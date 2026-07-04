@@ -87,6 +87,9 @@ class UpdateRuleRequest(BaseModel):
     score: float
     is_builtin: bool = False
 
+class DeleteRuleRequest(BaseModel):
+    name: str
+
 class ChatRequest(BaseModel):
     message: str
 
@@ -263,5 +266,25 @@ def update_rule(request: UpdateRuleRequest):
             
         reload_presidio_engine()
         return {"status": "success", "message": "Rule updated successfully."}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+@app.post("/delete_rule")
+def delete_rule(request: DeleteRuleRequest):
+    try:
+        with open("pii_rules.json", "r") as f:
+            data = json.load(f)
+            
+        initial_length = len(data["rules"])
+        data["rules"] = [rule for rule in data["rules"] if rule["name"] != request.name]
+        
+        if len(data["rules"]) == initial_length:
+            return {"status": "error", "message": "Rule not found."}
+            
+        with open("pii_rules.json", "w") as f:
+            json.dump(data, f, indent=2)
+            
+        reload_presidio_engine()
+        return {"status": "success", "message": "Rule deleted successfully."}
     except Exception as e:
         return {"status": "error", "message": str(e)}

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { fetchRules, addRule, updateRule } from './api';
+import { fetchRules, addRule, updateRule, deleteRule } from './api';
 
 export default function AdminConfig() {
   const [loggedIn, setLoggedIn] = useState(false);
@@ -12,6 +12,7 @@ export default function AdminConfig() {
   
   const [formData, setFormData] = useState({ name: '', entity: '', regex: '', score: 0.85, is_builtin: false });
   const [formMessage, setFormMessage] = useState(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (loggedIn) {
@@ -57,6 +58,9 @@ export default function AdminConfig() {
       return;
     }
 
+    setIsSaving(true);
+    setFormMessage(null);
+
     try {
       if (editingRule) {
         const payload = { ...formData, original_name: editingRule.name };
@@ -80,6 +84,32 @@ export default function AdminConfig() {
       loadRules(); // Refresh list
     } catch (e) {
       setFormMessage({ type: 'error', text: 'Failed to connect to backend.' });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!editingRule) return;
+    if (!window.confirm(`Are you sure you want to delete ${editingRule.name}?`)) return;
+
+    setIsSaving(true);
+    setFormMessage(null);
+
+    try {
+      const res = await deleteRule(editingRule.name);
+      if (res.status === 'success') {
+        setFormMessage({ type: 'success', text: 'Rule deleted!' });
+        setEditingRule(null);
+        setFormData({ name: '', entity: '', regex: '', score: 0.85, is_builtin: false });
+        loadRules();
+      } else {
+        setFormMessage({ type: 'error', text: res.message });
+      }
+    } catch (e) {
+      setFormMessage({ type: 'error', text: 'Failed to connect to backend.' });
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -181,10 +211,17 @@ export default function AdminConfig() {
                 <small className="help-text">How confident the AI should be when making this match. A lower score (0.4) might catch more data but cause false positives.</small>
               </div>
 
-              <div style={{display: 'flex', gap: '1rem'}}>
-                <button type="submit" className="primary">{editingRule ? 'Update Rule' : 'Add New Rule'}</button>
+              <div style={{display: 'flex', gap: '1rem', alignItems: 'center'}}>
+                <button type="submit" className="primary" disabled={isSaving}>
+                  {isSaving ? 'Processing...' : (editingRule ? 'Update Rule' : 'Add New Rule')}
+                </button>
                 {editingRule && (
-                  <button type="button" className="secondary" onClick={handleCancelEdit}>Cancel</button>
+                  <>
+                    <button type="button" className="secondary" onClick={handleCancelEdit} disabled={isSaving}>Cancel</button>
+                    <button type="button" onClick={handleDelete} disabled={isSaving} style={{ backgroundColor: '#cf222e', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '6px', cursor: isSaving ? 'not-allowed' : 'pointer' }}>
+                      Delete
+                    </button>
+                  </>
                 )}
               </div>
               

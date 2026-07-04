@@ -19,11 +19,20 @@ export async function addRule(rule) {
   return res.json();
 }
 
-export async function updateRule(rule) {
+export async function updateRule(ruleData) {
   const res = await fetch(`${API_BASE}/update_rule`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(rule)
+    body: JSON.stringify(ruleData)
+  });
+  return res.json();
+}
+
+export async function deleteRule(name) {
+  const res = await fetch(`${API_BASE}/delete_rule`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name })
   });
   return res.json();
 }
