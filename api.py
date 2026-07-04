@@ -33,7 +33,7 @@ def reload_presidio_engine():
     print("Reloading Presidio NLP models...")
     new_analyzer = AnalyzerEngine()
     
-    ACTIVE_ENTITIES = ["PERSON", "CREDIT_CARD", "PHONE_NUMBER", "US_SSN", "IN_AADHAAR", "EMAIL_ADDRESS"]
+    ACTIVE_ENTITIES = ["IN_AADHAAR"]
     
     # Load custom python recognizer (Verhoeff Math)
     new_analyzer.registry.add_recognizer(AadhaarRecognizer())
@@ -43,9 +43,10 @@ def reload_presidio_engine():
         with open("pii_rules.json", "r") as f:
             rules = json.load(f)["rules"]
             for rule in rules:
-                pattern = Pattern(name=rule["name"], regex=rule["regex"], score=rule["score"])
-                recognizer = PatternRecognizer(supported_entity=rule["entity"], patterns=[pattern])
-                new_analyzer.registry.add_recognizer(recognizer)
+                if not rule.get("is_builtin", False):
+                    pattern = Pattern(name=rule["name"], regex=rule["regex"], score=rule["score"])
+                    recognizer = PatternRecognizer(supported_entity=rule["entity"], patterns=[pattern])
+                    new_analyzer.registry.add_recognizer(recognizer)
                 if rule["entity"] not in ACTIVE_ENTITIES:
                     ACTIVE_ENTITIES.append(rule["entity"])
     except Exception as e:
@@ -76,6 +77,7 @@ class RuleRequest(BaseModel):
     entity: str
     regex: str
     score: float
+    is_builtin: bool = False
 
 class UpdateRuleRequest(BaseModel):
     original_name: str
@@ -83,6 +85,7 @@ class UpdateRuleRequest(BaseModel):
     entity: str
     regex: str
     score: float
+    is_builtin: bool = False
 
 class ChatRequest(BaseModel):
     message: str
@@ -219,7 +222,8 @@ def add_rule(request: RuleRequest):
             "name": request.name,
             "entity": request.entity,
             "regex": request.regex,
-            "score": request.score
+            "score": request.score,
+            "is_builtin": request.is_builtin
         }
         data["rules"].append(new_rule)
         
@@ -247,6 +251,7 @@ def update_rule(request: UpdateRuleRequest):
                 rule["entity"] = request.entity
                 rule["regex"] = request.regex
                 rule["score"] = request.score
+                rule["is_builtin"] = request.is_builtin
                 rule_found = True
                 break
                 

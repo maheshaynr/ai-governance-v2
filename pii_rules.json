@@ -1,22 +1,46 @@
 {
   "rules": [
     {
+      "name": "Standard_Person_Names",
+      "entity": "PERSON",
+      "regex": "",
+      "score": 0.85,
+      "is_builtin": true
+    },
+    {
+      "name": "Standard_Email_Addresses",
+      "entity": "EMAIL_ADDRESS",
+      "regex": "",
+      "score": 0.85,
+      "is_builtin": true
+    },
+    {
+      "name": "Standard_US_SSN",
+      "entity": "US_SSN",
+      "regex": "",
+      "score": 0.85,
+      "is_builtin": true
+    },
+    {
       "name": "PAN_Card_Structural",
       "entity": "IN_PAN",
       "regex": "\\b[A-Z]{3}[PCHFATBLJG][A-Z]\\d{4}[A-Z]\\b",
-      "score": 0.9
+      "score": 0.9,
+      "is_builtin": false
     },
     {
-      "name": "Credit Card",
+      "name": "PoC_Fake_CC",
       "entity": "CREDIT_CARD",
       "regex": "\\b\\d{4}-\\d{4}-\\d{4}-\\d{4}\\b",
-      "score": 0.85
+      "score": 0.85,
+      "is_builtin": false
     },
     {
       "name": "PoC_Fake_Phone",
       "entity": "PHONE_NUMBER",
       "regex": "\\b\\d{10}\\b",
-      "score": 0.85
+      "score": 0.85,
+      "is_builtin": false
     }
   ]
 }

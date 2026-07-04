@@ -10,7 +10,7 @@ export default function AdminConfig() {
   const [rules, setRules] = useState([]);
   const [editingRule, setEditingRule] = useState(null);
   
-  const [formData, setFormData] = useState({ name: '', entity: '', regex: '', score: 0.85 });
+  const [formData, setFormData] = useState({ name: '', entity: '', regex: '', score: 0.85, is_builtin: false });
   const [formMessage, setFormMessage] = useState(null);
 
   useEffect(() => {
@@ -40,19 +40,19 @@ export default function AdminConfig() {
 
   const handleEditClick = (rule) => {
     setEditingRule(rule);
-    setFormData({ name: rule.name, entity: rule.entity, regex: rule.regex, score: rule.score });
+    setFormData({ name: rule.name, entity: rule.entity, regex: rule.regex, score: rule.score, is_builtin: rule.is_builtin || false });
     setFormMessage(null);
   };
 
   const handleCancelEdit = () => {
     setEditingRule(null);
-    setFormData({ name: '', entity: '', regex: '', score: 0.85 });
+    setFormData({ name: '', entity: '', regex: '', score: 0.85, is_builtin: false });
     setFormMessage(null);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.name || !formData.entity || !formData.regex) {
+    if (!formData.name || !formData.entity || (!formData.is_builtin && !formData.regex)) {
       setFormMessage({ type: 'error', text: 'All fields are required.' });
       return;
     }
@@ -64,7 +64,7 @@ export default function AdminConfig() {
         if (res.status === 'success') {
           setFormMessage({ type: 'success', text: 'Rule updated and hot-reloaded!' });
           setEditingRule(null);
-          setFormData({ name: '', entity: '', regex: '', score: 0.85 });
+          setFormData({ name: '', entity: '', regex: '', score: 0.85, is_builtin: false });
         } else {
           setFormMessage({ type: 'error', text: res.message });
         }
@@ -72,7 +72,7 @@ export default function AdminConfig() {
         const res = await addRule(formData);
         if (res.status === 'success') {
           setFormMessage({ type: 'success', text: 'Rule added and hot-reloaded!' });
-          setFormData({ name: '', entity: '', regex: '', score: 0.85 });
+          setFormData({ name: '', entity: '', regex: '', score: 0.85, is_builtin: false });
         } else {
           setFormMessage({ type: 'error', text: res.message });
         }
@@ -118,6 +118,18 @@ export default function AdminConfig() {
               <h4>#{idx + 1}: {r.name}</h4>
               <div className="rule-meta">Entity: {r.entity}</div>
               <div className="rule-meta">Score: {r.score}</div>
+              <div style={{ marginBottom: '0.5rem' }}>
+                <span style={{ 
+                  backgroundColor: r.is_builtin ? '#dafbe1' : '#ddf4ff', 
+                  color: r.is_builtin ? '#1a7f37' : '#0969da', 
+                  padding: '2px 6px', 
+                  borderRadius: '12px', 
+                  fontSize: '0.75rem',
+                  fontWeight: '600'
+                }}>
+                  {r.is_builtin ? '✨ Built-In AI' : '⚙️ Custom Regex'}
+                </span>
+              </div>
               <button className="secondary" style={{padding: '0.2rem 0.5rem', fontSize: '0.8rem'}} onClick={() => handleEditClick(r)}>
                 Edit
               </button>
@@ -141,9 +153,25 @@ export default function AdminConfig() {
                 <small className="help-text">The Presidio tag used to mask the data (e.g., 'CREDIT_CARD'). The output will be replaced with &lt;ENTITY_CLASS&gt;.</small>
               </div>
 
+              <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <input 
+                  type="checkbox" 
+                  checked={formData.is_builtin} 
+                  onChange={e => setFormData({...formData, is_builtin: e.target.checked, regex: e.target.checked ? '' : formData.regex})} 
+                  style={{ width: 'auto', margin: 0 }}
+                />
+                <label style={{ margin: 0 }}>Use Built-in AI (No Regex required)</label>
+              </div>
+
               <div className="form-group">
-                <label>Regex Pattern</label>
-                <input type="text" value={formData.regex} onChange={e => setFormData({...formData, regex: e.target.value})} />
+                <label style={{ color: formData.is_builtin ? '#8c959f' : 'inherit' }}>Regex Pattern</label>
+                <input 
+                  type="text" 
+                  value={formData.regex} 
+                  onChange={e => setFormData({...formData, regex: e.target.value})} 
+                  disabled={formData.is_builtin}
+                  style={{ backgroundColor: formData.is_builtin ? '#f6f8fa' : '#fff' }}
+                />
                 <small className="help-text">The mathematical regular expression that matches the sensitive data. Make sure to use word boundaries (\b).</small>
               </div>
 
