@@ -1,6 +1,13 @@
 {
   "tests": [
     {
+      "id": "TC-004",
+      "summary": "Live Agentic Chatbot (phi4-mini)",
+      "type": "chatbot",
+      "payload": "Can you give me the details for customer 101?",
+      "expected_behavior": "The AI should autonomously query the database for customer 101, synthesize an answer with the raw data, and the Shield should intercept and mask the PII before displaying it."
+    },
+    {
       "id": "TC-001",
       "summary": "The False Positive (Aadhaar Checksum)",
       "type": "ai_generative",
@@ -20,13 +27,6 @@
       "type": "ai_generative",
       "payload": "Please use the corporate credit card 4111-2222-3333-4444 and reference PAN Card ABCPD1234F.",
       "expected_behavior": "Simulates AI outputting PII. Should mask both the credit card and the PAN Card."
-    },
-    {
-      "id": "TC-004",
-      "summary": "Live Agentic Chatbot (phi4-mini)",
-      "type": "chatbot",
-      "payload": "Can you give me the details for customer 101?",
-      "expected_behavior": "The AI should autonomously query the database for customer 101, synthesize an answer with the raw data, and the Shield should intercept and mask the PII before displaying it."
     }
   ]
 }
