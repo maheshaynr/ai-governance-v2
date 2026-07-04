@@ -33,7 +33,7 @@ def reload_presidio_engine():
     print("Reloading Presidio NLP models...")
     new_analyzer = AnalyzerEngine()
     
-    ACTIVE_ENTITIES = ["IN_AADHAAR"]
+    ACTIVE_ENTITIES = []
     
     # Load custom python recognizer (Verhoeff Math)
     new_analyzer.registry.add_recognizer(AadhaarRecognizer())
@@ -43,7 +43,7 @@ def reload_presidio_engine():
         with open("pii_rules.json", "r") as f:
             rules = json.load(f)["rules"]
             for rule in rules:
-                if not rule.get("is_builtin", False):
+                if not rule.get("is_builtin", False) and not rule.get("is_algorithmic", False):
                     pattern = Pattern(name=rule["name"], regex=rule["regex"], score=rule["score"])
                     recognizer = PatternRecognizer(supported_entity=rule["entity"], patterns=[pattern])
                     new_analyzer.registry.add_recognizer(recognizer)
@@ -78,6 +78,7 @@ class RuleRequest(BaseModel):
     regex: str
     score: float
     is_builtin: bool = False
+    is_algorithmic: bool = False
 
 class UpdateRuleRequest(BaseModel):
     original_name: str
@@ -86,6 +87,7 @@ class UpdateRuleRequest(BaseModel):
     regex: str
     score: float
     is_builtin: bool = False
+    is_algorithmic: bool = False
 
 class DeleteRuleRequest(BaseModel):
     name: str
@@ -176,7 +178,7 @@ If you are provided with data, summarize it naturally and helpfully."""
             # Feed back to LLM
             json_schema = '''{
   "customer_id": 101,
-  "summary": "...",
+  "customer_name": "...",
   "sensitive_data": {
     "phone": "...",
     "payment_card": "...",
@@ -241,7 +243,8 @@ def add_rule(request: RuleRequest):
             "entity": request.entity,
             "regex": request.regex,
             "score": request.score,
-            "is_builtin": request.is_builtin
+            "is_builtin": request.is_builtin,
+            "is_algorithmic": request.is_algorithmic
         }
         data["rules"].append(new_rule)
         
@@ -270,6 +273,7 @@ def update_rule(request: UpdateRuleRequest):
                 rule["regex"] = request.regex
                 rule["score"] = request.score
                 rule["is_builtin"] = request.is_builtin
+                rule["is_algorithmic"] = request.is_algorithmic
                 rule_found = True
                 break
                 

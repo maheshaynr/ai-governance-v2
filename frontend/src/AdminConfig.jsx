@@ -10,7 +10,7 @@ export default function AdminConfig() {
   const [rules, setRules] = useState([]);
   const [editingRule, setEditingRule] = useState(null);
   
-  const [formData, setFormData] = useState({ name: '', entity: '', regex: '', score: 0.85, is_builtin: false });
+  const [formData, setFormData] = useState({ name: '', entity: '', regex: '', score: 0.85, is_builtin: false, is_algorithmic: false });
   const [formMessage, setFormMessage] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -41,19 +41,19 @@ export default function AdminConfig() {
 
   const handleEditClick = (rule) => {
     setEditingRule(rule);
-    setFormData({ name: rule.name, entity: rule.entity, regex: rule.regex, score: rule.score, is_builtin: rule.is_builtin || false });
+    setFormData({ name: rule.name, entity: rule.entity, regex: rule.regex, score: rule.score, is_builtin: rule.is_builtin || false, is_algorithmic: rule.is_algorithmic || false });
     setFormMessage(null);
   };
 
   const handleCancelEdit = () => {
     setEditingRule(null);
-    setFormData({ name: '', entity: '', regex: '', score: 0.85, is_builtin: false });
+    setFormData({ name: '', entity: '', regex: '', score: 0.85, is_builtin: false, is_algorithmic: false });
     setFormMessage(null);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.name || !formData.entity || (!formData.is_builtin && !formData.regex)) {
+    if (!formData.name || !formData.entity || (!formData.is_builtin && !formData.is_algorithmic && !formData.regex)) {
       setFormMessage({ type: 'error', text: 'All fields are required.' });
       return;
     }
@@ -68,7 +68,7 @@ export default function AdminConfig() {
         if (res.status === 'success') {
           setFormMessage({ type: 'success', text: 'Rule updated and hot-reloaded!' });
           setEditingRule(null);
-          setFormData({ name: '', entity: '', regex: '', score: 0.85, is_builtin: false });
+          setFormData({ name: '', entity: '', regex: '', score: 0.85, is_builtin: false, is_algorithmic: false });
         } else {
           setFormMessage({ type: 'error', text: res.message });
         }
@@ -76,7 +76,7 @@ export default function AdminConfig() {
         const res = await addRule(formData);
         if (res.status === 'success') {
           setFormMessage({ type: 'success', text: 'Rule added and hot-reloaded!' });
-          setFormData({ name: '', entity: '', regex: '', score: 0.85, is_builtin: false });
+          setFormData({ name: '', entity: '', regex: '', score: 0.85, is_builtin: false, is_algorithmic: false });
         } else {
           setFormMessage({ type: 'error', text: res.message });
         }
@@ -101,7 +101,7 @@ export default function AdminConfig() {
       if (res.status === 'success') {
         setFormMessage({ type: 'success', text: 'Rule deleted!' });
         setEditingRule(null);
-        setFormData({ name: '', entity: '', regex: '', score: 0.85, is_builtin: false });
+        setFormData({ name: '', entity: '', regex: '', score: 0.85, is_builtin: false, is_algorithmic: false });
         loadRules();
       } else {
         setFormMessage({ type: 'error', text: res.message });
@@ -149,16 +149,15 @@ export default function AdminConfig() {
               <div className="rule-meta">Entity: {r.entity}</div>
               <div className="rule-meta">Score: {r.score}</div>
               <div style={{ marginBottom: '0.5rem' }}>
-                <span style={{ 
-                  backgroundColor: r.is_builtin ? '#dafbe1' : '#ddf4ff', 
-                  color: r.is_builtin ? '#1a7f37' : '#0969da', 
-                  padding: '2px 6px', 
-                  borderRadius: '12px', 
-                  fontSize: '0.75rem',
-                  fontWeight: '600'
-                }}>
-                  {r.is_builtin ? '✨ Built-In AI' : '⚙️ Custom Regex'}
-                </span>
+                {r.is_algorithmic ? (
+                  <span style={{ backgroundColor: '#f3e8ff', color: '#7e22ce', padding: '2px 6px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: '600' }}>
+                    🧬 Algorithmic Rule
+                  </span>
+                ) : (
+                  <span style={{ backgroundColor: r.is_builtin ? '#dafbe1' : '#ddf4ff', color: r.is_builtin ? '#1a7f37' : '#0969da', padding: '2px 6px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: '600' }}>
+                    {r.is_builtin ? '✨ Built-In AI' : '⚙️ Custom Regex'}
+                  </span>
+                )}
               </div>
               <button className="secondary" style={{padding: '0.2rem 0.5rem', fontSize: '0.8rem'}} onClick={() => handleEditClick(r)}>
                 Edit
@@ -183,24 +182,36 @@ export default function AdminConfig() {
                 <small className="help-text">The Presidio tag used to mask the data (e.g., 'CREDIT_CARD'). The output will be replaced with &lt;ENTITY_CLASS&gt;.</small>
               </div>
 
-              <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <input 
-                  type="checkbox" 
-                  checked={formData.is_builtin} 
-                  onChange={e => setFormData({...formData, is_builtin: e.target.checked, regex: e.target.checked ? '' : formData.regex})} 
-                  style={{ width: 'auto', margin: 0 }}
-                />
-                <label style={{ margin: 0 }}>Use Built-in AI (No Regex required)</label>
+              <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <input 
+                    type="checkbox" 
+                    checked={formData.is_builtin} 
+                    onChange={e => setFormData({...formData, is_builtin: e.target.checked, is_algorithmic: false, regex: e.target.checked ? '' : formData.regex})} 
+                    style={{ width: 'auto', margin: 0 }}
+                  />
+                  <label style={{ margin: 0 }}>Use Built-in AI</label>
+                </div>
+                
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <input 
+                    type="checkbox" 
+                    checked={formData.is_algorithmic} 
+                    onChange={e => setFormData({...formData, is_algorithmic: e.target.checked, is_builtin: false, regex: e.target.checked ? 'Python Code' : formData.regex})} 
+                    style={{ width: 'auto', margin: 0 }}
+                  />
+                  <label style={{ margin: 0 }}>Algorithmic Python Rule</label>
+                </div>
               </div>
 
               <div className="form-group">
-                <label style={{ color: formData.is_builtin ? '#8c959f' : 'inherit' }}>Regex Pattern</label>
+                <label style={{ color: (formData.is_builtin || formData.is_algorithmic) ? '#8c959f' : 'inherit' }}>Regex Pattern</label>
                 <input 
                   type="text" 
                   value={formData.regex} 
                   onChange={e => setFormData({...formData, regex: e.target.value})} 
-                  disabled={formData.is_builtin}
-                  style={{ backgroundColor: formData.is_builtin ? '#f6f8fa' : '#fff' }}
+                  disabled={formData.is_builtin || formData.is_algorithmic}
+                  style={{ backgroundColor: (formData.is_builtin || formData.is_algorithmic) ? '#f6f8fa' : '#fff' }}
                 />
                 <small className="help-text">The mathematical regular expression that matches the sensitive data. Make sure to use word boundaries (\b).</small>
               </div>
