@@ -150,7 +150,7 @@ If you are provided with data, summarize it naturally and helpfully."""
     try:
         # Step 1: Initial call to Ollama
         payload = {
-            "model": "phi4-mini",
+            "model": "phi4-mini:3.8b",
             "messages": messages,
             "stream": False
         }
