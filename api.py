@@ -174,10 +174,25 @@ If you are provided with data, summarize it naturally and helpfully."""
             raw_data = database.get_customer_profile(customer_id)
             
             # Feed back to LLM
+            json_schema = '''{
+  "customer_id": 101,
+  "summary": "...",
+  "sensitive_data": {
+    "phone": "...",
+    "payment_card": "...",
+    "aadhaar": "...",
+    "pan": "..."
+  }
+}'''
             messages.append({"role": "assistant", "content": ai_message})
-            messages.append({"role": "user", "content": f"Here is the database result: {raw_data}. Please synthesize this for the user."})
+            messages.append({
+                "role": "user", 
+                "content": f"Here is the database result: {raw_data}. Respond ONLY with a valid JSON object matching this exact schema, filling in the sensitive data fields. Schema:\n{json_schema}"
+            })
             
             payload["messages"] = messages
+            payload["format"] = "json"
+            
             resp2 = requests.post(OLLAMA_URL, json=payload)
             ai_message = resp2.json()["message"]["content"]
             

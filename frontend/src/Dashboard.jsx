@@ -124,13 +124,13 @@ export default function Dashboard() {
                             {/* Raw Output Bubble (Leaky) */}
                             <div style={{ flex: 1, backgroundColor: '#ffebe9', border: '1px solid #ff8182', color: '#cf222e', padding: '1rem', borderRadius: '18px 18px 18px 0' }}>
                               <strong>🔴 Raw LLM Output (Leaking PII):</strong>
-                              <p style={{ margin: '0.5rem 0 0 0', whiteSpace: 'pre-wrap' }}>{msg.raw_content}</p>
+                              <pre style={{ margin: '0.5rem 0 0 0', whiteSpace: 'pre-wrap', fontFamily: 'monospace', fontSize: '0.9rem' }}>{msg.raw_content}</pre>
                             </div>
                             
                             {/* Shielded Output Bubble */}
                             <div style={{ flex: 1, backgroundColor: '#dafbe1', border: '1px solid #4ac26b', color: '#1a7f37', padding: '1rem', borderRadius: '18px 18px 18px 0' }}>
                               <strong>🟢 Shielded Output (Safe):</strong>
-                              <p style={{ margin: '0.5rem 0 0 0', whiteSpace: 'pre-wrap' }}>{msg.masked_content}</p>
+                              <pre style={{ margin: '0.5rem 0 0 0', whiteSpace: 'pre-wrap', fontFamily: 'monospace', fontSize: '0.9rem' }}>{msg.masked_content}</pre>
                             </div>
                           </div>
                         )}
