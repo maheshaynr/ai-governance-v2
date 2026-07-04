@@ -1,0 +1,11 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+.env
+cohort.db
+
+# Node / React
+frontend/node_modules/
+frontend/dist/
+frontend/.env

@@ -1,0 +1,178 @@
+[
+    {
+        "timestamp": "2026-07-03T12:33:18.919361",
+        "original_raw": "My name is John Smith. Check my account, my SSN is 123-45-6789.",
+        "pii_masked": "My name is <PERSON>. Check my account, my SSN is 123-45-6789.",
+        "final_rewrite": "My name is <PERSON>. Check my account, my SSN is 123-45-6789.",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-03T12:45:54.489958",
+        "pii_masked_input": "My name is <PERSON>. Check my account, my SSN is 123-45-6789.\n",
+        "final_rewrite": "My name is <PERSON>. Check my account, my SSN is 123-45-6789.\n",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-03T12:51:25.794312",
+        "pii_masked_input": "My name is <PERSON> and my Aadhaar number is <IN_AADHAAR>, please fix my router.",
+        "final_rewrite": "My name is <PERSON> and my Aadhaar number is <IN_AADHAAR>, please fix my router.",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-03T12:51:45.320622",
+        "pii_masked_input": "My name is <PERSON> and my Aadhaar number is <PHONE_NUMBER>, please fix my router.",
+        "final_rewrite": "My name is <PERSON> and my Aadhaar number is <PHONE_NUMBER>, please fix my router.",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-03T12:52:01.841063",
+        "pii_masked_input": "My name is <PERSON> and my Aadhaar number is <PHONE_NUMBER>, please fix my router now",
+        "final_rewrite": "My name is <PERSON> and my Aadhaar number is <PHONE_NUMBER>, please fix my router now",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-03T18:04:01.424465",
+        "pii_masked_input": "AI_HASH:07127249",
+        "final_rewrite": "Cancel order number 9999 <DATE_TIME>.",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-03T18:07:07.448187",
+        "pii_masked_input": "AI_HASH:07127249",
+        "final_rewrite": "Cancel order number 9999 <DATE_TIME>.",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-03T18:08:13.269995",
+        "pii_masked_input": "AI_HASH:07127249",
+        "final_rewrite": "Cancel order number 9999 4105 7059.",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-03T18:08:53.209192",
+        "pii_masked_input": "AI_HASH:9e185f78",
+        "final_rewrite": "Please use the corporate credit card 4111-2222-3333-4444 and reference PAN Card ABCDP1234F.",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-03T18:09:10.161977",
+        "pii_masked_input": "DB_HASH:af785298",
+        "final_rewrite": "Customer Mahesh (ID: 101) purchased Macbook Pro, iPhone. Payment Card: 4111-2222-3333-4444. Contact: 9876543210. Aadhaar: <IN_AADHAAR>. PAN: ABCDP1234F.",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-03T18:17:47.737969",
+        "pii_masked_input": "DB_HASH:e04ca283",
+        "final_rewrite": "Customer Mahesh (ID: 101) purchased Macbook Pro, iPhone. Payment Card: <CREDIT_CARD>. Contact: <PHONE_NUMBER>. Aadhaar: <IN_AADHAAR>. PAN: <IN_PAN>.",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-03T18:17:58.024239",
+        "pii_masked_input": "AI_HASH:a185d90a",
+        "final_rewrite": "Please use the corporate credit card <CREDIT_CARD> and reference PAN Card <IN_PAN>.",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-03T18:23:19.097540",
+        "pii_masked_input": "AI_HASH:e1facab4",
+        "final_rewrite": "Please use the corporate credit card <CREDIT_CARD> and reference PAN Card ABC1234F.",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-03T18:23:34.690612",
+        "pii_masked_input": "AI_HASH:995df68d",
+        "final_rewrite": "Please use the corporate credit card 4111-2222-333-4444 and reference PAN Card ABC1234F.",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-03T18:23:44.117096",
+        "pii_masked_input": "AI_HASH:28b17818",
+        "final_rewrite": "Please use the corporate credit card 4111-2222-3e33-4444 and reference PAN Card ABCB1234F.",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-03T18:24:06.729864",
+        "pii_masked_input": "AI_HASH:8f308b45",
+        "final_rewrite": "Please use the corporate credit card 4111-2222-3e33-4444 and reference PAN Card AOIPT934D.",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-03T18:24:27.278897",
+        "pii_masked_input": "AI_HASH:361a4530",
+        "final_rewrite": "Please use the corporate credit card 4111-2222-3e33-4444 and reference PAN Card AHIPM044F.",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-03T18:26:40.767713",
+        "pii_masked_input": "AI_HASH:4eb535c6",
+        "final_rewrite": "Please use the corporate credit card 4111-2222-3e33-4444 and reference PAN Card <IN_PAN>.",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-03T18:26:52.710628",
+        "pii_masked_input": "DB_HASH:e04ca283",
+        "final_rewrite": "Customer Mahesh (ID: 101) purchased Macbook Pro, iPhone. Payment Card: <CREDIT_CARD>. Contact: <PHONE_NUMBER>. Aadhaar: <IN_AADHAAR>. PAN: <IN_PAN>.",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-03T18:28:12.668519",
+        "pii_masked_input": "DB_HASH:1747d113",
+        "final_rewrite": "<PERSON> (ID: 102) purchased Server Rack. Payment Card: <CREDIT_CARD>. Contact: 555-019-8372. Aadhaar: <IN_AADHAAR>. PAN: WXYZC5678G.",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-04T23:31:03.880769",
+        "pii_masked_input": "DB_HASH:e04ca283",
+        "final_rewrite": "Customer Mahesh (ID: 101) purchased Macbook Pro, iPhone. Payment Card: <CREDIT_CARD>. Contact: <PHONE_NUMBER>. Aadhaar: <IN_AADHAAR>. PAN: <IN_PAN>.",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-04T23:33:24.076336",
+        "pii_masked_input": "AI_HASH:07127249",
+        "final_rewrite": "Cancel order number 9999 4105 7059.",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-04T23:47:20.933917",
+        "pii_masked_input": "AI_HASH:a185d90a",
+        "final_rewrite": "Please use the corporate credit card <CREDIT_CARD> and reference PAN Card <IN_PAN>.",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-04T23:47:39.806599",
+        "pii_masked_input": "AI_HASH:b1e00474",
+        "final_rewrite": "Please use the corporate credit card <CREDIT_CARD> and reference PAN Card <IN_PAN> and my passport number is 43535345",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-04T23:58:16.073503",
+        "pii_masked_input": "DB_HASH:e04ca283",
+        "final_rewrite": "Customer Mahesh (ID: 101) purchased Macbook Pro, iPhone. Payment Card: <CREDIT_CARD>. Contact: <PHONE_NUMBER>. Aadhaar: <IN_AADHAAR>. PAN: <IN_PAN>.",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
+    }
+]
