@@ -34,16 +34,16 @@ function App() {
               Testing Dashboard
             </button>
             <button 
-              className={activeTab === 'analytics' ? 'active' : ''} 
-              onClick={() => setActiveTab('analytics')}
-            >
-              Analytics & Metrics
-            </button>
-            <button 
               className={activeTab === 'admin' ? 'active' : ''} 
               onClick={() => setActiveTab('admin')}
             >
               Admin Configuration
+            </button>
+            <button 
+              className={activeTab === 'analytics' ? 'active' : ''} 
+              onClick={() => setActiveTab('analytics')}
+            >
+              Analytics & Metrics
             </button>
           </div>
         </div>
