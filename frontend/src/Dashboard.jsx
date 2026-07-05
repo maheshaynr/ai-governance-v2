@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { queryDb, governAi, fetchTestCases, chatAgent } from './api';
+import { queryDb, governAi, fetchTestCases, chatAgent, fetchAlarms } from './api';
 
 export default function Dashboard() {
   const [testCases, setTestCases] = useState([]);
@@ -10,9 +10,21 @@ export default function Dashboard() {
   
   // Chat state
   const [chatMessages, setChatMessages] = useState([]);
+  const [alarms, setAlarms] = useState([]);
 
   useEffect(() => {
     loadTestCases();
+    
+    // Poll for background alarms every 3 seconds
+    const interval = setInterval(() => {
+      fetchAlarms().then(data => {
+        if (data.alarms) {
+          setAlarms(data.alarms);
+        }
+      }).catch(e => console.error(e));
+    }, 3000);
+    
+    return () => clearInterval(interval);
   }, []);
 
   const loadTestCases = async () => {
@@ -75,6 +87,20 @@ export default function Dashboard() {
 
   return (
     <div>
+      {alarms.length > 0 && (
+        <div style={{ backgroundColor: '#cf222e', color: 'white', padding: '1rem', borderRadius: '6px', marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <span style={{ fontSize: '1.5rem' }}>🚨</span>
+            <div>
+              <strong>Security Alert:</strong> You have {alarms.length} pending alarm{alarms.length > 1 ? 's' : ''} triggered by the LLM Watchdog.
+            </div>
+          </div>
+          <button style={{ backgroundColor: 'white', color: '#cf222e', border: 'none', padding: '0.5rem 1rem', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer' }} onClick={() => window.open('/admin', '_blank')}>
+            Open Admin Portal
+          </button>
+        </div>
+      )}
+
       <h2>Egress Shield (Client)</h2>
       <p>Test the <strong>Universal Output Guardrail</strong> against Database Queries and AI Hallucinations.</p>
 

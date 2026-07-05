@@ -314,5 +314,26 @@
         "final_rewrite": "{\n  \"customer_id\": 101,\n  \"customer_name\": \"<PERSON>\",\n  \"sensitive_data\": {\n    \"phone\": \"<PHONE_NUMBER>\",\n    \"payment_card\": \"<CREDIT_CARD>\",\n    \"aadhaar\": \"<IN_AADHAAR>\",\n    \"pan\": \"<IN_PAN>..\"\n  }\n}",
         "fidelity_score": 1.0,
         "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-05T08:59:02.083825",
+        "pii_masked_input": "AI_HASH:07127249",
+        "final_rewrite": "Cancel order number 9999 4105 7059.",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-05T08:59:09.617641",
+        "pii_masked_input": "AI_HASH:a185d90a",
+        "final_rewrite": "Please use the corporate credit card <CREDIT_CARD> and reference PAN Card <IN_PAN>.",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-05T08:59:30.373261",
+        "pii_masked_input": "AI_HASH:748f48ca",
+        "final_rewrite": "My name is <PERSON> and my AWS API key is sk-live-abc123xyz. Please don't share it.",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
     }
 ]
