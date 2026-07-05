@@ -277,6 +277,15 @@ def sandbox_suggest_rule(request: SandboxSuggestRequest):
             data = json.load(f)
             existing_rules = data.get("rules", [])
             existing_entities = [r.get("entity") for r in existing_rules if r.get("entity")]
+            
+            # PRE-CHECK: See if an inactive rule already catches this leak
+            inactive_rules = [r for r in existing_rules if not r.get("is_active", True)]
+            for r in inactive_rules:
+                if "regex" in r:
+                    import re
+                    pattern = re.compile(r["regex"])
+                    if pattern.search(request.context_snippet):
+                        return {"status": "success", "suggestion": {"entity": r["entity"], "regex": r["regex"]}}
     except:
         existing_entities = []
         
@@ -496,16 +505,29 @@ def add_rule(request: RuleRequest):
         with open("pii_rules.json", "r") as f:
             data = json.load(f)
         
-        new_rule = {
-            "name": request.name,
-            "entity": request.entity,
-            "regex": request.regex,
-            "score": request.score,
-            "is_builtin": request.is_builtin,
-            "is_algorithmic": request.is_algorithmic,
-            "is_active": request.is_active
-        }
-        data["rules"].append(new_rule)
+        rule_found = False
+        for rule in data.get("rules", []):
+            if rule.get("entity") == request.entity:
+                # Upsert: Rule exists, just update and reactivate it
+                rule["regex"] = request.regex
+                rule["score"] = request.score
+                rule["is_active"] = request.is_active
+                rule_found = True
+                break
+                
+        if not rule_found:
+            new_rule = {
+                "name": request.name,
+                "entity": request.entity,
+                "regex": request.regex,
+                "score": request.score,
+                "is_builtin": request.is_builtin,
+                "is_algorithmic": request.is_algorithmic,
+                "is_active": request.is_active
+            }
+            if "rules" not in data:
+                data["rules"] = []
+            data["rules"].append(new_rule)
         
         with open("pii_rules.json", "w") as f:
             json.dump(data, f, indent=2)
