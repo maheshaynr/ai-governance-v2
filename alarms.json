@@ -1,64 +1,21 @@
 [
   {
-    "alarm_id": "ALM-20260705-4dde6d24",
-    "severity": "HIGH",
-    "category": "UNCATEGORIZED",
-    "timestamp": "2026-07-05T10:29:44.489800Z",
-    "missed_entity": {
-      "type": "IBAN",
-      "value_preview": "TE66577...",
-      "reason": "It is used for financial transactions and contains personal banking information",
-      "detected_by": "phi-4-mini"
-    },
-    "context_snippet": "My name is Mahesh and my AWS API key is sk-live-abc123xyz and my IBAN is TE66577. Please don't share it.",
-    "layer1_findings": [
-      "PERSON"
-    ],
-    "layer2_findings": [
-      "API Key",
-      "IBAN"
-    ],
-    "status": "PENDING_REVIEW"
-  },
-  {
-    "alarm_id": "ALM-20260705-e7b99940",
-    "severity": "HIGH",
-    "category": "UNCATEGORIZED",
-    "timestamp": "2026-07-05T10:29:40.360200Z",
-    "missed_entity": {
-      "type": "API Key",
-      "value_preview": "sk-live-abc123x...",
-      "reason": "It grants access to a service or application",
-      "detected_by": "phi-4-mini"
-    },
-    "context_snippet": "My name is Mahesh and my AWS API key is sk-live-abc123xyz and my IBAN is TE66577. Please don't share it.",
-    "layer1_findings": [
-      "PERSON"
-    ],
-    "layer2_findings": [
-      "API Key",
-      "IBAN"
-    ],
-    "status": "PENDING_REVIEW"
-  },
-  {
-    "alarm_id": "ALM-20260705-bf829476",
+    "alarm_id": "ALM-20260705-59c9c3e4",
     "severity": "HIGH",
     "category": "FINANCIAL",
-    "timestamp": "2026-07-05T10:28:47.218508Z",
+    "timestamp": "2026-07-05T10:44:55.157051Z",
     "missed_entity": {
-      "type": "Authentication data",
-      "value_preview": "PAN PD1234F...",
-      "reason": "Personal Account Number (PAN) which is sensitive",
+      "type": "Authentication Data",
+      "value_preview": "sk-proj-4P9kLmN...",
+      "reason": "API key is a sensitive authentication data that should not be exposed publicly",
       "detected_by": "phi-4-mini"
     },
-    "context_snippet": "Please use the corporate credit card 4111-2222-3333-4444 and reference PAN Card ABCPD1234F.",
+    "context_snippet": "My name is Mahesh and my OpenAI API key is sk-proj-4P9kLmN8xY2ZaBcDeFgHiJkLmNoPqRsTuVwXyZ0123456789AbCdEfGhIjKlMnOpQrStUv. Please don't share it.",
     "layer1_findings": [
-      "CREDIT_CARD"
+      "PERSON"
     ],
     "layer2_findings": [
-      "Financial data",
-      "Authentication data"
+      "Authentication Data"
     ],
     "status": "PENDING_REVIEW"
   }

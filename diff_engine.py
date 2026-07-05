@@ -29,11 +29,14 @@ def generate_alarm(raw_text: str, missing_finding: dict, l1_entities: list, l2_e
     
     # --- INTELLIGENT NOTIFICATION ROUTING CATEGORY ---
     entity_type = missing_finding.get("type", "UNKNOWN").upper()
-    financial_keywords = ['CREDIT_CARD', 'PAN', 'API_KEY', 'BANK', 'FINANCIAL', 'SALARY', 'PAYMENT', 'AUTHENTICATION', 'CREDENTIAL']
+    financial_keywords = ['CREDIT_CARD', 'PAN', 'BANK', 'FINANCIAL', 'SALARY', 'PAYMENT']
     hipaa_keywords = ['MEDICAL', 'HEALTH', 'DIAGNOSIS', 'MRN', 'PRESCRIPTION', 'PATIENT', 'BLOOD']
+    auth_keywords = ['API_KEY', 'AUTHENTICATION', 'CREDENTIAL', 'PASSWORD', 'TOKEN']
     
     category = "UNCATEGORIZED"
-    if any(k in entity_type for k in financial_keywords):
+    if any(k in entity_type for k in auth_keywords):
+        category = "AUTHENTICATION"
+    elif any(k in entity_type for k in financial_keywords):
         category = "FINANCIAL"
     elif any(k in entity_type for k in hipaa_keywords):
         category = "HIPAA"

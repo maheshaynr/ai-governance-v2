@@ -553,7 +553,13 @@ export default function AdminConfig() {
                       <span style={{ backgroundColor: '#cf222e', color: '#fff', padding: '2px 8px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 'bold' }}>{alarm.severity}</span>
                       <h4 style={{ margin: 0, fontSize: '1.1rem' }}>{alarm.missed_entity.type}</h4>
                       {alarm.category && (
-                        <span style={{ backgroundColor: '#0969da', color: '#fff', padding: '2px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 'bold' }}>{alarm.category}</span>
+                        <span style={{ 
+                          backgroundColor: alarm.category === 'AUTHENTICATION' ? '#8b5cf6' : 
+                                           alarm.category === 'FINANCIAL' ? '#0969da' : 
+                                           alarm.category === 'HIPAA' ? '#116329' : 
+                                           alarm.category === 'GDPR' ? '#9a6700' : '#57606a', 
+                          color: '#fff', padding: '2px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 'bold' 
+                        }}>{alarm.category}</span>
                       )}
                     </div>
                     <span style={{ color: '#57606a', fontSize: '0.85rem' }}>{new Date(alarm.timestamp).toLocaleString()}</span>
