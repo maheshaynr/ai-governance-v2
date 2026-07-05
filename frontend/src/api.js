@@ -42,12 +42,17 @@ export async function fetchAlarms() {
   return res.json();
 }
 
-export async function deleteAlarm(alarm_id) {
+export async function deleteAlarm(alarm_id, status = 'DISMISSED') {
   const res = await fetch(`${API_BASE}/delete_alarm`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ alarm_id })
+    body: JSON.stringify({ alarm_id, status })
   });
+  return res.json();
+}
+
+export async function fetchAnalytics(timeframe = '24h') {
+  const res = await fetch(`${API_BASE}/analytics?timeframe=${timeframe}`);
   return res.json();
 }
 

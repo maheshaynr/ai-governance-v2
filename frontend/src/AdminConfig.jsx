@@ -310,8 +310,8 @@ export default function AdminConfig() {
       };
       await addRule(rulePayload);
       
-      // Dismiss the alarm
-      await deleteAlarm(sandboxAlarm.alarm_id);
+      // Dismiss the alarm and mark as RESOLVED
+      await deleteAlarm(sandboxAlarm.alarm_id, 'RESOLVED');
       
       // Reload UI
       await loadRules();

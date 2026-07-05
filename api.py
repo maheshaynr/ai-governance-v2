@@ -117,6 +117,7 @@ class DeleteSubscriberRequest(BaseModel):
 
 class DeleteAlarmRequest(BaseModel):
     alarm_id: str
+    status: str = "DISMISSED"
 
 class ChatRequest(BaseModel):
     message: str
@@ -353,6 +354,15 @@ def delete_alarm(request: DeleteAlarmRequest):
         with open("alarms.json", "w") as f:
             json.dump(alarms, f, indent=2)
             
+        # Update archive ledger
+        archive = diff_engine.load_archive()
+        for a in archive:
+            if a.get("alarm_id") == request.alarm_id:
+                a["status"] = request.status
+                break
+        with open(diff_engine.ARCHIVE_FILE, "w") as f:
+            json.dump(archive, f, indent=2)
+            
         return {"status": "success"}
     except Exception as e:
         return {"status": "error", "message": str(e)}
@@ -540,5 +550,107 @@ def delete_rule(request: DeleteRuleRequest):
             
         reload_presidio_engine()
         return {"status": "success", "message": "Rule deleted successfully."}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+@app.get("/analytics")
+def get_analytics(timeframe: str = "24h"):
+    try:
+        import diff_engine
+        from datetime import datetime, timedelta
+        
+        # Determine cutoff time
+        now = datetime.utcnow()
+        if timeframe == "24h":
+            cutoff = now - timedelta(hours=24)
+        elif timeframe == "7d":
+            cutoff = now - timedelta(days=7)
+        elif timeframe == "30d":
+            cutoff = now - timedelta(days=30)
+        elif timeframe == "90d":
+            cutoff = now - timedelta(days=90)
+        else:
+            cutoff = now - timedelta(days=3650) # All time basically
+            
+        # Parse audit logs for traffic trend
+        total_requests = 0
+        traffic_trend = {}
+        
+        if os.path.exists("governance_audit.json"):
+            with open("governance_audit.json", "r") as f:
+                audit_logs = json.load(f)
+                
+            for log in audit_logs:
+                try:
+                    log_time = datetime.fromisoformat(log["timestamp"].replace("Z", ""))
+                    if log_time >= cutoff:
+                        total_requests += 1
+                        day_key = log_time.strftime("%Y-%m-%d")
+                        traffic_trend[day_key] = traffic_trend.get(day_key, 0) + 1
+                except:
+                    pass
+                    
+        # Parse alarm archive for alarm metrics
+        archive = diff_engine.load_archive()
+        
+        total_alarms = 0
+        resolved_alarms = 0
+        dismissed_alarms = 0
+        pending_alarms = 0
+        category_distribution = {}
+        alarm_trend = {}
+        
+        for alarm in archive:
+            try:
+                alarm_time = datetime.fromisoformat(alarm["timestamp"].replace("Z", ""))
+                if alarm_time >= cutoff:
+                    total_alarms += 1
+                    
+                    # Status breakdown
+                    status = alarm.get("status", "PENDING_REVIEW")
+                    if status == "RESOLVED":
+                        resolved_alarms += 1
+                    elif status == "DISMISSED":
+                        dismissed_alarms += 1
+                    else:
+                        pending_alarms += 1
+                        
+                    # Category breakdown
+                    cat = alarm.get("category", "UNCATEGORIZED")
+                    category_distribution[cat] = category_distribution.get(cat, 0) + 1
+                    
+                    # Trend breakdown
+                    day_key = alarm_time.strftime("%Y-%m-%d")
+                    alarm_trend[day_key] = alarm_trend.get(day_key, 0) + 1
+            except:
+                pass
+                
+        # Format trends for recharts
+        all_days = sorted(list(set(list(traffic_trend.keys()) + list(alarm_trend.keys()))))
+        trend_data = []
+        for day in all_days:
+            trend_data.append({
+                "date": day,
+                "requests": traffic_trend.get(day, 0),
+                "alarms": alarm_trend.get(day, 0)
+            })
+            
+        # Format category data
+        cat_data = []
+        for cat, count in category_distribution.items():
+            cat_data.append({"name": cat, "value": count})
+            
+        return {
+            "status": "success",
+            "metrics": {
+                "total_requests": total_requests,
+                "total_alarms": total_alarms,
+                "resolved": resolved_alarms,
+                "dismissed": dismissed_alarms,
+                "pending": pending_alarms
+            },
+            "category_data": cat_data,
+            "trend_data": trend_data
+        }
     except Exception as e:
         return {"status": "error", "message": str(e)}

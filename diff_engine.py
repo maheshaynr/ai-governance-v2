@@ -6,6 +6,7 @@ import logging
 from notifications import EmailNotifier
 
 ALARMS_FILE = "alarms.json"
+ARCHIVE_FILE = "alarms_archive.json"
 
 def load_alarms():
     if not os.path.exists(ALARMS_FILE):
@@ -16,11 +17,25 @@ def load_alarms():
     except:
         return []
 
+def load_archive():
+    if not os.path.exists(ARCHIVE_FILE):
+        return []
+    try:
+        with open(ARCHIVE_FILE, "r") as f:
+            return json.load(f)
+    except:
+        return []
+
 def save_alarm(alarm):
     alarms = load_alarms()
     alarms.insert(0, alarm)  # Prepend new alarm
     with open(ALARMS_FILE, "w") as f:
         json.dump(alarms, f, indent=2)
+
+    archive = load_archive()
+    archive.insert(0, alarm)
+    with open(ARCHIVE_FILE, "w") as f:
+        json.dump(archive, f, indent=2)
 
 def generate_alarm(raw_text: str, missing_finding: dict, l1_entities: list, l2_entities: list):
     """

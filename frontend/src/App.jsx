@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import Dashboard from './Dashboard';
 import AdminConfig from './AdminConfig';
+import AnalyticsDashboard from './AnalyticsDashboard';
 import { fetchAlarms } from './api';
 
 function App() {
@@ -33,6 +34,12 @@ function App() {
               Testing Dashboard
             </button>
             <button 
+              className={activeTab === 'analytics' ? 'active' : ''} 
+              onClick={() => setActiveTab('analytics')}
+            >
+              Analytics & Metrics
+            </button>
+            <button 
               className={activeTab === 'admin' ? 'active' : ''} 
               onClick={() => setActiveTab('admin')}
             >
@@ -52,7 +59,9 @@ function App() {
       </div>
 
       <main>
-        {activeTab === 'dashboard' ? <Dashboard /> : <AdminConfig />}
+        {activeTab === 'dashboard' && <Dashboard />}
+        {activeTab === 'analytics' && <AnalyticsDashboard />}
+        {activeTab === 'admin' && <AdminConfig />}
       </main>
     </div>
   );
