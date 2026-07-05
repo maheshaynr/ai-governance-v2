@@ -405,8 +405,13 @@ export default function AdminConfig() {
                     <span style={{ color: '#57606a', fontSize: '0.85rem' }}>{new Date(alarm.timestamp).toLocaleString()}</span>
                   </div>
                   
-                  <div style={{ backgroundColor: '#f6f8fa', padding: '0.75rem', borderRadius: '6px', marginBottom: '0.75rem', fontFamily: 'monospace', fontSize: '0.9rem' }}>
-                    Value: <strong>{alarm.missed_entity.value_preview}</strong>
+                  <div style={{ backgroundColor: '#f6f8fa', padding: '0.75rem', borderRadius: '6px', marginBottom: '0.75rem', fontSize: '0.9rem' }}>
+                    <div style={{ marginBottom: '0.5rem', fontStyle: 'italic', color: '#57606a' }}>
+                      "{alarm.context_snippet}"
+                    </div>
+                    <div>
+                      Extracted Value: <strong style={{fontFamily: 'monospace'}}>{alarm.missed_entity.value_preview}</strong>
+                    </div>
                   </div>
                   
                   <div style={{ marginBottom: '1rem' }}>
@@ -434,7 +439,7 @@ export default function AdminConfig() {
                       setFormData({ name: `New_${alarm.missed_entity.type}`, entity: alarm.missed_entity.type, regex: '', score: 0.85, is_builtin: false, is_algorithmic: false });
                       setFormMessage({ type: 'success', text: `Auto-filled form for ${alarm.missed_entity.type}. Please define Regex or select Built-in AI.`});
                     }}>
-                      Confirm & Create Rule
+                      Create Rule for '{alarm.missed_entity.type}'
                     </button>
                     <button className="secondary">Dismiss (False Positive)</button>
                   </div>
