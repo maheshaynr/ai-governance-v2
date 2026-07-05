@@ -1,0 +1,16 @@
+[
+    {
+        "timestamp": "2026-07-05T17:32:02.008126",
+        "pii_masked_input": "AI_HASH:84525f27",
+        "final_rewrite": "Customer requested a wire transfer to their European account. Please process payment to IBAN GB29NWBK30123456789012 immediately.",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-05T17:32:04.875391",
+        "pii_masked_input": "AI_HASH:46bae50b",
+        "final_rewrite": "My name is <PERSON> and my OpenAI API key is sk-proj-4P9kLmN8xY2ZaBcDeFgHiJkLmNoPqRsTuVwXyZ0123456789AbCdEfGhIjKlMnOpQrStUv. Please don't share it.",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
+    }
+]

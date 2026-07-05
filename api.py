@@ -294,7 +294,7 @@ CRITICAL: The existing entities in our rule engine are: {existing_entities}.
 If your suggested meaningful name already exists in this list, you MUST append a number to make it unique (e.g. OPEN_AI_API_KEY_2).
 Do NOT include any markdown formatting or explanation."""
     
-    user_prompt = f"The primary engine missed a sensitive entity of type '{request.missed_entity_type}'. Specifically, it missed the value starting with '{request.value_preview}'. Here is the full context statement:\n\n{request.context_snippet}\n\nProvide the JSON with a regex to specifically catch that extracted value and suggest the correct highly meaningful Entity Class."
+    user_prompt = f"The primary engine missed a sensitive entity (currently broadly categorized as '{request.missed_entity_type}'). Specifically, it missed the value starting with '{request.value_preview}'. Here is the full context statement:\n\n{request.context_snippet}\n\nProvide the JSON with a regex to specifically catch that extracted value. You MUST deduce a highly specific, meaningful Entity Class from the context (e.g. if it mentions an API key, use OPENAI_API_KEY, NOT the broad category '{request.missed_entity_type}')."
     
     messages = [
         {"role": "system", "content": SYSTEM_PROMPT},
