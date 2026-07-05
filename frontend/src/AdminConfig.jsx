@@ -19,7 +19,7 @@ export default function AdminConfig() {
   const [editingSubscriber, setEditingSubscriber] = useState(null);
   
   const [formData, setFormData] = useState({ name: '', entity: '', regex: '', score: 0.85, is_builtin: false, is_algorithmic: false });
-  const [subFormData, setSubFormData] = useState({ user_name: '', role: '', alert_type: 'ALL', teams_webhook: '', email: '' });
+  const [subFormData, setSubFormData] = useState({ user_name: '', role: '', alert_type: 'ALL', email: '' });
   
   const [formMessage, setFormMessage] = useState(null);
   const [subFormMessage, setSubFormMessage] = useState(null);
@@ -167,13 +167,13 @@ export default function AdminConfig() {
 
   const handleEditSubscriberClick = (s) => {
     setEditingSubscriber(s);
-    setSubFormData({ user_name: s.user_name, role: s.role, alert_type: s.alert_type, teams_webhook: s.teams_webhook || '', email: s.email || '' });
+    setSubFormData({ user_name: s.user_name, role: s.role, alert_type: s.alert_type, email: s.email || '' });
     setSubFormMessage(null);
   };
 
   const handleCancelEditSubscriber = () => {
     setEditingSubscriber(null);
-    setSubFormData({ user_name: '', role: '', alert_type: 'ALL', teams_webhook: '', email: '' });
+    setSubFormData({ user_name: '', role: '', alert_type: 'ALL', email: '' });
     setSubFormMessage(null);
   };
 
@@ -183,8 +183,8 @@ export default function AdminConfig() {
       setSubFormMessage({ type: 'error', text: 'Name and Role are required.' });
       return;
     }
-    if (!subFormData.teams_webhook && !subFormData.email) {
-      setSubFormMessage({ type: 'error', text: 'At least one notification method (Webhook or Email) is required.' });
+    if (!subFormData.email) {
+      setSubFormMessage({ type: 'error', text: 'Email is required.' });
       return;
     }
     
@@ -196,7 +196,7 @@ export default function AdminConfig() {
         if (res.status === 'success') {
           setSubFormMessage({ type: 'success', text: 'Subscriber updated!' });
           setEditingSubscriber(null);
-          setSubFormData({ user_name: '', role: '', alert_type: 'ALL', teams_webhook: '', email: '' });
+          setSubFormData({ user_name: '', role: '', alert_type: 'ALL', email: '' });
           loadSubscribers();
         } else {
           setSubFormMessage({ type: 'error', text: res.message });
@@ -205,7 +205,7 @@ export default function AdminConfig() {
         const res = await addSubscriber(subFormData);
         if (res.status === 'success') {
           setSubFormMessage({ type: 'success', text: 'Subscriber added!' });
-          setSubFormData({ user_name: '', role: '', alert_type: 'ALL', teams_webhook: '', email: '' });
+          setSubFormData({ user_name: '', role: '', alert_type: 'ALL', email: '' });
           loadSubscribers();
         } else {
           setSubFormMessage({ type: 'error', text: res.message });
@@ -563,11 +563,6 @@ export default function AdminConfig() {
                 <div className="form-group">
                   <label>Email Address</label>
                   <input type="email" value={subFormData.email} onChange={e => setSubFormData({...subFormData, email: e.target.value})} placeholder="jane.doe@company.com" />
-                </div>
-                <div className="form-group">
-                  <label>Microsoft Teams Webhook URL</label>
-                  <input type="text" value={subFormData.teams_webhook} onChange={e => setSubFormData({...subFormData, teams_webhook: e.target.value})} placeholder="https://yourcompany.webhook.office.com/..." />
-                  <small className="help-text">Create an Incoming Webhook connector in your Teams channel and paste the URL here.</small>
                 </div>
                 <div style={{marginTop: '1rem', display: 'flex', gap: '1rem', alignItems: 'center'}}>
                   <button type="submit" className="primary" disabled={isSaving}>

@@ -64,8 +64,7 @@
     {
       "user_name": "Mahesh",
       "role": "Global Admin",
-      "alert_type": "ALL",
-      "teams_webhook": "https://teams.microsoft.com/l/channel/19%3ATnkAOAGj3MHu46VvCjeQzE3lna-JADR1Jc6t5oQfks01%40thread.tacv2/Security_Alerts_Test?groupId=1bfa881c-d2ed-43e1-9938-e5ec9f1aec5b&tenantId=93aa23a4-6ee1-4601-8592-31a762489359&ngc=true"
+      "alert_type": "ALL"
     }
   ]
 }

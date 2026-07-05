@@ -3,7 +3,7 @@ import os
 import uuid
 from datetime import datetime
 import logging
-from notifications import TeamsNotifier, EmailNotifier
+from notifications import EmailNotifier
 
 ALARMS_FILE = "alarms.json"
 
@@ -68,9 +68,6 @@ def generate_alarm(raw_text: str, missing_finding: dict, l1_entities: list, l2_e
             for sub in subscribers:
                 # If subscriber wants ALL alerts, or their type matches the category, or it's UNCATEGORIZED (send to ALL)
                 if sub.get("alert_type") == "ALL" or sub.get("alert_type") == category or (category == "UNCATEGORIZED" and sub.get("alert_type") == "ALL"):
-                    # Send MS Teams Alert if configured
-                    if sub.get("teams_webhook"):
-                        TeamsNotifier.send_alarm_alert(sub.get("teams_webhook"), alarm, f"{sub.get('role')} ({sub.get('alert_type')})")
                     # Send Email Alert if configured
                     if sub.get("email"):
                         EmailNotifier.send_alarm_email(sub.get("email"), alarm, f"{sub.get('role')} ({sub.get('alert_type')})")
