@@ -17,7 +17,7 @@
     "layer2_findings": [
       "Authentication Data"
     ],
-    "status": "PENDING_REVIEW"
+    "status": "RESOLVED"
   },
   {
     "alarm_id": "ALM-20260705-1678c445",

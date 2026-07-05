@@ -174,9 +174,9 @@ export default function AnalyticsDashboard() {
                   <Pie
                     data={statusData}
                     cx="50%"
-                    cy="50%"
-                    innerRadius={75}
-                    outerRadius={115}
+                    cy="45%"
+                    innerRadius={65}
+                    outerRadius={95}
                     paddingAngle={5}
                     dataKey="value"
                     stroke="none"

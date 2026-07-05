@@ -67,6 +67,15 @@
       "is_builtin": false,
       "is_algorithmic": false,
       "is_active": true
+    },
+    {
+      "name": "AutoFix_OPENAI_API_KEY",
+      "entity": "OPENAI_API_KEY",
+      "regex": "\\bsk-proj-[a-zA-Z0-9]+\\b",
+      "score": 0.85,
+      "is_builtin": false,
+      "is_algorithmic": false,
+      "is_active": true
     }
   ],
   "notification_subscribers": [
