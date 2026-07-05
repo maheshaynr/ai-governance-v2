@@ -335,5 +335,12 @@
         "final_rewrite": "My name is <PERSON> and my AWS API key is sk-live-abc123xyz. Please don't share it.",
         "fidelity_score": 1.0,
         "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-05T09:11:08.004751",
+        "pii_masked_input": "AI_HASH:748f48ca",
+        "final_rewrite": "My name is <PERSON> and my AWS API key is sk-live-abc123xyz. Please don't share it.",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
     }
 ]

@@ -8,14 +8,14 @@ function App() {
   const [alarms, setAlarms] = useState([]);
 
   useEffect(() => {
-    // Poll for background alarms every 20 seconds
+    // Poll for background alarms every 5 seconds
     const interval = setInterval(() => {
       fetchAlarms().then(data => {
         if (data.alarms) {
           setAlarms(data.alarms);
         }
       }).catch(e => console.error(e));
-    }, 20000);
+    }, 5000);
     
     return () => clearInterval(interval);
   }, []);
