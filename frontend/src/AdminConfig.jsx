@@ -434,13 +434,13 @@ export default function AdminConfig() {
                     <div style={{ flex: 1, backgroundColor: '#ffebe9', padding: '0.75rem', borderRadius: '6px', border: '1px solid #ff8182' }}>
                       <strong>Primary Engine Found:</strong>
                       <div style={{ fontSize: '0.9rem', color: '#cf222e', marginTop: '0.5rem' }}>
-                        {alarm.layer1_findings.length > 0 ? alarm.layer1_findings.join(', ') : 'Nothing'}
+                        {alarm.layer1_findings.length > 0 ? Array.from(new Set(alarm.layer1_findings)).join(', ') : 'Nothing'}
                       </div>
                     </div>
                     <div style={{ flex: 1, backgroundColor: '#dafbe1', padding: '0.75rem', borderRadius: '6px', border: '1px solid #4ac26b' }}>
                       <strong>LLM Watchdog Found:</strong>
                       <div style={{ fontSize: '0.9rem', color: '#1a7f37', marginTop: '0.5rem' }}>
-                        {alarm.layer2_findings.length > 0 ? alarm.layer2_findings.join(', ') : 'Nothing'}
+                        {alarm.layer2_findings.length > 0 ? Array.from(new Set(alarm.layer2_findings)).join(', ') : 'Nothing'}
                       </div>
                     </div>
                   </div>

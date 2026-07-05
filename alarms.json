@@ -1,20 +1,23 @@
 [
   {
-    "alarm_id": "ALM-20260705-0ceca230",
+    "alarm_id": "ALM-20260705-b569b966",
     "severity": "HIGH",
-    "timestamp": "2026-07-05T03:44:02.852580Z",
+    "category": "UNCATEGORIZED",
+    "timestamp": "2026-07-05T05:38:14.968627Z",
     "missed_entity": {
-      "type": "Authentication Data",
-      "value_preview": "AWS API key: sk...",
-      "reason": "No reason provided",
+      "type": "Authentication data",
+      "value_preview": "sk-live-abc123x...",
+      "reason": "Sensitive authentication detail that should not be shared publicly or in insecure ways.",
       "detected_by": "phi-4-mini"
     },
-    "context_snippet": "My name is Mahesh and my AWS API key is sk-live-abc123xyz. Please don't share it.",
+    "context_snippet": "My name is Mahesh , my pan is ABCPD1234F and my AWS API key is sk-live-abc123xyz. Please don't share it.",
     "layer1_findings": [
+      "IN_PAN",
       "PERSON"
     ],
     "layer2_findings": [
-      "Authentication Data"
+      "Authentication data",
+      "Authentication data"
     ],
     "status": "PENDING_REVIEW"
   }
