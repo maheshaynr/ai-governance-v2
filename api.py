@@ -288,7 +288,6 @@ You must output ONLY valid JSON matching this EXACT schema:
   "regex": "valid_regex_pattern"
 }}
 Ensure the regex uses word boundaries (\\b) instead of string anchors (^ or $) because the sensitive data will be found in the middle of sentences. 
-Do NOT use strict digit counts (like \\d{{14}}) if you are unsure of the exact length, use flexible quantifiers (like \\d{{8,20}}) or match the preview format exactly.
 The 'entity' field MUST be formatted in UPPER_CASE_WITH_UNDERSCORES (e.g. OPEN_AI_API_KEY, IBAN_NUMBER) and it MUST be a highly meaningful name specific to the data being extracted. Do NOT use generic names like AUTHENTICATION_DATA.
 
 CRITICAL: The existing entities in our rule engine are: {existing_entities}. 
