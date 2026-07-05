@@ -642,8 +642,8 @@ export default function AdminConfig() {
                       <td style={{ padding: '0.75rem' }}>{s.role}</td>
                       <td style={{ padding: '0.75rem' }}>
                         <span style={{ 
-                          backgroundColor: s.alert_type === 'FINANCIAL' ? '#ddf4ff' : s.alert_type === 'HIPAA' ? '#dafbe1' : s.alert_type === 'GDPR' ? '#fff8c5' : '#f3e8ff', 
-                          color: s.alert_type === 'FINANCIAL' ? '#0969da' : s.alert_type === 'HIPAA' ? '#1a7f37' : s.alert_type === 'GDPR' ? '#9a6700' : '#7e22ce', 
+                          backgroundColor: s.alert_type === 'AUTHENTICATION' ? '#ede9fe' : s.alert_type === 'FINANCIAL' ? '#ddf4ff' : s.alert_type === 'HIPAA' ? '#dafbe1' : s.alert_type === 'GDPR' ? '#fff8c5' : '#f3e8ff', 
+                          color: s.alert_type === 'AUTHENTICATION' ? '#8b5cf6' : s.alert_type === 'FINANCIAL' ? '#0969da' : s.alert_type === 'HIPAA' ? '#1a7f37' : s.alert_type === 'GDPR' ? '#9a6700' : '#7e22ce', 
                           padding: '2px 6px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: '600' 
                         }}>
                           {s.alert_type}
@@ -681,6 +681,7 @@ export default function AdminConfig() {
                   >
                     <option value="ALL">ALL (Global Admin / Uncategorized)</option>
                     <option value="FINANCIAL">FINANCIAL (PCI-DSS / Banking)</option>
+                    <option value="AUTHENTICATION">AUTHENTICATION (API Keys / Credentials)</option>
                     <option value="HIPAA">HIPAA (Protected Health Info)</option>
                     <option value="GDPR">GDPR (General Privacy / EU)</option>
                   </select>
