@@ -1,4 +1,7 @@
 {
+  "settings": {
+    "enable_llm_watchdog": true
+  },
   "rules": [
     {
       "name": "Standard_Person_Names",

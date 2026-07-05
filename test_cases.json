@@ -1,32 +1,39 @@
 {
   "tests": [
     {
-      "id": "TC-004",
-      "summary": "Live Agentic Chatbot (phi4-mini)",
+      "id": "TC-001",
+      "summary": "Live Agentic Chatbot",
       "type": "chatbot",
       "payload": "Can you give me the details for customer 101?",
       "expected_behavior": "The AI should autonomously query the database for customer 101, synthesize an answer with the raw data, and the Shield should intercept and mask the PII before displaying it."
     },
     {
-      "id": "TC-001",
+      "id": "TC-002",
       "summary": "The False Positive (Aadhaar Checksum)",
       "type": "ai_generative",
       "payload": "Cancel order number 9999 4105 7059.",
       "expected_behavior": "Should NOT be masked because it ends in 9, which fails the Verhoeff mathematical checksum for Aadhaar."
     },
     {
-      "id": "TC-002",
+      "id": "TC-003",
       "summary": "Secure Database Retrieval (Customer 101)",
       "type": "db_query",
       "payload": "101",
       "expected_behavior": "Should retrieve raw data for Customer 101 from SQLite and successfully mask the SSN/PII."
     },
     {
-      "id": "TC-003",
+      "id": "TC-004",
       "summary": "AI Hallucination Shield (PAN Card)",
       "type": "ai_generative",
       "payload": "Please use the corporate credit card 4111-2222-3333-4444 and reference PAN Card ABCPD1234F.",
       "expected_behavior": "Simulates AI outputting PII. Should mask both the credit card and the PAN Card."
+    },
+    {
+      "id": "TC-005",
+      "summary": "The Layer 2 Watchdog (API Key Leak)",
+      "type": "ai_generative",
+      "payload": "My name is Mahesh and my AWS API key is sk-live-abc123xyz. Please don't share it.",
+      "expected_behavior": "Layer 1 will mask Mahesh to PERSON but will miss the API key. Layer 2 will catch the API key in the background and trigger an alarm in the Admin UI."
     }
   ]
 }

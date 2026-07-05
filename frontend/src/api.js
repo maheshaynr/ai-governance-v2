@@ -37,6 +37,20 @@ export async function deleteRule(name) {
   return res.json();
 }
 
+export async function fetchAlarms() {
+  const res = await fetch(`${API_BASE}/alarms`);
+  return res.json();
+}
+
+export async function toggleWatchdog(enable_llm_watchdog) {
+  const res = await fetch(`${API_BASE}/toggle_watchdog`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ enable_llm_watchdog })
+  });
+  return res.json();
+}
+
 export async function queryDb(customerId) {
   const res = await fetch(`${API_BASE}/query_db`, {
     method: 'POST',

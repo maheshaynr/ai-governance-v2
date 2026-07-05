@@ -1,7 +1,7 @@
 import json
 import requests
 import re
-from fastapi import FastAPI
+from fastapi import FastAPI, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from presidio_analyzer import AnalyzerEngine, PatternRecognizer, Pattern
@@ -10,6 +10,8 @@ import hashlib
 from audit_logger import AuditLogger
 from custom_recognizers import AadhaarRecognizer
 import database
+import llm_watchdog
+import diff_engine
 
 app = FastAPI(title="AI Governance API")
 
@@ -101,21 +103,34 @@ class ChatResponse(BaseModel):
     status: str
 
 # --- 3. The Universal Guardrail Function ---
-def apply_egress_guardrail(raw_text: str) -> str:
+def apply_egress_guardrail(raw_text: str):
     # We explicitly define the entities we want to track using the global ACTIVE_ENTITIES.
     # This includes both our hardcoded defaults and dynamic JSON rules.
     results = analyzer.analyze(text=raw_text, language='en', entities=ACTIVE_ENTITIES, score_threshold=0.5)
     anonymized_result = anonymizer.anonymize(text=raw_text, analyzer_results=results)
-    return anonymized_result.text
+    return anonymized_result.text, results
+
+def run_watchdog_task(raw_text: str, layer1_results):
+    try:
+        with open("pii_rules.json", "r") as f:
+            settings = json.load(f).get("settings", {})
+            if not settings.get("enable_llm_watchdog", False):
+                return
+    except:
+        return
+        
+    l2_res = llm_watchdog.analyze_text(raw_text)
+    diff_engine.run_diff(raw_text, layer1_results, l2_res)
 
 # --- 4. Endpoints ---
 @app.post("/query_db", response_model=GovernResponse)
-def query_database(request: DbQueryRequest):
+def query_database(request: DbQueryRequest, background_tasks: BackgroundTasks):
     # 1. Fetch raw data
     raw_data = database.get_customer_profile(request.customer_id)
     
     # 2. Universal Egress Guardrail
-    masked_output = apply_egress_guardrail(raw_data)
+    masked_output, l1_results = apply_egress_guardrail(raw_data)
+    background_tasks.add_task(run_watchdog_task, raw_data, l1_results)
     
     # 3. Secure Audit Logging
     raw_hash = hashlib.sha256(raw_data.encode()).hexdigest()
@@ -129,9 +144,10 @@ def query_database(request: DbQueryRequest):
     return GovernResponse(masked_output=masked_output, status="success")
 
 @app.post("/govern_ai", response_model=GovernResponse)
-def govern_ai_output(request: GenerativeRequest):
+def govern_ai_output(request: GenerativeRequest, background_tasks: BackgroundTasks):
     # This simulates receiving output FROM an AI model before sending to user.
-    masked_output = apply_egress_guardrail(request.text)
+    masked_output, l1_results = apply_egress_guardrail(request.text)
+    background_tasks.add_task(run_watchdog_task, request.text, l1_results)
     
     raw_hash = hashlib.sha256(request.text.encode()).hexdigest()
     AuditLogger.log_transaction(
@@ -143,7 +159,7 @@ def govern_ai_output(request: GenerativeRequest):
     return GovernResponse(masked_output=masked_output, status="success")
 
 @app.post("/chat", response_model=ChatResponse)
-def chat_agent(request: ChatRequest):
+def chat_agent(request: ChatRequest, background_tasks: BackgroundTasks):
     OLLAMA_URL = "http://localhost:11434/api/chat"
     SYSTEM_PROMPT = """You are an internal enterprise AI with access to a customer database. 
 If the user asks for details about a specific customer, you MUST output ONLY the command <FETCH_DB:ID> where ID is the customer number (e.g. <FETCH_DB:101>). 
@@ -199,7 +215,8 @@ If you are provided with data, summarize it naturally and helpfully."""
             ai_message = resp2.json()["message"]["content"]
             
         # Step 3: Apply Guardrail
-        masked_message = apply_egress_guardrail(ai_message)
+        masked_message, l1_results = apply_egress_guardrail(ai_message)
+        background_tasks.add_task(run_watchdog_task, ai_message, l1_results)
         
         # Secure Audit Logging
         raw_hash = hashlib.sha256(ai_message.encode()).hexdigest()
@@ -221,7 +238,32 @@ def get_rules():
         with open("pii_rules.json", "r") as f:
             return json.load(f)
     except Exception as e:
-        return {"rules": []}
+        return {"rules": [], "settings": {}}
+
+@app.get("/alarms")
+def get_alarms():
+    import diff_engine
+    return {"alarms": diff_engine.load_alarms()}
+
+class ToggleRequest(BaseModel):
+    enable_llm_watchdog: bool
+
+@app.post("/toggle_watchdog")
+def toggle_watchdog(request: ToggleRequest):
+    try:
+        with open("pii_rules.json", "r") as f:
+            data = json.load(f)
+        
+        if "settings" not in data:
+            data["settings"] = {}
+        data["settings"]["enable_llm_watchdog"] = request.enable_llm_watchdog
+        
+        with open("pii_rules.json", "w") as f:
+            json.dump(data, f, indent=2)
+            
+        return {"status": "success"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
 
 @app.get("/test_cases")
 def get_test_cases():
