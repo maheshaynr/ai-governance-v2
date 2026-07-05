@@ -28,12 +28,8 @@ export default function AdminConfig() {
   useEffect(() => {
     if (loggedIn) {
       loadRules();
-      if (activeTab === 'alarms') {
-        loadAlarms();
-      }
-      if (activeTab === 'routing') {
-        loadSubscribers();
-      }
+      loadAlarms();
+      loadSubscribers();
     }
   }, [loggedIn, activeTab]);
 
