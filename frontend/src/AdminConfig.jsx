@@ -565,46 +565,48 @@ export default function AdminConfig() {
                     <span style={{ color: '#57606a', fontSize: '0.85rem' }}>{new Date(alarm.timestamp).toLocaleString()}</span>
                   </div>
                   
-                  <div style={{ backgroundColor: '#f6f8fa', padding: '0.75rem', borderRadius: '6px', marginBottom: '0.75rem', fontSize: '0.9rem' }}>
-                    <div style={{ marginBottom: '0.5rem', fontStyle: 'italic', color: '#57606a' }}>
-                      "{alarm.context_snippet}"
-                    </div>
-                    <div>
-                      Extracted Value: <strong style={{fontFamily: 'monospace'}}>{alarm.missed_entity.value_preview}</strong>
-                    </div>
-                  </div>
-                  
-                  <div style={{ marginBottom: '1rem' }}>
-                    <strong>Reason given by AI:</strong> {alarm.missed_entity.reason}
-                  </div>
-                  
-                  <div style={{ display: 'flex', gap: '1rem' }}>
-                    <div style={{ flex: 1, backgroundColor: '#ffebe9', padding: '0.75rem', borderRadius: '6px', border: '1px solid #ff8182' }}>
-                      <strong>Primary Engine Found:</strong>
-                      <div style={{ fontSize: '0.9rem', color: '#cf222e', marginTop: '0.5rem' }}>
-                        {alarm.layer1_findings.length > 0 ? Array.from(new Set(alarm.layer1_findings)).join(', ') : 'Nothing'}
+                  <div style={{ padding: '0 1rem 1rem 1rem' }}>
+                    <div style={{ backgroundColor: '#f6f8fa', padding: '0.75rem', borderRadius: '6px', marginBottom: '0.75rem', fontSize: '0.9rem' }}>
+                      <div style={{ marginBottom: '0.5rem', fontStyle: 'italic', color: '#57606a' }}>
+                        "{alarm.context_snippet}"
+                      </div>
+                      <div>
+                        Leaked Data Snippet: <strong style={{fontFamily: 'monospace'}}>{alarm.missed_entity.value_preview}</strong>
                       </div>
                     </div>
-                    <div style={{ flex: 1, backgroundColor: '#dafbe1', padding: '0.75rem', borderRadius: '6px', border: '1px solid #4ac26b' }}>
-                      <strong>LLM Watchdog Found:</strong>
-                      <div style={{ fontSize: '0.9rem', color: '#1a7f37', marginTop: '0.5rem' }}>
-                        {alarm.layer2_findings.length > 0 ? Array.from(new Set(alarm.layer2_findings)).join(', ') : 'Nothing'}
+                    
+                    <div style={{ marginBottom: '1rem' }}>
+                      <strong>Reason given by AI:</strong> {alarm.missed_entity.reason}
+                    </div>
+                    
+                    <div style={{ display: 'flex', gap: '1rem' }}>
+                      <div style={{ flex: 1, backgroundColor: '#ffebe9', padding: '0.75rem', borderRadius: '6px', border: '1px solid #ff8182' }}>
+                        <strong>Primary Engine Found:</strong>
+                        <div style={{ fontSize: '0.9rem', color: '#cf222e', marginTop: '0.5rem' }}>
+                          {alarm.layer1_findings.length > 0 ? Array.from(new Set(alarm.layer1_findings)).join(', ') : 'Nothing'}
+                        </div>
+                      </div>
+                      <div style={{ flex: 1, backgroundColor: '#dafbe1', padding: '0.75rem', borderRadius: '6px', border: '1px solid #4ac26b' }}>
+                        <strong>LLM Watchdog Found:</strong>
+                        <div style={{ fontSize: '0.9rem', color: '#1a7f37', marginTop: '0.5rem' }}>
+                          {alarm.layer2_findings.length > 0 ? Array.from(new Set(alarm.layer2_findings)).join(', ') : 'Nothing'}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  
-                  <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem' }}>
-                    <button className="secondary" onClick={() => handleOpenSandbox(alarm)} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', backgroundColor: '#fff', color: '#4682b4', border: '1px solid #4682b4' }}>
-                      🛠️ Fix & Replay Sandbox
-                    </button>
-                    <button className="secondary" onClick={() => {
-                      setActiveTab('rules');
-                      setFormData({ name: `New_${alarm.missed_entity.type}`, entity: alarm.missed_entity.type, regex: '', score: 0.85, is_builtin: false, is_algorithmic: false, is_active: true });
-                      setFormMessage({ type: 'success', text: `Auto-filled form for ${alarm.missed_entity.type}. Please define Regex or select Built-in AI.`});
-                    }} style={{ backgroundColor: '#fff', color: '#4682b4', border: '1px solid #4682b4' }}>
-                      ➕ Create Rule for '{alarm.missed_entity.type}'
-                    </button>
-                    <button className="secondary" onClick={() => handleDismissAlarm(alarm.alarm_id)} style={{ color: '#4682b4', border: '1px solid #4682b4', backgroundColor: '#fff' }}>🚫 Dismiss (False Positive)</button>
+                    
+                    <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem' }}>
+                      <button className="secondary" onClick={() => handleOpenSandbox(alarm)} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', backgroundColor: '#fff', color: '#4682b4', border: '1px solid #4682b4' }}>
+                        🛠️ Fix & Replay Sandbox
+                      </button>
+                      <button className="secondary" onClick={() => {
+                        setActiveTab('rules');
+                        setFormData({ name: `New_${alarm.missed_entity.type}`, entity: alarm.missed_entity.type, regex: '', score: 0.85, is_builtin: false, is_algorithmic: false, is_active: true });
+                        setFormMessage({ type: 'success', text: `Auto-filled form for ${alarm.missed_entity.type}. Please define Regex or select Built-in AI.`});
+                      }} style={{ backgroundColor: '#fff', color: '#4682b4', border: '1px solid #4682b4' }}>
+                        ➕ Create Rule
+                      </button>
+                      <button className="secondary" onClick={() => handleDismissAlarm(alarm.alarm_id)} style={{ color: '#4682b4', border: '1px solid #4682b4', backgroundColor: '#fff' }}>🚫 Dismiss (False Positive)</button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -725,7 +727,7 @@ export default function AdminConfig() {
             <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end', marginBottom: '1.5rem' }}>
               <div style={{ flex: 1 }}>
                 <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>Entity Class</label>
-                <input type="text" value={sandboxFormData.entity} onChange={e => setSandboxFormData({...sandboxFormData, entity: e.target.value})} style={{ width: '100%' }} />
+                <input type="text" value={sandboxFormData.entity} onChange={e => setSandboxFormData({...sandboxFormData, entity: e.target.value})} style={{ width: '100%' }} placeholder="e.g., OPEN_AI_API_KEY" />
               </div>
               <div style={{ flex: 2 }}>
                 <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>Regex Pattern</label>
