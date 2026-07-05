@@ -32,7 +32,7 @@
       "id": "TC-005",
       "summary": "The Layer 2 Watchdog (API Key Leak)",
       "type": "ai_generative",
-      "payload": "My name is Mahesh and my AWS API key is sk-live-abc123xyz. Please don't share it.",
+      "payload": "My name is Mahesh and my OpenAI API key is sk-proj-4P9kLmN8xY2ZaBcDeFgHiJkLmNoPqRsTuVwXyZ0123456789AbCdEfGhIjKlMnOpQrStUv. Please don't share it.",
       "expected_behavior": "Layer 1 will mask Mahesh to PERSON but will miss the API key. Layer 2 will catch the API key in the background and trigger an alarm in the Admin UI."
     }
   ]

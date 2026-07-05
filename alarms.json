@@ -1,77 +1,55 @@
 [
   {
-    "alarm_id": "ALM-20260705-9c0a8268",
-    "severity": "HIGH",
-    "category": "FINANCIAL",
-    "timestamp": "2026-07-05T10:24:31.955930Z",
-    "missed_entity": {
-      "type": "Financial data",
-      "value_preview": "REE12131232...",
-      "reason": "IBAN is typically linked to bank accounts and financial institutions.",
-      "detected_by": "phi-4-mini"
-    },
-    "context_snippet": "My name is Mahesh and my AWS API key is sk-live-abc123xyz and my IBAN numer is REE1213 123 Please don't share it.",
-    "layer1_findings": [
-      "PERSON"
-    ],
-    "layer2_findings": [
-      "Authentication data",
-      "Financial data"
-    ],
-    "status": "PENDING_REVIEW"
-  },
-  {
-    "alarm_id": "ALM-20260705-4ebf8f0a",
-    "severity": "HIGH",
-    "category": "FINANCIAL",
-    "timestamp": "2026-07-05T10:24:28.101796Z",
-    "missed_entity": {
-      "type": "Authentication data",
-      "value_preview": "sk-live-abc123x...",
-      "reason": "No reason provided",
-      "detected_by": "phi-4-mini"
-    },
-    "context_snippet": "My name is Mahesh and my AWS API key is sk-live-abc123xyz and my IBAN numer is REE1213 123 Please don't share it.",
-    "layer1_findings": [
-      "PERSON"
-    ],
-    "layer2_findings": [
-      "Authentication data",
-      "Financial data"
-    ],
-    "status": "PENDING_REVIEW"
-  },
-  {
-    "alarm_id": "ALM-20260705-34531726",
+    "alarm_id": "ALM-20260705-4dde6d24",
     "severity": "HIGH",
     "category": "UNCATEGORIZED",
-    "timestamp": "2026-07-05T10:23:54.517536Z",
+    "timestamp": "2026-07-05T10:29:44.489800Z",
     "missed_entity": {
-      "type": "Internal Identifiers",
-      "value_preview": "credit card det...",
-      "reason": "No reason provided",
+      "type": "IBAN",
+      "value_preview": "TE66577...",
+      "reason": "It is used for financial transactions and contains personal banking information",
       "detected_by": "phi-4-mini"
     },
-    "context_snippet": "Please use the corporate credit card 4111-2222-3333-4444 and reference PAN Card ABCPD1234F.",
+    "context_snippet": "My name is Mahesh and my AWS API key is sk-live-abc123xyz and my IBAN is TE66577. Please don't share it.",
     "layer1_findings": [
-      "CREDIT_CARD"
+      "PERSON"
     ],
     "layer2_findings": [
-      "Financial Data",
-      "Authentication Data",
-      "Internal Identifiers"
+      "API Key",
+      "IBAN"
     ],
     "status": "PENDING_REVIEW"
   },
   {
-    "alarm_id": "ALM-20260705-d461c52a",
+    "alarm_id": "ALM-20260705-e7b99940",
+    "severity": "HIGH",
+    "category": "UNCATEGORIZED",
+    "timestamp": "2026-07-05T10:29:40.360200Z",
+    "missed_entity": {
+      "type": "API Key",
+      "value_preview": "sk-live-abc123x...",
+      "reason": "It grants access to a service or application",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "My name is Mahesh and my AWS API key is sk-live-abc123xyz and my IBAN is TE66577. Please don't share it.",
+    "layer1_findings": [
+      "PERSON"
+    ],
+    "layer2_findings": [
+      "API Key",
+      "IBAN"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260705-bf829476",
     "severity": "HIGH",
     "category": "FINANCIAL",
-    "timestamp": "2026-07-05T10:23:50.264399Z",
+    "timestamp": "2026-07-05T10:28:47.218508Z",
     "missed_entity": {
-      "type": "Authentication Data",
-      "value_preview": "PAN Card ABCPD1...",
-      "reason": "No reason provided",
+      "type": "Authentication data",
+      "value_preview": "PAN PD1234F...",
+      "reason": "Personal Account Number (PAN) which is sensitive",
       "detected_by": "phi-4-mini"
     },
     "context_snippet": "Please use the corporate credit card 4111-2222-3333-4444 and reference PAN Card ABCPD1234F.",
@@ -79,9 +57,8 @@
       "CREDIT_CARD"
     ],
     "layer2_findings": [
-      "Financial Data",
-      "Authentication Data",
-      "Internal Identifiers"
+      "Financial data",
+      "Authentication data"
     ],
     "status": "PENDING_REVIEW"
   }

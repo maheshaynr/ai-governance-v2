@@ -276,7 +276,7 @@ You must output ONLY valid JSON matching this EXACT schema:
   "entity": "STANDARD_ENTITY_NAME",
   "regex": "valid_regex_pattern"
 }
-Ensure the regex uses word boundaries if appropriate and correctly catches the data. The regex should be based on PII Presidio library format. Do NOT include any markdown formatting or explanation."""
+Ensure the regex uses word boundaries if appropriate and correctly catches the data. The regex should be based on PII Presidio library format. The 'entity' field MUST be formatted in UPPER_CASE_WITH_UNDERSCORES (e.g. OPEN_AI_API_KEY). Do NOT include any markdown formatting or explanation."""
     
     user_prompt = f"The primary engine missed a sensitive entity of type '{request.missed_entity_type}'. Specifically, it missed the value starting with '{request.value_preview}'. Here is the full context statement:\n\n{request.context_snippet}\n\nProvide the JSON with a regex to specifically catch that extracted value and suggest the correct Entity Class."
     

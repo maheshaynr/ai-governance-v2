@@ -588,17 +588,17 @@ export default function AdminConfig() {
                   </div>
                   
                   <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem' }}>
-                    <button className="primary" onClick={() => handleOpenSandbox(alarm)} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', backgroundColor: '#4682b4', borderColor: '#4682b4' }}>
+                    <button className="secondary" onClick={() => handleOpenSandbox(alarm)} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', backgroundColor: '#fff', color: '#4682b4', border: '1px solid #4682b4' }}>
                       🛠️ Fix & Replay Sandbox
                     </button>
-                    <button className="primary" onClick={() => {
+                    <button className="secondary" onClick={() => {
                       setActiveTab('rules');
                       setFormData({ name: `New_${alarm.missed_entity.type}`, entity: alarm.missed_entity.type, regex: '', score: 0.85, is_builtin: false, is_algorithmic: false, is_active: true });
                       setFormMessage({ type: 'success', text: `Auto-filled form for ${alarm.missed_entity.type}. Please define Regex or select Built-in AI.`});
-                    }} style={{ backgroundColor: '#4682b4', borderColor: '#4682b4' }}>
-                      Create Rule for '{alarm.missed_entity.type}'
+                    }} style={{ backgroundColor: '#fff', color: '#4682b4', border: '1px solid #4682b4' }}>
+                      ➕ Create Rule for '{alarm.missed_entity.type}'
                     </button>
-                    <button className="secondary" onClick={() => handleDismissAlarm(alarm.alarm_id)} style={{ color: '#4682b4', borderColor: '#4682b4', backgroundColor: '#fff' }}>Dismiss (False Positive)</button>
+                    <button className="secondary" onClick={() => handleDismissAlarm(alarm.alarm_id)} style={{ color: '#4682b4', border: '1px solid #4682b4', backgroundColor: '#fff' }}>🚫 Dismiss (False Positive)</button>
                   </div>
                 </div>
               ))}
@@ -727,11 +727,11 @@ export default function AdminConfig() {
             </div>
 
             <div style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'center', gap: '1rem' }}>
-              <button className="secondary" onClick={handleSuggestRule} disabled={sandboxLoading} style={{ fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.4rem 0.8rem' }}>
+              <button className="secondary" onClick={handleSuggestRule} disabled={sandboxLoading} style={{ fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.4rem 0.8rem', backgroundColor: '#fff', color: '#4682b4', border: '1px solid #4682b4' }}>
                 {sandboxLoading && !sandboxFormData.regex ? '⏳...' : '✨ Suggest AI Fix'}
               </button>
-              <button className="secondary" onClick={handleTestSandbox} disabled={sandboxLoading} style={{ fontSize: '0.9rem', padding: '0.4rem 0.8rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                {sandboxLoading && sandboxFormData.regex ? 'Running Sandbox...' : '🔁 Run Replay Test'}
+              <button className="secondary" onClick={handleTestSandbox} disabled={sandboxLoading} style={{ fontSize: '0.9rem', padding: '0.4rem 0.8rem', display: 'flex', alignItems: 'center', gap: '0.5rem', backgroundColor: '#fff', color: '#4682b4', border: '1px solid #4682b4' }}>
+                {sandboxLoading && sandboxFormData.regex ? '⏳ Running Sandbox...' : '🔁 Run Replay Test'}
               </button>
             </div>
 
