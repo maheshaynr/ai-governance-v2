@@ -47,5 +47,19 @@
         "final_rewrite": "My name is <PERSON> and my OpenAI API key is <OPENAI_API_KEY>. Please don't share it.",
         "fidelity_score": 1.0,
         "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-05T18:23:19.695945",
+        "pii_masked_input": "AI_HASH:e767eb33",
+        "final_rewrite": "Please charge the renewal fee to my Visa card 4000 1234 5678 9010.",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-05T18:24:40.445353",
+        "pii_masked_input": "AI_HASH:e767eb33",
+        "final_rewrite": "Please charge the renewal fee to my Visa card 4000 1234 5678 9010.",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
     }
 ]

@@ -44,10 +44,10 @@
     },
     {
       "id": "TC-FIN-01",
-      "summary": "[FINANCIAL] Credit Card in Chat",
+      "summary": "[FINANCIAL] Credit Card in Chat (Layer 2 Threat Test)",
       "type": "ai_generative",
       "payload": "Please charge the renewal fee to my Visa card 4000 1234 5678 9010.",
-      "expected_behavior": "Should be intercepted as PCI-DSS data and masked before logging."
+      "expected_behavior": "Layer 1 will ignore this because it fails the Luhn checksum (invalid card). Layer 2 Watchdog will catch it semantically and trigger a Threat Alarm, perfect for testing 'False Dismissal' workflows."
     },
     {
       "id": "TC-FIN-02",
