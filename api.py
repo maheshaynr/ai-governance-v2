@@ -600,7 +600,10 @@ def get_analytics(timeframe: str = "24h"):
                     log_time = datetime.fromisoformat(log["timestamp"].replace("Z", ""))
                     if log_time >= cutoff:
                         total_requests += 1
-                        day_key = log_time.strftime("%Y-%m-%d")
+                        if timeframe == "24h":
+                            day_key = log_time.strftime("%H:00")
+                        else:
+                            day_key = log_time.strftime("%b %d")
                         traffic_trend[day_key] = traffic_trend.get(day_key, 0) + 1
                 except:
                     pass
@@ -635,7 +638,10 @@ def get_analytics(timeframe: str = "24h"):
                     category_distribution[cat] = category_distribution.get(cat, 0) + 1
                     
                     # Trend breakdown
-                    day_key = alarm_time.strftime("%Y-%m-%d")
+                    if timeframe == "24h":
+                        day_key = alarm_time.strftime("%H:00")
+                    else:
+                        day_key = alarm_time.strftime("%b %d")
                     alarm_trend[day_key] = alarm_trend.get(day_key, 0) + 1
             except:
                 pass
