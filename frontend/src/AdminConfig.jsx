@@ -13,6 +13,7 @@ export default function AdminConfig() {
   const [alarms, setAlarms] = useState([]);
   const [subscribers, setSubscribers] = useState([]);
   const [llmWatchdogEnabled, setLlmWatchdogEnabled] = useState(false);
+  const [isTogglingWatchdog, setIsTogglingWatchdog] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   const [editingRule, setEditingRule] = useState(null);
@@ -71,11 +72,14 @@ export default function AdminConfig() {
   };
 
   const handleToggleWatchdog = async (enabled) => {
+    setIsTogglingWatchdog(true);
     try {
       await toggleWatchdog(enabled);
       setLlmWatchdogEnabled(enabled);
     } catch (e) {
       console.error("Failed to toggle watchdog", e);
+    } finally {
+      setIsTogglingWatchdog(false);
     }
   };
 
@@ -357,12 +361,16 @@ export default function AdminConfig() {
         <div style={{display: 'flex', gap: '1rem', alignItems: 'center'}}>
           <div style={{display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#f6f8fa', padding: '0.5rem 1rem', borderRadius: '6px', border: '1px solid #d0d7de'}}>
             <label style={{margin: 0, fontWeight: '600', fontSize: '0.9rem', color: '#24292f'}}>Secondary Threat Engine:</label>
-            <label className="switch" style={{position: 'relative', display: 'inline-block', width: '40px', height: '20px'}}>
-              <input type="checkbox" checked={llmWatchdogEnabled} onChange={(e) => handleToggleWatchdog(e.target.checked)} style={{opacity: 0, width: 0, height: 0}} />
-              <span className="slider" style={{position: 'absolute', cursor: 'pointer', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: llmWatchdogEnabled ? '#2da44e' : '#cf222e', transition: '.4s', borderRadius: '20px'}}>
-                <span style={{position: 'absolute', height: '14px', width: '14px', left: llmWatchdogEnabled ? '22px' : '3px', bottom: '3px', backgroundColor: 'white', transition: '.4s', borderRadius: '50%'}}></span>
-              </span>
-            </label>
+            {isTogglingWatchdog ? (
+              <span style={{ fontSize: '0.8rem', color: '#57606a', fontStyle: 'italic', marginLeft: '0.5rem' }}>⏳ Updating...</span>
+            ) : (
+              <label className="switch" style={{position: 'relative', display: 'inline-block', width: '40px', height: '20px'}}>
+                <input type="checkbox" checked={llmWatchdogEnabled} onChange={(e) => handleToggleWatchdog(e.target.checked)} style={{opacity: 0, width: 0, height: 0}} />
+                <span className="slider" style={{position: 'absolute', cursor: 'pointer', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: llmWatchdogEnabled ? '#2da44e' : '#cf222e', transition: '.4s', borderRadius: '20px'}}>
+                  <span style={{position: 'absolute', height: '14px', width: '14px', left: llmWatchdogEnabled ? '22px' : '3px', bottom: '3px', backgroundColor: 'white', transition: '.4s', borderRadius: '50%'}}></span>
+                </span>
+              </label>
+            )}
           </div>
           <button className="secondary" onClick={() => setLoggedIn(false)}>Logout</button>
         </div>

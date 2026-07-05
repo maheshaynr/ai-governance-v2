@@ -12,5 +12,12 @@
         "final_rewrite": "My name is <PERSON> and my OpenAI API key is sk-proj-4P9kLmN8xY2ZaBcDeFgHiJkLmNoPqRsTuVwXyZ0123456789AbCdEfGhIjKlMnOpQrStUv. Please don't share it.",
         "fidelity_score": 1.0,
         "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-05T17:36:00.537348",
+        "pii_masked_input": "AI_HASH:84525f27",
+        "final_rewrite": "Customer requested a wire transfer to their European account. Please process payment to IBAN <IBAN_NUMBER> immediately.",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
     }
 ]
