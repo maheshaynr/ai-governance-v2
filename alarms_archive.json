@@ -1,5 +1,23 @@
 [
   {
+    "alarm_id": "ALM-20260705-1678c445",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-07-05T12:17:48.588825Z",
+    "missed_entity": {
+      "type": "Financial data",
+      "value_preview": "GB29NWBK3012345...",
+      "reason": "It is an international bank identifier (IBAN) which can be used to access financial accounts",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "Customer requested a wire transfer to their European account. Please process payment to IBAN GB29NWBK30123456789012 immediately.",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "Financial data"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
     "alarm_id": "ALM-20260705-79c03829",
     "severity": "HIGH",
     "category": "FINANCIAL",

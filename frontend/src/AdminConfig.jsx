@@ -33,6 +33,7 @@ export default function AdminConfig() {
   const [sandboxTestResult, setSandboxTestResult] = useState(null);
   const [sandboxLoading, setSandboxLoading] = useState(false);
   const [sandboxApplying, setSandboxApplying] = useState(false);
+  const [isReactivationWarning, setIsReactivationWarning] = useState(false);
 
   useEffect(() => {
     if (loggedIn) {
@@ -261,6 +262,7 @@ export default function AdminConfig() {
     setSandboxModalOpen(false);
     setSandboxAlarm(null);
     setSandboxTestResult(null);
+    setIsReactivationWarning(false);
   };
 
   const handleSuggestRule = async () => {
@@ -270,6 +272,7 @@ export default function AdminConfig() {
       const res = await sandboxSuggestRule(sandboxAlarm.context_snippet, sandboxAlarm.missed_entity.type, sandboxAlarm.missed_entity.value_preview);
       if (res.status === 'success') {
         setSandboxFormData({ entity: res.suggestion.entity, regex: res.suggestion.regex });
+        setIsReactivationWarning(res.suggestion.is_reactivation || false);
       } else {
         alert("AI Suggestion failed: " + res.message);
       }
@@ -734,6 +737,12 @@ export default function AdminConfig() {
                 "{sandboxAlarm.context_snippet}"
               </div>
             </div>
+            
+            {isReactivationWarning && (
+              <div style={{ backgroundColor: '#fff8c5', border: '1px solid #d4a72c', padding: '1rem', borderRadius: '6px', marginBottom: '1.5rem', color: '#9a6700' }}>
+                ⚠️ <strong>Pre-existing Rule Found:</strong> This leak is caught by an existing inactive rule. We have auto-filled it below for reactivation. If you prefer to create a brand new rule, simply change the Entity Class name!
+              </div>
+            )}
 
             <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end', marginBottom: '1.5rem' }}>
               <div style={{ flex: 1 }}>

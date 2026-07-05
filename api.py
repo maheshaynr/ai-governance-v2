@@ -285,7 +285,7 @@ def sandbox_suggest_rule(request: SandboxSuggestRequest):
                     import re
                     pattern = re.compile(r["regex"])
                     if pattern.search(request.context_snippet):
-                        return {"status": "success", "suggestion": {"entity": r["entity"], "regex": r["regex"]}}
+                        return {"status": "success", "suggestion": {"entity": r["entity"], "regex": r["regex"], "is_reactivation": True}}
     except:
         existing_entities = []
         

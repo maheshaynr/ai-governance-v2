@@ -26,5 +26,12 @@
         "final_rewrite": "Customer requested a wire transfer to their European account. Please process payment to IBAN GB29NWBK30123456789012 immediately.",
         "fidelity_score": 1.0,
         "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-05T17:47:30.890492",
+        "pii_masked_input": "AI_HASH:84525f27",
+        "final_rewrite": "Customer requested a wire transfer to their European account. Please process payment to IBAN GB29NWBK30123456789012 immediately.",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
     }
 ]
