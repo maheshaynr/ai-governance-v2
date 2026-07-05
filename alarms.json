@@ -1,81 +1,22 @@
 [
   {
-    "alarm_id": "ALM-20260705-08142253",
+    "alarm_id": "ALM-20260705-5853d671",
     "severity": "HIGH",
-    "category": "UNCATEGORIZED",
-    "timestamp": "2026-07-05T07:09:41.589221Z",
+    "category": "GDPR",
+    "timestamp": "2026-07-05T08:18:25.746774Z",
     "missed_entity": {
-      "type": "Authentication Data",
-      "value_preview": "sk-live-abc123x...",
+      "type": "Personal Identifiers",
+      "value_preview": "PAN Card ABCPD1...",
       "reason": "No reason provided",
       "detected_by": "phi-4-mini"
     },
-    "context_snippet": "My name is Mahesh and my AWS API key is sk-live-abc123xyz. Please don't share it.",
+    "context_snippet": "Please use the corporate credit card 4111-2222-3333-4444 and reference PAN Card ABCPD1234F.",
     "layer1_findings": [
-      "PERSON"
+      "CREDIT_CARD"
     ],
     "layer2_findings": [
-      "Authentication Data"
-    ],
-    "status": "PENDING_REVIEW"
-  },
-  {
-    "alarm_id": "ALM-20260705-cbdcb5ba",
-    "severity": "HIGH",
-    "category": "UNCATEGORIZED",
-    "timestamp": "2026-07-05T06:58:48.717313Z",
-    "missed_entity": {
-      "type": "Authentication data",
-      "value_preview": "sk-live-abc123x...",
-      "reason": "No reason provided",
-      "detected_by": "phi-4-mini"
-    },
-    "context_snippet": "My name is Mahesh and my AWS API key is sk-live-abc123xyz. Please don't share it.",
-    "layer1_findings": [
-      "PERSON"
-    ],
-    "layer2_findings": [
-      "Authentication data"
-    ],
-    "status": "PENDING_REVIEW"
-  },
-  {
-    "alarm_id": "ALM-20260705-d80a20c4",
-    "severity": "HIGH",
-    "category": "UNCATEGORIZED",
-    "timestamp": "2026-07-05T06:43:52.306066Z",
-    "missed_entity": {
-      "type": "Authentication data",
-      "value_preview": "AWS API key: sk...",
-      "reason": "No reason provided",
-      "detected_by": "phi-4-mini"
-    },
-    "context_snippet": "My name is Mahesh and my AWS API key is sk-live-abc123xyz. Please don't share it.",
-    "layer1_findings": [
-      "PERSON"
-    ],
-    "layer2_findings": [
-      "Authentication data"
-    ],
-    "status": "PENDING_REVIEW"
-  },
-  {
-    "alarm_id": "ALM-20260705-c0344d6f",
-    "severity": "HIGH",
-    "category": "UNCATEGORIZED",
-    "timestamp": "2026-07-05T06:42:20.769282Z",
-    "missed_entity": {
-      "type": "Authentication data",
-      "value_preview": "sk-live-abc123x...",
-      "reason": "Contains sensitive authentication details that should not be shared publicly.",
-      "detected_by": "phi-4-mini"
-    },
-    "context_snippet": "My name is Mahesh and my AWS API key is sk-live-abc123xyz. Please don't share it.",
-    "layer1_findings": [
-      "PERSON"
-    ],
-    "layer2_findings": [
-      "Authentication data"
+      "Financial Data",
+      "Personal Identifiers"
     ],
     "status": "PENDING_REVIEW"
   }

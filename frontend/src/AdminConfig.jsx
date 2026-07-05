@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { fetchRules, addRule, updateRule, deleteRule, fetchAlarms, toggleWatchdog, fetchSubscribers, addSubscriber, updateSubscriber, deleteSubscriber, deleteAlarm } from './api';
+import { fetchRules, addRule, updateRule, deleteRule, fetchAlarms, toggleWatchdog, fetchSubscribers, addSubscriber, updateSubscriber, deleteSubscriber, deleteAlarm, sandboxSuggestRule, sandboxTestRule } from './api';
 
 export default function AdminConfig() {
   const [loggedIn, setLoggedIn] = useState(false);
@@ -24,6 +24,13 @@ export default function AdminConfig() {
   const [formMessage, setFormMessage] = useState(null);
   const [subFormMessage, setSubFormMessage] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
+
+  // Sandbox Modal State
+  const [sandboxModalOpen, setSandboxModalOpen] = useState(false);
+  const [sandboxAlarm, setSandboxAlarm] = useState(null);
+  const [sandboxFormData, setSandboxFormData] = useState({ entity: '', regex: '' });
+  const [sandboxLoading, setSandboxLoading] = useState(false);
+  const [sandboxTestResult, setSandboxTestResult] = useState(null);
 
   useEffect(() => {
     if (loggedIn) {
@@ -235,6 +242,86 @@ export default function AdminConfig() {
       loadSubscribers();
     } catch (e) {
       console.error(e);
+    }
+  };
+
+  const handleOpenSandbox = (alarm) => {
+    setSandboxAlarm(alarm);
+    setSandboxFormData({ entity: alarm.missed_entity.type, regex: '' });
+    setSandboxTestResult(null);
+    setSandboxModalOpen(true);
+  };
+
+  const handleCloseSandbox = () => {
+    setSandboxModalOpen(false);
+    setSandboxAlarm(null);
+    setSandboxTestResult(null);
+  };
+
+  const handleSuggestRule = async () => {
+    setSandboxLoading(true);
+    setSandboxTestResult(null);
+    try {
+      const res = await sandboxSuggestRule(sandboxAlarm.context_snippet, sandboxAlarm.missed_entity.type);
+      if (res.status === 'success') {
+        setSandboxFormData({ entity: res.suggestion.entity, regex: res.suggestion.regex });
+      } else {
+        alert("AI Suggestion failed: " + res.message);
+      }
+    } catch (e) {
+      alert("Failed to connect to AI.");
+    } finally {
+      setSandboxLoading(false);
+    }
+  };
+
+  const handleTestSandbox = async () => {
+    if (!sandboxFormData.regex) {
+      alert("Please provide a Regex pattern first.");
+      return;
+    }
+    setSandboxLoading(true);
+    try {
+      const res = await sandboxTestRule(sandboxAlarm.context_snippet, sandboxFormData.regex, sandboxFormData.entity);
+      if (res.status === 'success') {
+        setSandboxTestResult(res);
+      } else {
+        alert("Sandbox Test Failed: " + res.message);
+      }
+    } catch (e) {
+      alert("Failed to run sandbox.");
+    } finally {
+      setSandboxLoading(false);
+    }
+  };
+
+  const handleConfirmApplySandbox = async () => {
+    setSandboxLoading(true);
+    try {
+      // Add the rule
+      const rulePayload = {
+        name: `AutoFix_${sandboxFormData.entity}`,
+        entity: sandboxFormData.entity,
+        regex: sandboxFormData.regex,
+        score: 0.85,
+        is_builtin: false,
+        is_algorithmic: false,
+        is_active: true
+      };
+      await addRule(rulePayload);
+      
+      // Dismiss the alarm
+      await deleteAlarm(sandboxAlarm.alarm_id);
+      
+      // Reload UI
+      await loadRules();
+      await loadAlarms();
+      
+      handleCloseSandbox();
+    } catch (e) {
+      alert("Failed to apply rule.");
+    } finally {
+      setSandboxLoading(false);
     }
   };
 
@@ -501,12 +588,8 @@ export default function AdminConfig() {
                   </div>
                   
                   <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem' }}>
-                    <button className="primary" onClick={() => {
-                      setActiveTab('rules');
-                      setFormData({ name: `New_${alarm.missed_entity.type}`, entity: alarm.missed_entity.type, regex: '', score: 0.85, is_builtin: false, is_algorithmic: false });
-                      setFormMessage({ type: 'success', text: `Auto-filled form for ${alarm.missed_entity.type}. Please define Regex or select Built-in AI.`});
-                    }}>
-                      Create Rule for '{alarm.missed_entity.type}'
+                    <button className="primary" onClick={() => handleOpenSandbox(alarm)} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      🛠️ Fix & Replay Sandbox
                     </button>
                     <button className="secondary" onClick={() => handleDismissAlarm(alarm.alarm_id)}>Dismiss (False Positive)</button>
                   </div>
@@ -609,6 +692,68 @@ export default function AdminConfig() {
           </div>
         </div>
       )}
+
+      {sandboxModalOpen && sandboxAlarm && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div style={{ background: '#fff', padding: '2rem', borderRadius: '8px', width: '90%', maxWidth: '700px', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 10px 25px rgba(0,0,0,0.2)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h2 style={{ margin: 0 }}>🛠️ Sandbox Rule Fixer</h2>
+              <button onClick={handleCloseSandbox} style={{ background: 'transparent', border: 'none', fontSize: '1.5rem', cursor: 'pointer' }}>×</button>
+            </div>
+            
+            <div style={{ backgroundColor: '#f6f8fa', padding: '1rem', borderRadius: '6px', marginBottom: '1.5rem' }}>
+              <strong>Problematic Context:</strong>
+              <div style={{ fontStyle: 'italic', marginTop: '0.5rem', color: '#57606a', borderLeft: '3px solid #cf222e', paddingLeft: '0.5rem' }}>
+                "{sandboxAlarm.context_snippet}"
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end', marginBottom: '1.5rem' }}>
+              <div style={{ flex: 1 }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>Entity Class</label>
+                <input type="text" value={sandboxFormData.entity} onChange={e => setSandboxFormData({...sandboxFormData, entity: e.target.value})} style={{ width: '100%' }} />
+              </div>
+              <div style={{ flex: 2 }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>Regex Pattern</label>
+                <input type="text" value={sandboxFormData.regex} onChange={e => setSandboxFormData({...sandboxFormData, regex: e.target.value})} style={{ width: '100%', fontFamily: 'monospace' }} placeholder="e.g. \b[0-9]{4}\b" />
+              </div>
+              <button className="secondary" onClick={handleSuggestRule} disabled={sandboxLoading} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem' }}>
+                {sandboxLoading && !sandboxFormData.regex ? '⏳...' : '✨ Suggest AI Fix'}
+              </button>
+            </div>
+
+            <div style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'center' }}>
+              <button className="primary" onClick={handleTestSandbox} disabled={sandboxLoading} style={{ fontSize: '1.1rem', padding: '0.75rem 2rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                {sandboxLoading && sandboxFormData.regex ? 'Running Sandbox...' : '🔁 Run Replay Test'}
+              </button>
+            </div>
+
+            {sandboxTestResult && (
+              <div style={{ padding: '1rem', borderRadius: '6px', marginBottom: '1.5rem', border: sandboxTestResult.caught ? '1px solid #4ac26b' : '1px solid #ff8182', backgroundColor: sandboxTestResult.caught ? '#dafbe1' : '#ffebe9' }}>
+                {sandboxTestResult.caught ? (
+                  <>
+                    <h4 style={{ margin: '0 0 0.5rem 0', color: '#1a7f37' }}>✅ Test Successful!</h4>
+                    <p style={{ margin: 0 }}>The sandbox engine successfully caught: <strong style={{ fontFamily: 'monospace', backgroundColor: 'rgba(255,255,255,0.7)', padding: '2px 4px', borderRadius: '4px' }}>{sandboxTestResult.matched_text}</strong></p>
+                  </>
+                ) : (
+                  <>
+                    <h4 style={{ margin: '0 0 0.5rem 0', color: '#cf222e' }}>❌ Test Failed</h4>
+                    <p style={{ margin: 0 }}>The provided regex pattern did not catch any data in the context snippet. Please adjust your regex.</p>
+                  </>
+                )}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', borderTop: '1px solid #d0d7de', paddingTop: '1rem' }}>
+              <button className="secondary" onClick={handleCloseSandbox}>Cancel</button>
+              <button className="primary" onClick={handleConfirmApplySandbox} disabled={!sandboxTestResult || !sandboxTestResult.caught || sandboxLoading} style={{ backgroundColor: (!sandboxTestResult || !sandboxTestResult.caught) ? '#ccc' : '#2da44e' }}>
+                ✅ Confirm & Apply Rule
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

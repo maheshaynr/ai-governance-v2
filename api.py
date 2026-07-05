@@ -126,6 +126,15 @@ class ChatResponse(BaseModel):
     masked_output: str
     status: str
 
+class SandboxSuggestRequest(BaseModel):
+    context_snippet: str
+    missed_entity_type: str
+
+class SandboxTestRequest(BaseModel):
+    context_snippet: str
+    regex_pattern: str
+    entity_name: str
+
 # --- 3. The Universal Guardrail Function ---
 def apply_egress_guardrail(raw_text: str):
     # We explicitly define the entities we want to track using the global ACTIVE_ENTITIES.
@@ -255,6 +264,66 @@ If you are provided with data, summarize it naturally and helpfully."""
         
     except Exception as e:
         return ChatResponse(raw_output="Error", masked_output=str(e), status="error")
+
+@app.post("/sandbox_suggest_rule")
+def sandbox_suggest_rule(request: SandboxSuggestRequest):
+    OLLAMA_URL = "http://localhost:11434/api/chat"
+    SYSTEM_PROMPT = """You are an expert Data Loss Prevention (DLP) engineer. 
+Your job is to provide a Python regular expression to catch sensitive data that was missed. 
+You must output ONLY valid JSON matching this EXACT schema:
+{
+  "entity": "STANDARD_ENTITY_NAME",
+  "regex": "valid_regex_pattern"
+}
+Ensure the regex uses word boundaries if appropriate and correctly catches the data. Do NOT include any markdown formatting or explanation."""
+    
+    user_prompt = f"The primary engine missed a sensitive entity of type '{request.missed_entity_type}'. Here is the context statement where it occurred:\n\n{request.context_snippet}\n\nProvide the JSON with a regex to catch it."
+    
+    messages = [
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "user", "content": user_prompt}
+    ]
+    
+    try:
+        payload = {
+            "model": "phi4-mini:3.8b",
+            "messages": messages,
+            "stream": False,
+            "format": "json"
+        }
+        resp = requests.post(OLLAMA_URL, json=payload, timeout=30)
+        if resp.status_code != 200:
+            return {"status": "error", "message": "Failed to contact local AI"}
+            
+        ai_message = resp.json()["message"]["content"]
+        return {"status": "success", "suggestion": json.loads(ai_message)}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+@app.post("/sandbox_test_rule")
+def sandbox_test_rule(request: SandboxTestRequest):
+    try:
+        # Spin up a temporary, isolated Presidio Engine
+        sandbox_analyzer = AnalyzerEngine()
+        
+        # Add ONLY the proposed Regex
+        pattern = Pattern(name="sandbox_test", regex=request.regex_pattern, score=0.85)
+        recognizer = PatternRecognizer(supported_entity=request.entity_name, patterns=[pattern])
+        sandbox_analyzer.registry.add_recognizer(recognizer)
+        
+        # Test the snippet against the isolated engine
+        results = sandbox_analyzer.analyze(text=request.context_snippet, language='en', entities=[request.entity_name], score_threshold=0.5)
+        
+        if not results:
+            return {"status": "success", "caught": False, "matched_text": None}
+            
+        # Extract the highest scoring match
+        best_match = max(results, key=lambda x: x.score)
+        matched_text = request.context_snippet[best_match.start:best_match.end]
+        
+        return {"status": "success", "caught": True, "matched_text": matched_text}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
 
 @app.get("/rules")
 def get_rules():

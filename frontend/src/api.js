@@ -119,3 +119,21 @@ export async function chatAgent(message) {
   return res.json();
 }
 
+export async function sandboxSuggestRule(context_snippet, missed_entity_type) {
+  const res = await fetch(`${API_BASE}/sandbox_suggest_rule`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ context_snippet, missed_entity_type })
+  });
+  return res.json();
+}
+
+export async function sandboxTestRule(context_snippet, regex_pattern, entity_name) {
+  const res = await fetch(`${API_BASE}/sandbox_test_rule`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ context_snippet, regex_pattern, entity_name })
+  });
+  return res.json();
+}
+
