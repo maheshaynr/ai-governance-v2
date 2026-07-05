@@ -1,1 +1,21 @@
-[]
+[
+  {
+    "alarm_id": "ALM-20260705-0ceca230",
+    "severity": "HIGH",
+    "timestamp": "2026-07-05T03:44:02.852580Z",
+    "missed_entity": {
+      "type": "Authentication Data",
+      "value_preview": "AWS API key: sk...",
+      "reason": "No reason provided",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "My name is Mahesh and my AWS API key is sk-live-abc123xyz. Please don't share it.",
+    "layer1_findings": [
+      "PERSON"
+    ],
+    "layer2_findings": [
+      "Authentication Data"
+    ],
+    "status": "PENDING_REVIEW"
+  }
+]

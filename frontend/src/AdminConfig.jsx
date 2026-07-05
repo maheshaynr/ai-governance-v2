@@ -405,11 +405,14 @@ export default function AdminConfig() {
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               {alarms.map((alarm, idx) => (
-                <div key={idx} style={{ border: '1px solid #d0d7de', borderRadius: '6px', padding: '1rem', backgroundColor: '#fff' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
-                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                      <span style={{ backgroundColor: '#cf222e', color: 'white', padding: '2px 6px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: '600' }}>{alarm.severity}</span>
-                      <strong style={{ fontSize: '1.1rem' }}>{alarm.missed_entity.type}</strong>
+                <div key={alarm.alarm_id} style={{ border: '1px solid #d0d7de', borderRadius: '8px', marginBottom: '1.5rem', background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #d0d7de', padding: '1rem', background: '#f6f8fa', borderTopLeftRadius: '8px', borderTopRightRadius: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                      <span style={{ backgroundColor: '#cf222e', color: '#fff', padding: '2px 8px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 'bold' }}>{alarm.severity}</span>
+                      <h4 style={{ margin: 0, fontSize: '1.1rem' }}>{alarm.missed_entity.type}</h4>
+                      {alarm.category && (
+                        <span style={{ backgroundColor: '#0969da', color: '#fff', padding: '2px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 'bold' }}>{alarm.category}</span>
+                      )}
                     </div>
                     <span style={{ color: '#57606a', fontSize: '0.85rem' }}>{new Date(alarm.timestamp).toLocaleString()}</span>
                   </div>

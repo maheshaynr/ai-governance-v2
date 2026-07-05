@@ -26,9 +26,24 @@ def generate_alarm(raw_text: str, missing_finding: dict, l1_entities: list, l2_e
     """
     Creates and saves an alarm object for the dashboard.
     """
+    
+    # --- INTELLIGENT NOTIFICATION ROUTING CATEGORY ---
+    entity_type = missing_finding.get("type", "UNKNOWN").upper()
+    financial_keywords = ['CREDIT_CARD', 'PAN', 'API_KEY', 'BANK', 'FINANCIAL', 'SALARY', 'PAYMENT']
+    hipaa_keywords = ['MEDICAL', 'HEALTH', 'DIAGNOSIS', 'MRN', 'PRESCRIPTION', 'PATIENT', 'BLOOD']
+    
+    category = "UNCATEGORIZED"
+    if any(k in entity_type for k in financial_keywords):
+        category = "FINANCIAL"
+    elif any(k in entity_type for k in hipaa_keywords):
+        category = "HIPAA"
+    elif 'PERSON' in entity_type or 'EMAIL' in entity_type or 'PHONE' in entity_type:
+        category = "GDPR"
+
     alarm = {
         "alarm_id": f"ALM-{datetime.now().strftime('%Y%m%d')}-{str(uuid.uuid4())[:8]}",
         "severity": "HIGH",
+        "category": category,
         "timestamp": datetime.utcnow().isoformat() + "Z",
         "missed_entity": {
             "type": missing_finding.get("type", "UNKNOWN"),
@@ -43,23 +58,8 @@ def generate_alarm(raw_text: str, missing_finding: dict, l1_entities: list, l2_e
     }
     
     save_alarm(alarm)
-    logging.warning(f"🚨 ALARM GENERATED: Phi-4 found unmasked {alarm['missed_entity']['type']}")
+    logging.warning(f"🚨 ALARM GENERATED: Phi-4 found unmasked {alarm['missed_entity']['type']} (Category: {category})")
     
-    # --- INTELLIGENT NOTIFICATION ROUTING ---
-    entity_type = alarm['missed_entity']['type'].upper()
-    
-    # 1. Map Entity to Category
-    financial_keywords = ['CREDIT_CARD', 'PAN', 'API_KEY', 'BANK', 'FINANCIAL', 'SALARY', 'PAYMENT']
-    hipaa_keywords = ['MEDICAL', 'HEALTH', 'DIAGNOSIS', 'MRN', 'PRESCRIPTION', 'PATIENT', 'BLOOD']
-    
-    category = "UNCATEGORIZED"
-    if any(k in entity_type for k in financial_keywords):
-        category = "FINANCIAL"
-    elif any(k in entity_type for k in hipaa_keywords):
-        category = "HIPAA"
-    elif 'PERSON' in entity_type or 'EMAIL' in entity_type or 'PHONE' in entity_type:
-        category = "GDPR"
-        
     # 2. Dispatch to Subscribers
     try:
         with open("pii_rules.json", "r") as f:
