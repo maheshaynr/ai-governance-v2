@@ -356,5 +356,26 @@
         "final_rewrite": "My name is <PERSON> , my pan is <IN_PAN> and my AWS API key is sk-live-abc123xyz. Please don't share it.",
         "fidelity_score": 1.0,
         "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-05T11:26:16.554153",
+        "pii_masked_input": "AI_HASH:7a92818c",
+        "final_rewrite": "My IBAN is DE89 3704 0044 0532 0130 00 and the linked card ends in 4242, expiry 03/28.",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-05T11:26:40.676929",
+        "pii_masked_input": "AI_HASH:fd44e0ba",
+        "final_rewrite": "My name is <PERSON> and my AWS API key is sk-lve-abc123xyz. Please don't share it.",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-05T11:27:57.788286",
+        "pii_masked_input": "AI_HASH:905c3f08",
+        "final_rewrite": "My IBAN is FE89 3704 0044 0532 0130 00 and the linked card ends in 4242, expiry 03/28",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
     }
 ]

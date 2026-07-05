@@ -99,6 +99,7 @@ class SubscriberRequest(BaseModel):
     role: str
     alert_type: str
     teams_webhook: str
+    email: str = ""
 
 class UpdateSubscriberRequest(BaseModel):
     original_user_name: str
@@ -106,6 +107,7 @@ class UpdateSubscriberRequest(BaseModel):
     role: str
     alert_type: str
     teams_webhook: str
+    email: str = ""
 
 class DeleteSubscriberRequest(BaseModel):
     user_name: str
@@ -324,7 +326,8 @@ def add_subscriber(request: SubscriberRequest):
             "user_name": request.user_name,
             "role": request.role,
             "alert_type": request.alert_type,
-            "teams_webhook": request.teams_webhook
+            "teams_webhook": request.teams_webhook,
+            "email": request.email
         }
         data["notification_subscribers"].append(new_sub)
         
@@ -349,6 +352,7 @@ def update_subscriber(request: UpdateSubscriberRequest):
                     sub["role"] = request.role
                     sub["alert_type"] = request.alert_type
                     sub["teams_webhook"] = request.teams_webhook
+                    sub["email"] = request.email
                     sub_found = True
                     break
                     
