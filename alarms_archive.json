@@ -1,5 +1,25 @@
 [
   {
+    "alarm_id": "ALM-20260705-73a8839b",
+    "severity": "HIGH",
+    "category": "AUTHENTICATION",
+    "timestamp": "2026-07-05T12:36:25.596663Z",
+    "missed_entity": {
+      "type": "Authentication Data",
+      "value_preview": "sk-proj-4P9kLmN...",
+      "reason": "API key",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "My name is Mahesh and my OpenAI API key is sk-proj-4P9kLmN8xY2ZaBcDeFgHiJkLmNoPqRsTuVwXyZ0123456789AbCdEfGhIjKlMnOpQrStUv. Please don't share it.",
+    "layer1_findings": [
+      "PERSON"
+    ],
+    "layer2_findings": [
+      "Authentication Data"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
     "alarm_id": "ALM-20260705-1678c445",
     "severity": "HIGH",
     "category": "FINANCIAL",
@@ -15,7 +35,7 @@
     "layer2_findings": [
       "Financial data"
     ],
-    "status": "PENDING_REVIEW"
+    "status": "DISMISSED"
   },
   {
     "alarm_id": "ALM-20260705-79c03829",
@@ -33,7 +53,7 @@
     "layer2_findings": [
       "Financial Data"
     ],
-    "status": "PENDING_REVIEW"
+    "status": "DISMISSED"
   },
   {
     "alarm_id": "ALM-20260705-2bcca0bb",
