@@ -75,10 +75,7 @@ export default function Dashboard() {
 
   return (
     <div>
-      <h2>Egress Shield (Client)</h2>
-      <p>Test the <strong>Universal Output Guardrail</strong> against Database Queries and AI Hallucinations.</p>
-
-      <div className="admin-layout">
+      <div className="admin-layout" style={{ marginTop: '1rem' }}>
         
         {/* Left Pane: Master List */}
         <div className="rules-list">
