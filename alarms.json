@@ -1,16 +1,16 @@
 [
   {
-    "alarm_id": "ALM-20260705-b3ada881",
+    "alarm_id": "ALM-20260705-cbdcb5ba",
     "severity": "HIGH",
     "category": "UNCATEGORIZED",
-    "timestamp": "2026-07-05T06:28:13.678211Z",
+    "timestamp": "2026-07-05T06:58:48.717313Z",
     "missed_entity": {
       "type": "Authentication data",
-      "value_preview": "sk-live-abcU123...",
-      "reason": "This contains sensitive authentication information that should not be shared.",
+      "value_preview": "sk-live-abc123x...",
+      "reason": "No reason provided",
       "detected_by": "phi-4-mini"
     },
-    "context_snippet": "My name is Mahesh and my AWS API key is sk-live-abcU123xyz. Please don't share it.",
+    "context_snippet": "My name is Mahesh and my AWS API key is sk-live-abc123xyz. Please don't share it.",
     "layer1_findings": [
       "PERSON"
     ],
@@ -20,99 +20,41 @@
     "status": "PENDING_REVIEW"
   },
   {
-    "alarm_id": "ALM-20260705-3c3f58e2",
-    "severity": "HIGH",
-    "category": "FINANCIAL",
-    "timestamp": "2026-07-05T05:58:06.700838Z",
-    "missed_entity": {
-      "type": "Financial Data",
-      "value_preview": "FE89 3704 0044 ...",
-      "reason": "Contains financial account details that can be used for unauthorized transactions.",
-      "detected_by": "phi-4-mini"
-    },
-    "context_snippet": "My IBAN is FE89 3704 0044 0532 0130 00 and the linked card ends in 4242, expiry 03/28",
-    "layer1_findings": [],
-    "layer2_findings": [
-      "Financial Data"
-    ],
-    "status": "PENDING_REVIEW"
-  },
-  {
-    "alarm_id": "ALM-20260705-1cc8b304",
+    "alarm_id": "ALM-20260705-d80a20c4",
     "severity": "HIGH",
     "category": "UNCATEGORIZED",
-    "timestamp": "2026-07-05T05:56:47.260456Z",
+    "timestamp": "2026-07-05T06:43:52.306066Z",
     "missed_entity": {
-      "type": "Authentication Data",
-      "value_preview": "sk-lve-abc123xy...",
-      "reason": "Contains an authentication token which can be used to access systems",
+      "type": "Authentication data",
+      "value_preview": "AWS API key: sk...",
+      "reason": "No reason provided",
       "detected_by": "phi-4-mini"
     },
-    "context_snippet": "My name is Mahesh and my AWS API key is sk-lve-abc123xyz. Please don't share it.",
+    "context_snippet": "My name is Mahesh and my AWS API key is sk-live-abc123xyz. Please don't share it.",
     "layer1_findings": [
       "PERSON"
     ],
     "layer2_findings": [
-      "Authentication Data"
+      "Authentication data"
     ],
     "status": "PENDING_REVIEW"
   },
   {
-    "alarm_id": "ALM-20260705-338ec6dc",
-    "severity": "HIGH",
-    "category": "FINANCIAL",
-    "timestamp": "2026-07-05T05:56:35.637190Z",
-    "missed_entity": {
-      "type": "Financial data",
-      "value_preview": "4242...",
-      "reason": "This part of the card information may lead to identifying someone's financial accounts and thus it shouldn\u2019t be shared publicly.",
-      "detected_by": "phi-4-mini"
-    },
-    "context_snippet": "My IBAN is DE89 3704 0044 0532 0130 00 and the linked card ends in 4242, expiry 03/28.",
-    "layer1_findings": [],
-    "layer2_findings": [
-      "Financial data",
-      "Financial data"
-    ],
-    "status": "PENDING_REVIEW"
-  },
-  {
-    "alarm_id": "ALM-20260705-9140309b",
-    "severity": "HIGH",
-    "category": "FINANCIAL",
-    "timestamp": "2026-07-05T05:56:34.706005Z",
-    "missed_entity": {
-      "type": "Financial data",
-      "value_preview": "DE89 3704 0044 ...",
-      "reason": "This is a bank account number which should not be exposed publicly.",
-      "detected_by": "phi-4-mini"
-    },
-    "context_snippet": "My IBAN is DE89 3704 0044 0532 0130 00 and the linked card ends in 4242, expiry 03/28.",
-    "layer1_findings": [],
-    "layer2_findings": [
-      "Financial data",
-      "Financial data"
-    ],
-    "status": "PENDING_REVIEW"
-  },
-  {
-    "alarm_id": "ALM-20260705-b569b966",
+    "alarm_id": "ALM-20260705-c0344d6f",
     "severity": "HIGH",
     "category": "UNCATEGORIZED",
-    "timestamp": "2026-07-05T05:38:14.968627Z",
+    "timestamp": "2026-07-05T06:42:20.769282Z",
     "missed_entity": {
       "type": "Authentication data",
       "value_preview": "sk-live-abc123x...",
-      "reason": "Sensitive authentication detail that should not be shared publicly or in insecure ways.",
+      "reason": "Contains sensitive authentication details that should not be shared publicly.",
       "detected_by": "phi-4-mini"
     },
-    "context_snippet": "My name is Mahesh , my pan is ABCPD1234F and my AWS API key is sk-live-abc123xyz. Please don't share it.",
+    "context_snippet": "My name is Mahesh and my AWS API key is sk-live-abc123xyz. Please don't share it.",
     "layer1_findings": [
-      "IN_PAN",
       "PERSON"
     ],
     "layer2_findings": [
-      "Authentication data",
       "Authentication data"
     ],
     "status": "PENDING_REVIEW"

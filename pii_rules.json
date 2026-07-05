@@ -64,7 +64,8 @@
     {
       "user_name": "Mahesh",
       "role": "Global Admin",
-      "alert_type": "ALL"
+      "alert_type": "ALL",
+      "email": "mahesh.r2@quest-global.com"
     }
   ]
 }

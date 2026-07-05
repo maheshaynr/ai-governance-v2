@@ -384,5 +384,40 @@
         "final_rewrite": "My name is <PERSON> and my AWS API key is sk-live-abcU123xyz. Please don't share it.",
         "fidelity_score": 1.0,
         "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-05T12:06:24.650482",
+        "pii_masked_input": "AI_HASH:748f48ca",
+        "final_rewrite": "My name is <PERSON> and my AWS API key is sk-live-abc123xyz. Please don't share it.",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-05T12:12:05.385614",
+        "pii_masked_input": "AI_HASH:748f48ca",
+        "final_rewrite": "My name is <PERSON> and my AWS API key is sk-live-abc123xyz. Please don't share it.",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-05T12:13:46.472129",
+        "pii_masked_input": "AI_HASH:748f48ca",
+        "final_rewrite": "My name is <PERSON> and my AWS API key is sk-live-abc123xyz. Please don't share it.",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-05T12:27:39.294660",
+        "pii_masked_input": "AI_HASH:748f48ca",
+        "final_rewrite": "My name is <PERSON> and my AWS API key is sk-live-abc123xyz. Please don't share it.",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-05T12:28:43.162237",
+        "pii_masked_input": "AI_HASH:748f48ca",
+        "final_rewrite": "My name is <PERSON> and my AWS API key is sk-live-abc123xyz. Please don't share it.",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
     }
 ]
