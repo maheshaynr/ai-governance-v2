@@ -588,17 +588,17 @@ export default function AdminConfig() {
                   </div>
                   
                   <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem' }}>
-                    <button className="primary" onClick={() => handleOpenSandbox(alarm)} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <button className="primary" onClick={() => handleOpenSandbox(alarm)} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', backgroundColor: '#4682b4', borderColor: '#4682b4' }}>
                       🛠️ Fix & Replay Sandbox
                     </button>
                     <button className="primary" onClick={() => {
                       setActiveTab('rules');
                       setFormData({ name: `New_${alarm.missed_entity.type}`, entity: alarm.missed_entity.type, regex: '', score: 0.85, is_builtin: false, is_algorithmic: false, is_active: true });
                       setFormMessage({ type: 'success', text: `Auto-filled form for ${alarm.missed_entity.type}. Please define Regex or select Built-in AI.`});
-                    }}>
+                    }} style={{ backgroundColor: '#4682b4', borderColor: '#4682b4' }}>
                       Create Rule for '{alarm.missed_entity.type}'
                     </button>
-                    <button className="secondary" onClick={() => handleDismissAlarm(alarm.alarm_id)}>Dismiss (False Positive)</button>
+                    <button className="secondary" onClick={() => handleDismissAlarm(alarm.alarm_id)} style={{ color: '#4682b4', borderColor: '#4682b4', backgroundColor: '#fff' }}>Dismiss (False Positive)</button>
                   </div>
                 </div>
               ))}

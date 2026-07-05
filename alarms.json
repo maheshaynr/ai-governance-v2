@@ -23,7 +23,7 @@
   {
     "alarm_id": "ALM-20260705-b9db83d7",
     "severity": "HIGH",
-    "category": "UNCATEGORIZED",
+    "category": "FINANCIAL",
     "timestamp": "2026-07-05T10:04:15.335270Z",
     "missed_entity": {
       "type": "Authentication Data",
