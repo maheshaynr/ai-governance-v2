@@ -61,5 +61,19 @@
         "final_rewrite": "Please charge the renewal fee to my Visa card 4000 1234 5678 9010.",
         "fidelity_score": 1.0,
         "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-05T18:30:17.632101",
+        "pii_masked_input": "AI_HASH:5c2b86da",
+        "final_rewrite": "Patient <PERSON> was diagnosed with Stage 2 Melanoma on 10/12/2023.",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-05T18:49:41.257989",
+        "pii_masked_input": "AI_HASH:6118de19",
+        "final_rewrite": "The GPS coordinates for the delivery driver are 48.8584 N, 2.2945 E.",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
     }
 ]

@@ -5,3 +5,4 @@ spacy
 fastapi
 uvicorn
 requests
+scispacy

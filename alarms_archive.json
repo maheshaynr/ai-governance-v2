@@ -1,5 +1,44 @@
 [
   {
+    "alarm_id": "ALM-20260705-a7e44f30",
+    "severity": "HIGH",
+    "category": "GDPR",
+    "timestamp": "2026-07-05T13:19:57.801393Z",
+    "missed_entity": {
+      "type": "Personal Identifiers",
+      "value_preview": "48.8584 N, 2.29...",
+      "reason": "GPS coordinates can potentially be used to pinpoint someone's location",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The GPS coordinates for the delivery driver are 48.8584 N, 2.2945 E.",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "Personal Identifiers"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260705-08b11534",
+    "severity": "HIGH",
+    "category": "HIPAA",
+    "timestamp": "2026-07-05T13:00:34.400827Z",
+    "missed_entity": {
+      "type": "Medical / Health Information",
+      "value_preview": "Stage 2 Melanom...",
+      "reason": "Health condition",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "Patient Sarah Connor was diagnosed with Stage 2 Melanoma on 10/12/2023.",
+    "layer1_findings": [
+      "PERSON"
+    ],
+    "layer2_findings": [
+      "Personal Identifiers",
+      "Medical / Health Information"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
     "alarm_id": "ALM-20260705-ab427d23",
     "severity": "HIGH",
     "category": "FINANCIAL",

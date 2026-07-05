@@ -6,6 +6,8 @@ from fastapi import FastAPI, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from presidio_analyzer import AnalyzerEngine, PatternRecognizer, Pattern
+from presidio_analyzer.nlp_engine import NlpEngineProvider
+from presidio_analyzer.predefined_recognizers import SpacyRecognizer
 from presidio_anonymizer import AnonymizerEngine
 import hashlib
 from audit_logger import AuditLogger
@@ -34,12 +36,32 @@ anonymizer = AnonymizerEngine()
 def reload_presidio_engine():
     global analyzer, ACTIVE_ENTITIES
     print("Reloading Presidio NLP models...")
-    new_analyzer = AnalyzerEngine()
+    # Configure Multi-Model NLP Engine
+    configuration = {
+        "nlp_engine_name": "spacy",
+        "models": [
+            {"lang_code": "en", "model_name": "en_core_web_lg"},
+            {"lang_code": "en-US", "model_name": "en_ner_bc5cdr_md"}
+        ]
+    }
+    nlp_engine = NlpEngineProvider(nlp_configuration=configuration).create_engine()
+    
+    new_analyzer = AnalyzerEngine(nlp_engine=nlp_engine, supported_languages=["en", "en-US"])
     
     ACTIVE_ENTITIES = []
     
     # Load custom python recognizer (Verhoeff Math)
     new_analyzer.registry.add_recognizer(AadhaarRecognizer())
+    
+    # Load SciSpaCy Medical Recognizer
+    try:
+        disease_recognizer = SpacyRecognizer(supported_language="en-US", supported_entities=["DISEASE", "CHEMICAL"])
+        new_analyzer.registry.add_recognizer(disease_recognizer)
+        ACTIVE_ENTITIES.extend(["DISEASE", "CHEMICAL"])
+    except Exception as e:
+        print(f"Warning: Failed to load SciSpaCy Recognizer: {e}")
+        
+
     
     # Load dynamic JSON rules
     try:
@@ -142,7 +164,14 @@ class SandboxTestRequest(BaseModel):
 def apply_egress_guardrail(raw_text: str):
     # We explicitly define the entities we want to track using the global ACTIVE_ENTITIES.
     # This includes both our hardcoded defaults and dynamic JSON rules.
-    results = analyzer.analyze(text=raw_text, language='en', entities=ACTIVE_ENTITIES, score_threshold=0.5)
+    results_en = analyzer.analyze(text=raw_text, language='en', entities=ACTIVE_ENTITIES, score_threshold=0.5)
+    
+    # Run the medical model
+    results_med = analyzer.analyze(text=raw_text, language='en-US', entities=ACTIVE_ENTITIES, score_threshold=0.5)
+    
+    # Combine results from both pipelines
+    results = results_en + results_med
+    
     anonymized_result = anonymizer.anonymize(text=raw_text, analyzer_results=results)
     return anonymized_result.text, results
 
