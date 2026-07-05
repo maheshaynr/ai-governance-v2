@@ -30,8 +30,9 @@ export default function AdminConfig() {
   const [sandboxModalOpen, setSandboxModalOpen] = useState(false);
   const [sandboxAlarm, setSandboxAlarm] = useState(null);
   const [sandboxFormData, setSandboxFormData] = useState({ entity: '', regex: '' });
-  const [sandboxLoading, setSandboxLoading] = useState(false);
   const [sandboxTestResult, setSandboxTestResult] = useState(null);
+  const [sandboxLoading, setSandboxLoading] = useState(false);
+  const [sandboxApplying, setSandboxApplying] = useState(false);
 
   useEffect(() => {
     if (loggedIn) {
@@ -300,7 +301,7 @@ export default function AdminConfig() {
   };
 
   const handleConfirmApplySandbox = async () => {
-    setSandboxLoading(true);
+    setSandboxApplying(true);
     try {
       // Add the rule
       const rulePayload = {
@@ -321,11 +322,13 @@ export default function AdminConfig() {
       await loadRules();
       await loadAlarms();
       
-      handleCloseSandbox();
+      setSandboxModalOpen(false);
+      
     } catch (e) {
-      alert("Failed to apply rule.");
+      console.error(e);
+      alert("Failed to confirm and apply rule.");
     } finally {
-      setSandboxLoading(false);
+      setSandboxApplying(false);
     }
   };
 
@@ -770,8 +773,8 @@ export default function AdminConfig() {
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', borderTop: '1px solid #d0d7de', paddingTop: '1rem' }}>
               <button className="secondary" onClick={handleCloseSandbox}>Cancel</button>
-              <button className="primary" onClick={handleConfirmApplySandbox} disabled={!sandboxTestResult || !sandboxTestResult.caught || sandboxLoading} style={{ backgroundColor: (!sandboxTestResult || !sandboxTestResult.caught) ? '#ccc' : '#2da44e' }}>
-                ✅ Confirm & Apply Rule
+              <button className="primary" onClick={handleConfirmApplySandbox} disabled={!sandboxTestResult || !sandboxTestResult.caught || sandboxApplying} style={{ backgroundColor: (!sandboxTestResult || !sandboxTestResult.caught) ? '#ccc' : '#2da44e' }}>
+                {sandboxApplying ? '⏳ Applying...' : '✅ Confirm & Apply Rule'}
               </button>
             </div>
           </div>

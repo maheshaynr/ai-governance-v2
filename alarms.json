@@ -1,21 +1,19 @@
 [
   {
-    "alarm_id": "ALM-20260705-2bcca0bb",
+    "alarm_id": "ALM-20260705-79c03829",
     "severity": "HIGH",
-    "category": "AUTHENTICATION",
-    "timestamp": "2026-07-05T12:02:28.712587Z",
+    "category": "FINANCIAL",
+    "timestamp": "2026-07-05T12:10:04.076277Z",
     "missed_entity": {
-      "type": "Authentication Data",
-      "value_preview": "sk-proj-4P9kLmN...",
-      "reason": "contains sensitive API key information that should not be shared publicly",
+      "type": "Financial Data",
+      "value_preview": "IBAN GB29NWBK30...",
+      "reason": "Contains banking details that could be used for financial transactions",
       "detected_by": "phi-4-mini"
     },
-    "context_snippet": "My name is Mahesh and my OpenAI API key is sk-proj-4P9kLmN8xY2ZaBcDeFgHiJkLmNoPqRsTuVwXyZ0123456789AbCdEfGhIjKlMnOpQrStUv. Please don't share it.",
-    "layer1_findings": [
-      "PERSON"
-    ],
+    "context_snippet": "Customer requested a wire transfer to their European account. Please process payment to IBAN GB29NWBK30123456789012 immediately.",
+    "layer1_findings": [],
     "layer2_findings": [
-      "Authentication Data"
+      "Financial Data"
     ],
     "status": "PENDING_REVIEW"
   }
