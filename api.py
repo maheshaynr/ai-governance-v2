@@ -103,6 +103,9 @@ class SubscriberRequest(BaseModel):
 class DeleteSubscriberRequest(BaseModel):
     user_name: str
 
+class DeleteAlarmRequest(BaseModel):
+    alarm_id: str
+
 class ChatRequest(BaseModel):
     message: str
 
@@ -253,6 +256,24 @@ def get_rules():
 def get_alarms():
     import diff_engine
     return {"alarms": diff_engine.load_alarms()}
+
+@app.post("/delete_alarm")
+def delete_alarm(request: DeleteAlarmRequest):
+    try:
+        import diff_engine
+        alarms = diff_engine.load_alarms()
+        initial_length = len(alarms)
+        alarms = [a for a in alarms if a.get("alarm_id") != request.alarm_id]
+        
+        if len(alarms) == initial_length:
+            return {"status": "error", "message": "Alarm not found."}
+            
+        with open("alarms.json", "w") as f:
+            json.dump(alarms, f, indent=2)
+            
+        return {"status": "success"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
 
 class ToggleRequest(BaseModel):
     enable_llm_watchdog: bool

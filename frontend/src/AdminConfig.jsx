@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { fetchRules, addRule, updateRule, deleteRule, fetchAlarms, toggleWatchdog, fetchSubscribers, addSubscriber, deleteSubscriber } from './api';
+import { fetchRules, addRule, updateRule, deleteRule, fetchAlarms, toggleWatchdog, fetchSubscribers, addSubscriber, deleteSubscriber, deleteAlarm } from './api';
 
 export default function AdminConfig() {
   const [loggedIn, setLoggedIn] = useState(false);
@@ -72,6 +72,15 @@ export default function AdminConfig() {
       setLlmWatchdogEnabled(enabled);
     } catch (e) {
       console.error("Failed to toggle watchdog", e);
+    }
+  };
+
+  const handleDismissAlarm = async (alarm_id) => {
+    try {
+      await deleteAlarm(alarm_id);
+      loadAlarms();
+    } catch (e) {
+      console.error("Failed to dismiss alarm", e);
     }
   };
 
@@ -441,7 +450,7 @@ export default function AdminConfig() {
                     }}>
                       Create Rule for '{alarm.missed_entity.type}'
                     </button>
-                    <button className="secondary">Dismiss (False Positive)</button>
+                    <button className="secondary" onClick={() => handleDismissAlarm(alarm.alarm_id)}>Dismiss (False Positive)</button>
                   </div>
                 </div>
               ))}

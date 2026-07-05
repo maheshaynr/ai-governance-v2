@@ -42,6 +42,15 @@ export async function fetchAlarms() {
   return res.json();
 }
 
+export async function deleteAlarm(alarm_id) {
+  const res = await fetch(`${API_BASE}/delete_alarm`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ alarm_id })
+  });
+  return res.json();
+}
+
 export async function toggleWatchdog(enable_llm_watchdog) {
   const res = await fetch(`${API_BASE}/toggle_watchdog`, {
     method: 'POST',
