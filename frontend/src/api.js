@@ -74,6 +74,15 @@ export async function addSubscriber(subscriber) {
   return res.json();
 }
 
+export async function updateSubscriber(subscriber) {
+  const res = await fetch(`${API_BASE}/update_subscriber`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(subscriber)
+  });
+  return res.json();
+}
+
 export async function deleteSubscriber(user_name) {
   const res = await fetch(`${API_BASE}/delete_subscriber`, {
     method: 'POST',

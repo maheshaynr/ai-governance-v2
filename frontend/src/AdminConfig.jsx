@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { fetchRules, addRule, updateRule, deleteRule, fetchAlarms, toggleWatchdog, fetchSubscribers, addSubscriber, deleteSubscriber, deleteAlarm } from './api';
+import { fetchRules, addRule, updateRule, deleteRule, fetchAlarms, toggleWatchdog, fetchSubscribers, addSubscriber, updateSubscriber, deleteSubscriber, deleteAlarm } from './api';
 
 export default function AdminConfig() {
   const [loggedIn, setLoggedIn] = useState(false);
@@ -16,6 +16,7 @@ export default function AdminConfig() {
   const [searchQuery, setSearchQuery] = useState('');
 
   const [editingRule, setEditingRule] = useState(null);
+  const [editingSubscriber, setEditingSubscriber] = useState(null);
   
   const [formData, setFormData] = useState({ name: '', entity: '', regex: '', score: 0.85, is_builtin: false, is_algorithmic: false });
   const [subFormData, setSubFormData] = useState({ user_name: '', role: '', alert_type: 'ALL', teams_webhook: '' });
@@ -168,6 +169,18 @@ export default function AdminConfig() {
     }
   };
 
+  const handleEditSubscriberClick = (s) => {
+    setEditingSubscriber(s);
+    setSubFormData({ user_name: s.user_name, role: s.role, alert_type: s.alert_type, teams_webhook: s.teams_webhook });
+    setSubFormMessage(null);
+  };
+
+  const handleCancelEditSubscriber = () => {
+    setEditingSubscriber(null);
+    setSubFormData({ user_name: '', role: '', alert_type: 'ALL', teams_webhook: '' });
+    setSubFormMessage(null);
+  };
+
   const handleAddSubscriber = async (e) => {
     e.preventDefault();
     if (!subFormData.user_name || !subFormData.role || !subFormData.teams_webhook) {
@@ -177,13 +190,26 @@ export default function AdminConfig() {
     
     setIsSaving(true);
     try {
-      const res = await addSubscriber(subFormData);
-      if (res.status === 'success') {
-        setSubFormMessage({ type: 'success', text: 'Subscriber added!' });
-        setSubFormData({ user_name: '', role: '', alert_type: 'ALL', teams_webhook: '' });
-        loadSubscribers();
+      if (editingSubscriber) {
+        const payload = { ...subFormData, original_user_name: editingSubscriber.user_name };
+        const res = await updateSubscriber(payload);
+        if (res.status === 'success') {
+          setSubFormMessage({ type: 'success', text: 'Subscriber updated!' });
+          setEditingSubscriber(null);
+          setSubFormData({ user_name: '', role: '', alert_type: 'ALL', teams_webhook: '' });
+          loadSubscribers();
+        } else {
+          setSubFormMessage({ type: 'error', text: res.message });
+        }
       } else {
-        setSubFormMessage({ type: 'error', text: res.message });
+        const res = await addSubscriber(subFormData);
+        if (res.status === 'success') {
+          setSubFormMessage({ type: 'success', text: 'Subscriber added!' });
+          setSubFormData({ user_name: '', role: '', alert_type: 'ALL', teams_webhook: '' });
+          loadSubscribers();
+        } else {
+          setSubFormMessage({ type: 'error', text: res.message });
+        }
       }
     } catch (e) {
       setSubFormMessage({ type: 'error', text: 'Failed to connect to backend.' });
@@ -498,7 +524,8 @@ export default function AdminConfig() {
                           {s.alert_type}
                         </span>
                       </td>
-                      <td style={{ padding: '0.75rem', textAlign: 'right' }}>
+                      <td style={{ padding: '0.75rem', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                        <button className="secondary" title="Edit" style={{padding: '0.3rem 0.5rem', fontSize: '1rem', border: 'none', background: 'transparent'}} onClick={() => handleEditSubscriberClick(s)}>✏️</button>
                         <button className="secondary" style={{padding: '0.2rem 0.5rem', fontSize: '0.8rem', color: '#cf222e'}} onClick={() => handleDeleteSubscriber(s.user_name)}>Remove</button>
                       </td>
                     </tr>
@@ -510,7 +537,7 @@ export default function AdminConfig() {
 
           <div className="rule-form">
             <div className="card">
-              <h3>Add Subscriber</h3>
+              <h3>{editingSubscriber ? 'Edit Subscriber' : 'Add Subscriber'}</h3>
               <form onSubmit={handleAddSubscriber}>
                 <div className="form-group">
                   <label>Full Name</label>
@@ -538,10 +565,13 @@ export default function AdminConfig() {
                   <input type="text" value={subFormData.teams_webhook} onChange={e => setSubFormData({...subFormData, teams_webhook: e.target.value})} placeholder="https://yourcompany.webhook.office.com/..." />
                   <small className="help-text">Create an Incoming Webhook connector in your Teams channel and paste the URL here.</small>
                 </div>
-                <div style={{marginTop: '1rem'}}>
+                <div style={{marginTop: '1rem', display: 'flex', gap: '1rem', alignItems: 'center'}}>
                   <button type="submit" className="primary" disabled={isSaving}>
-                    {isSaving ? 'Processing...' : 'Add Subscriber'}
+                    {isSaving ? 'Processing...' : (editingSubscriber ? 'Update Subscriber' : 'Add Subscriber')}
                   </button>
+                  {editingSubscriber && (
+                    <button type="button" className="secondary" onClick={handleCancelEditSubscriber} disabled={isSaving}>Cancel</button>
+                  )}
                 </div>
                 {subFormMessage && (
                   <div className={`alert-${subFormMessage.type}`} style={{marginTop: '1rem'}}>{subFormMessage.text}</div>

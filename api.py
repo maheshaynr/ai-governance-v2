@@ -100,6 +100,13 @@ class SubscriberRequest(BaseModel):
     alert_type: str
     teams_webhook: str
 
+class UpdateSubscriberRequest(BaseModel):
+    original_user_name: str
+    user_name: str
+    role: str
+    alert_type: str
+    teams_webhook: str
+
 class DeleteSubscriberRequest(BaseModel):
     user_name: str
 
@@ -325,6 +332,33 @@ def add_subscriber(request: SubscriberRequest):
             json.dump(data, f, indent=2)
             
         return {"status": "success", "message": "Subscriber added successfully."}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+@app.post("/update_subscriber")
+def update_subscriber(request: UpdateSubscriberRequest):
+    try:
+        with open("pii_rules.json", "r") as f:
+            data = json.load(f)
+            
+        sub_found = False
+        if "notification_subscribers" in data:
+            for sub in data["notification_subscribers"]:
+                if sub["user_name"] == request.original_user_name:
+                    sub["user_name"] = request.user_name
+                    sub["role"] = request.role
+                    sub["alert_type"] = request.alert_type
+                    sub["teams_webhook"] = request.teams_webhook
+                    sub_found = True
+                    break
+                    
+        if not sub_found:
+            return {"status": "error", "message": "Subscriber not found."}
+            
+        with open("pii_rules.json", "w") as f:
+            json.dump(data, f, indent=2)
+            
+        return {"status": "success", "message": "Subscriber updated successfully."}
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
