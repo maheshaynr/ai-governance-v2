@@ -55,9 +55,9 @@ def reload_presidio_engine():
     
     # Load SciSpaCy Medical Recognizer
     try:
-        disease_recognizer = SpacyRecognizer(supported_language="en-US", supported_entities=["DISEASE", "CHEMICAL"])
+        disease_recognizer = SpacyRecognizer(supported_language="en-US", supported_entities=["DISEASE"])
         new_analyzer.registry.add_recognizer(disease_recognizer)
-        ACTIVE_ENTITIES.extend(["DISEASE", "CHEMICAL"])
+        ACTIVE_ENTITIES.extend(["DISEASE"])
     except Exception as e:
         print(f"Warning: Failed to load SciSpaCy Recognizer: {e}")
         

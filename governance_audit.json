@@ -75,5 +75,250 @@
         "final_rewrite": "The GPS coordinates for the delivery driver are 48.8584 N, 2.2945 E.",
         "fidelity_score": 1.0,
         "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-05T19:16:19.400872",
+        "pii_masked_input": "CHAT_HASH:1dcad3e8",
+        "final_rewrite": "{\n  \"customer_id\": 101,\n  \"customer_name\": \"<PERSON>\",\n  \"sensitive_data\": {\n    \"phone\": \"<PHONE_NUMBER>\",\n    \"payment_card\": \"<CREDIT_CARD>\",\n    \"aadhaar\": \"<IN_AADHAAR>\",\n    \"pan\": \"<PERSON>..\"\n  }\n}",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-05T19:16:41.652335",
+        "pii_masked_input": "AI_HASH:5c2b86da",
+        "final_rewrite": "Patient <PERSON> was diagnosed with <DISEASE> on 10/12/2023.",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-05T19:16:56.349475",
+        "pii_masked_input": "AI_HASH:84c41f7d",
+        "final_rewrite": "Please pull the medical chart for MRN 84729105-X from the archive.",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-05T19:25:27.302204",
+        "pii_masked_input": "AI_HASH:c96f8fca",
+        "final_rewrite": "User logged in from IP address 192.168.1.150 at 02:00 AM.",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-05T19:26:45.183444",
+        "pii_masked_input": "AI_HASH:aab11a29",
+        "final_rewrite": "User logged in from IP address 192.168.231.150 at 02:00 AM.",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-05T19:27:19.070915",
+        "pii_masked_input": "AI_HASH:1e81191e",
+        "final_rewrite": "Contact the German branch manager at +49 151 2345 6789.",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-05T19:34:02.290909",
+        "pii_masked_input": "AI_HASH:1e81191e",
+        "final_rewrite": "Contact the German branch manager at +49 151 2345 6789.",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-05T19:38:10.941658",
+        "pii_masked_input": "CHAT_HASH:1dcad3e8",
+        "final_rewrite": "{\n  \"customer_id\": 101,\n  \"customer_name\": \"<PERSON>\",\n  \"sensitive_data\": {\n    \"phone\": \"<PHONE_NUMBER>\",\n    \"payment_card\": \"<CREDIT_CARD>\",\n    \"aadhaar\": \"<IN_AADHAAR>\",\n    \"pan\": \"<PERSON>..\"\n  }\n}",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-05T19:45:01.184131",
+        "pii_masked_input": "AI_HASH:6118de19",
+        "final_rewrite": "The GPS coordinates for the delivery driver are <GEOGRAPHIC_COORDINATES>.",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-05T19:46:24.564557",
+        "pii_masked_input": "AI_HASH:6118de19",
+        "final_rewrite": "The GPS coordinates for the delivery driver are 48.8584 <CHEMICAL> E.",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-05T19:46:37.093316",
+        "pii_masked_input": "AI_HASH:6118de19",
+        "final_rewrite": "The GPS coordinates for the delivery driver are 48.8584 <CHEMICAL> E.",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-05T19:47:31.941311",
+        "pii_masked_input": "AI_HASH:6118de19",
+        "final_rewrite": "The GPS coordinates for the delivery driver are 48.8584 <CHEMICAL> E.",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-05T19:52:14.760527",
+        "pii_masked_input": "AI_HASH:6118de19",
+        "final_rewrite": "The GPS coordinates for the delivery driver are 48.8584 N, 2.2945 E.",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-05T19:56:03.951902",
+        "pii_masked_input": "AI_HASH:5c2b86da",
+        "final_rewrite": "Patient <PERSON> was diagnosed with <DISEASE> on 10/12/2023.",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-05T19:56:17.412576",
+        "pii_masked_input": "AI_HASH:5ef260d0",
+        "final_rewrite": "Deploy failed. Using PEM file: -----BEGIN RSA PRIVATE KEY----- MIIE... -----END RSA PRIVATE KEY-----",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-05T20:01:10.549155",
+        "pii_masked_input": "AI_HASH:9d6613d4",
+        "final_rewrite": "Contact the German branch manager at +4915123456789.",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-05T20:16:22.624858",
+        "pii_masked_input": "AI_HASH:f7508ebc",
+        "final_rewrite": "The primary insurance ID for BlueCross BlueShield is XEA123456789.",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-05T20:19:04.493277",
+        "pii_masked_input": "CHAT_HASH:1dcad3e8",
+        "final_rewrite": "{\n  \"customer_id\": 101,\n  \"customer_name\": \"<PERSON>\",\n  \"sensitive_data\": {\n    \"phone\": \"<PHONE_NUMBER>\",\n    \"payment_card\": \"<CREDIT_CARD>\",\n    \"aadhaar\": \"<IN_AADHAAR>\",\n    \"pan\": \"<PERSON>..\"\n  }\n}",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-05T20:21:23.425045",
+        "pii_masked_input": "AI_HASH:d14786e4",
+        "final_rewrite": "Please send the finalized report to personal email: <EMAIL_ADDRESS>.",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-05T20:21:32.613564",
+        "pii_masked_input": "AI_HASH:f7508ebc",
+        "final_rewrite": "The primary insurance ID for BlueCross BlueShield is <INSURANCE_PRIMARY_ID>.",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-05T20:21:46.802876",
+        "pii_masked_input": "AI_HASH:3a1f308d",
+        "final_rewrite": "Dr. <PERSON> prescribed 50mg of Zoloft to <PERSON> yesterday.",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-05T20:24:25.184050",
+        "pii_masked_input": "AI_HASH:3a1f308d",
+        "final_rewrite": "Dr. <PERSON> prescribed 50mg of <CHEMICAL> to <PERSON> yesterday.",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-05T20:24:34.414655",
+        "pii_masked_input": "AI_HASH:5c2b86da",
+        "final_rewrite": "Patient <PERSON> was diagnosed with <DISEASE> on 10/12/2023.",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-05T20:24:37.973238",
+        "pii_masked_input": "AI_HASH:5ef260d0",
+        "final_rewrite": "Deploy failed. Using PEM file: <MIIE_PRIVATE_KEY>",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-05T20:24:43.023994",
+        "pii_masked_input": "AI_HASH:cc87a305",
+        "final_rewrite": "Connecting to Postgres prod-db with password 'SuperSecretDB!99'.",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-05T20:29:49.459589",
+        "pii_masked_input": "DB_HASH:e04ca283",
+        "final_rewrite": "Customer Mahesh (ID: 101) purchased Macbook Pro, iPhone. Payment Card: <CREDIT_CARD>. Contact: 9876543210. Aadhaar: <IN_AADHAAR>. <CHEMICAL>: ABCPD1234F.",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-05T20:33:59.184647",
+        "pii_masked_input": "AI_HASH:3a1f308d",
+        "final_rewrite": "Dr. <PERSON> prescribed 50mg of Zoloft to <PERSON> yesterday.",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-05T20:34:50.430445",
+        "pii_masked_input": "AI_HASH:e767eb33",
+        "final_rewrite": "Please charge the renewal fee to my Visa card 4000 1234 5678 9010.",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-05T20:35:08.985725",
+        "pii_masked_input": "AI_HASH:36e870b6",
+        "final_rewrite": "Wire the funds to JP Morgan routing number <PHONE_NUMBER>.",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-05T20:36:02.217943",
+        "pii_masked_input": "AI_HASH:e67ee6fc",
+        "final_rewrite": "Customer <PERSON> has an active balance of $14,500,000 in account 987654321.",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-05T20:40:40.855140",
+        "pii_masked_input": "AI_HASH:e767eb33",
+        "final_rewrite": "Please charge the renewal fee to my Visa card <CREDIT_CARD>.",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-05T20:40:51.066070",
+        "pii_masked_input": "AI_HASH:a185d90a",
+        "final_rewrite": "Please use the corporate credit card <CREDIT_CARD> and reference PAN Card ABCPD1234F.",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-05T21:33:27.280493",
+        "pii_masked_input": "AI_HASH:a185d90a",
+        "final_rewrite": "Please use the corporate credit card <CREDIT_CARD> and reference PAN Card ABCPD1234F.",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-05T21:39:08.842361",
+        "pii_masked_input": "AI_HASH:f7508ebc",
+        "final_rewrite": "The primary insurance ID for BlueCross BlueShield is <INSURANCE_PRIMARY_ID>.",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-05T21:39:42.365307",
+        "pii_masked_input": "AI_HASH:abb676cb",
+        "final_rewrite": "Wire the funds to JP Morgan routing number ABA021000021.",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
     }
 ]

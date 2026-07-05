@@ -1,5 +1,429 @@
 [
   {
+    "alarm_id": "ALM-20260705-caceb4e6",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-07-05T16:09:49.019162Z",
+    "missed_entity": {
+      "type": "Financial data",
+      "value_preview": "ABA021000021...",
+      "reason": "This is a bank account identifier which could be used for financial transactions",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "Wire the funds to JP Morgan routing number ABA021000021.",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "Financial data"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260705-d23acc69",
+    "severity": "HIGH",
+    "category": "AUTHENTICATION",
+    "timestamp": "2026-07-05T16:03:49.694459Z",
+    "missed_entity": {
+      "type": "Authentication data",
+      "value_preview": "PAN Card ABCPD1...",
+      "reason": "Personal identification number (PIN) that can be misused for fraudulent purposes",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "Please use the corporate credit card 4111-2222-3333-4444 and reference PAN Card ABCPD1234F.",
+    "layer1_findings": [
+      "CREDIT_CARD",
+      "MRN_NUMBER",
+      "MRN_NUMBER"
+    ],
+    "layer2_findings": [
+      "Financial data",
+      "Authentication data"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260705-391fbc9f",
+    "severity": "HIGH",
+    "category": "AUTHENTICATION",
+    "timestamp": "2026-07-05T15:11:00.227135Z",
+    "missed_entity": {
+      "type": "Authentication Data",
+      "value_preview": "PAN PD1234F...",
+      "reason": "Personal identification number (PIN) on a credit or debit card",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "Please use the corporate credit card 4111-2222-3333-4444 and reference PAN Card ABCPD1234F.",
+    "layer1_findings": [
+      "CREDIT_CARD",
+      "MRN_NUMBER",
+      "MRN_NUMBER"
+    ],
+    "layer2_findings": [
+      "Financial Data",
+      "Authentication Data"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260705-cb9a699d",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-07-05T15:06:08.255165Z",
+    "missed_entity": {
+      "type": "Financial data",
+      "value_preview": "14050000...",
+      "reason": "contains sensitive financial information",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "Customer John Doe has an active balance of $14,500,000 in account 987654321.",
+    "layer1_findings": [
+      "PERSON"
+    ],
+    "layer2_findings": [
+      "Financial data"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260705-c5d3ef00",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-07-05T15:04:57.662610Z",
+    "missed_entity": {
+      "type": "Financial data",
+      "value_preview": "40001234569810...",
+      "reason": "It's a credit/debit card number which is sensitive financial information.",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "Please charge the renewal fee to my Visa card 4000 1234 5678 9010.",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "Financial data"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260705-8fad2ac6",
+    "severity": "HIGH",
+    "category": "HIPAA",
+    "timestamp": "2026-07-05T15:04:06.341563Z",
+    "missed_entity": {
+      "type": "MEDICAL INFORMATION",
+      "value_preview": "Zoloft, 50mg...",
+      "reason": "No reason provided",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "Dr. Smith prescribed 50mg of Zoloft to John Appleseed yesterday.",
+    "layer1_findings": [
+      "PERSON",
+      "PERSON"
+    ],
+    "layer2_findings": [
+      "MEDICAL INFORMATION",
+      "PERSONAL IDENTIFIER"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260705-08fbac4f",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-07-05T15:00:14.560881Z",
+    "missed_entity": {
+      "type": "PAN Card",
+      "value_preview": "ABCPD1234F...",
+      "reason": "Personal Identifiable Information (PII)",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "Customer Mahesh (ID: 101) purchased Macbook Pro, iPhone. Payment Card: 4111-2222-3333-4444. Contact: 9876543210. Aadhaar: 9999 4105 7058. PAN: ABCPD1234F.",
+    "layer1_findings": [
+      "IN_AADHAAR",
+      "CREDIT_CARD",
+      "MRN_NUMBER",
+      "MRN_NUMBER",
+      "CHEMICAL"
+    ],
+    "layer2_findings": [
+      "Payment Card",
+      "Contact Information",
+      "Aadhaar Number",
+      "PAN Card"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260705-d71dadbb",
+    "severity": "HIGH",
+    "category": "UNCATEGORIZED",
+    "timestamp": "2026-07-05T15:00:10.252985Z",
+    "missed_entity": {
+      "type": "Aadhaar Number",
+      "value_preview": "99994105058...",
+      "reason": "Personal Identifiable Information (PII)",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "Customer Mahesh (ID: 101) purchased Macbook Pro, iPhone. Payment Card: 4111-2222-3333-4444. Contact: 9876543210. Aadhaar: 9999 4105 7058. PAN: ABCPD1234F.",
+    "layer1_findings": [
+      "IN_AADHAAR",
+      "CREDIT_CARD",
+      "MRN_NUMBER",
+      "MRN_NUMBER",
+      "CHEMICAL"
+    ],
+    "layer2_findings": [
+      "Payment Card",
+      "Contact Information",
+      "Aadhaar Number",
+      "PAN Card"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260705-e5119f1c",
+    "severity": "HIGH",
+    "category": "UNCATEGORIZED",
+    "timestamp": "2026-07-05T15:00:06.156568Z",
+    "missed_entity": {
+      "type": "Contact Information",
+      "value_preview": "9876543210...",
+      "reason": "personal identifiers, contact information",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "Customer Mahesh (ID: 101) purchased Macbook Pro, iPhone. Payment Card: 4111-2222-3333-4444. Contact: 9876543210. Aadhaar: 9999 4105 7058. PAN: ABCPD1234F.",
+    "layer1_findings": [
+      "IN_AADHAAR",
+      "CREDIT_CARD",
+      "MRN_NUMBER",
+      "MRN_NUMBER",
+      "CHEMICAL"
+    ],
+    "layer2_findings": [
+      "Payment Card",
+      "Contact Information",
+      "Aadhaar Number",
+      "PAN Card"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260705-88905695",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-07-05T15:00:01.912278Z",
+    "missed_entity": {
+      "type": "Payment Card",
+      "value_preview": "41112222334444...",
+      "reason": "financial data",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "Customer Mahesh (ID: 101) purchased Macbook Pro, iPhone. Payment Card: 4111-2222-3333-4444. Contact: 9876543210. Aadhaar: 9999 4105 7058. PAN: ABCPD1234F.",
+    "layer1_findings": [
+      "IN_AADHAAR",
+      "CREDIT_CARD",
+      "MRN_NUMBER",
+      "MRN_NUMBER",
+      "CHEMICAL"
+    ],
+    "layer2_findings": [
+      "Payment Card",
+      "Contact Information",
+      "Aadhaar Number",
+      "PAN Card"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260705-fefed398",
+    "severity": "HIGH",
+    "category": "AUTHENTICATION",
+    "timestamp": "2026-07-05T14:54:55.441004Z",
+    "missed_entity": {
+      "type": "Authentication data",
+      "value_preview": "SuperSecretDB!9...",
+      "reason": "It's a database credential that should not be exposed publicly",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "Connecting to Postgres prod-db with password 'SuperSecretDB!99'.",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "Authentication data"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260705-7906e76a",
+    "severity": "HIGH",
+    "category": "GDPR",
+    "timestamp": "2026-07-05T14:46:36.975051Z",
+    "missed_entity": {
+      "type": "Personal Identifier",
+      "value_preview": "XEA123456789...",
+      "reason": "It can be used to access personal health records and other sensitive data.",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The primary insurance ID for BlueCross BlueShield is XEA123456789.",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "Personal Identifier"
+    ],
+    "status": "RESOLVED"
+  },
+  {
+    "alarm_id": "ALM-20260705-09d2740a",
+    "severity": "HIGH",
+    "category": "AUTHENTICATION",
+    "timestamp": "2026-07-05T14:26:23.380033Z",
+    "missed_entity": {
+      "type": "Authentication data",
+      "value_preview": "MIIE......",
+      "reason": "it's part of a private key which should not be exposed publicly",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "Deploy failed. Using PEM file: -----BEGIN RSA PRIVATE KEY----- MIIE... -----END RSA PRIVATE KEY-----",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "Authentication data"
+    ],
+    "status": "RESOLVED"
+  },
+  {
+    "alarm_id": "ALM-20260705-5d45b185",
+    "severity": "HIGH",
+    "category": "UNCATEGORIZED",
+    "timestamp": "2026-07-05T14:22:20.701185Z",
+    "missed_entity": {
+      "type": "GPS Coordinates",
+      "value_preview": "48.8584 N, 2.29...",
+      "reason": "could potentially be used to track an individual's movements",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The GPS coordinates for the delivery driver are 48.8584 N, 2.2945 E.",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "GPS Coordinates"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260705-40749dac",
+    "severity": "HIGH",
+    "category": "UNCATEGORIZED",
+    "timestamp": "2026-07-05T14:04:15.939567Z",
+    "missed_entity": {
+      "type": "CONTACT_INFORMATION",
+      "value_preview": "+49 151 2345 67...",
+      "reason": "Publicly exposed phone number",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "Contact the German branch manager at +49 151 2345 6789.",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "CONTACT_INFORMATION"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260705-5bc0ca70",
+    "severity": "HIGH",
+    "category": "UNCATEGORIZED",
+    "timestamp": "2026-07-05T13:57:24.196904Z",
+    "missed_entity": {
+      "type": "CONTACT INFORMATION",
+      "value_preview": "+491153456789...",
+      "reason": "Contains phone number which is private information",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "Contact the German branch manager at +49 151 2345 6789.",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "CONTACT INFORMATION"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260705-6fc5f2d8",
+    "severity": "HIGH",
+    "category": "GDPR",
+    "timestamp": "2026-07-05T13:56:51.120348Z",
+    "missed_entity": {
+      "type": "Personal identifiers",
+      "value_preview": "IP address - 19...",
+      "reason": "could potentially identify a specific user or device",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "User logged in from IP address 192.168.231.150 at 02:00 AM.",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "Personal identifiers"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260705-3251d9d8",
+    "severity": "HIGH",
+    "category": "UNCATEGORIZED",
+    "timestamp": "2026-07-05T13:55:40.900853Z",
+    "missed_entity": {
+      "type": "IP Address",
+      "value_preview": "192.168.1.150...",
+      "reason": "Personal identifier; potentially sensitive if linked to user activities",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "User logged in from IP address 192.168.1.150 at 02:00 AM.",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "IP Address"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260705-4e5f2f3d",
+    "severity": "HIGH",
+    "category": "HIPAA",
+    "timestamp": "2026-07-05T13:47:01.516127Z",
+    "missed_entity": {
+      "type": "Medical Information",
+      "value_preview": "MRN 84729105-X...",
+      "reason": "No reason provided",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "Please pull the medical chart for MRN 84729105-X from the archive.",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "Medical Information"
+    ],
+    "status": "RESOLVED"
+  },
+  {
+    "alarm_id": "ALM-20260705-4f1f246e",
+    "severity": "HIGH",
+    "category": "GDPR",
+    "timestamp": "2026-07-05T13:46:35.069006Z",
+    "missed_entity": {
+      "type": "Personal identifier",
+      "value_preview": "101...",
+      "reason": "Internal customer ID",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "{\n  \"customer_id\": 101,\n  \"customer_name\": \"Mahesh\",\n  \"sensitive_data\": {\n    \"phone\": \"9876543210\",\n    \"payment_card\": \"4111-2222-3333-4444\",\n    \"aadhaar\": \"9999 4105 7058\",\n    \"pan\": \"ABCPD1234F...",
+    "layer1_findings": [
+      "IN_AADHAAR",
+      "PERSON",
+      "PHONE_NUMBER",
+      "CREDIT_CARD",
+      "PERSON",
+      "PHONE_NUMBER"
+    ],
+    "layer2_findings": [
+      "Personal identifier",
+      "Name",
+      "Phone number",
+      "Payment card",
+      "Aadhaar number",
+      "PAN card"
+    ],
+    "status": "DISMISSED"
+  },
+  {
     "alarm_id": "ALM-20260705-a7e44f30",
     "severity": "HIGH",
     "category": "GDPR",
@@ -15,7 +439,7 @@
     "layer2_findings": [
       "Personal Identifiers"
     ],
-    "status": "PENDING_REVIEW"
+    "status": "RESOLVED"
   },
   {
     "alarm_id": "ALM-20260705-08b11534",
@@ -36,7 +460,7 @@
       "Personal Identifiers",
       "Medical / Health Information"
     ],
-    "status": "PENDING_REVIEW"
+    "status": "DISMISSED"
   },
   {
     "alarm_id": "ALM-20260705-ab427d23",
@@ -54,7 +478,7 @@
     "layer2_findings": [
       "Financial Data"
     ],
-    "status": "PENDING_REVIEW"
+    "status": "DISMISSED"
   },
   {
     "alarm_id": "ALM-20260705-2cd78a8d",
@@ -72,7 +496,7 @@
     "layer2_findings": [
       "Financial data"
     ],
-    "status": "PENDING_REVIEW"
+    "status": "DISMISSED"
   },
   {
     "alarm_id": "ALM-20260705-73a8839b",

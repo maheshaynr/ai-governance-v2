@@ -78,7 +78,7 @@ export default function Dashboard() {
       <div className="admin-layout" style={{ marginTop: '1rem' }}>
         
         {/* Left Pane: Master List */}
-        <div className="rules-list card" style={{ marginTop: '0', alignSelf: 'flex-start' }}>
+        <div className="rules-list card" style={{ marginTop: '0', alignSelf: 'flex-start', maxHeight: 'calc(100vh - 120px)', overflowY: 'auto' }}>
           <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>🧪 Test Suite</h3>
           {testCases.map((tc) => (
             <div 
@@ -94,7 +94,7 @@ export default function Dashboard() {
         </div>
 
         {/* Right Pane: Execution Details */}
-        <div className="rule-form">
+        <div className="rule-form" style={{ position: 'sticky', top: '20px' }}>
           {selectedTest ? (
             <div className="card">
               <h3>{selectedTest.summary}</h3>

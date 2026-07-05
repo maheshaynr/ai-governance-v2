@@ -46,32 +46,52 @@
     {
       "name": "PoC_Fake_CC",
       "entity": "CREDIT_CARD",
-      "regex": "\\b\\d{4}-\\d{4}-\\d{4}-\\d{4}\\b",
-      "score": 0.85,
-      "is_builtin": false,
-      "is_algorithmic": false
-    },
-    {
-      "name": "PoC_Fake_Phone",
-      "entity": "PHONE_NUMBER",
-      "regex": "\\b\\d{10}\\b",
-      "score": 0.85,
-      "is_builtin": false,
-      "is_algorithmic": false
-    },
-    {
-      "name": "AutoFix_IBAN_NUMBER",
-      "entity": "IBAN_NUMBER",
-      "regex": "\\bGB29NWBK30123456789012\\b",
+      "regex": "\\b(?:\\d{4}[- ]?){3}\\d{4}\\b",
       "score": 0.85,
       "is_builtin": false,
       "is_algorithmic": false,
       "is_active": true
     },
     {
-      "name": "AutoFix_OPENAI_API_KEY",
-      "entity": "OPENAI_API_KEY",
-      "regex": "\\bsk-proj-[a-zA-Z0-9]+\\b",
+      "name": "PoC_Fake_Phone",
+      "entity": "PHONE_NUMBER",
+      "regex": "",
+      "score": 0.85,
+      "is_builtin": true,
+      "is_algorithmic": false,
+      "is_active": true
+    },
+    {
+      "name": "AutoFix_MRN_NUMBER",
+      "entity": "MRN_NUMBER",
+      "regex": "\\d{4}-[a-zA-Z0-9]+",
+      "score": 0.85,
+      "is_builtin": false,
+      "is_algorithmic": false,
+      "is_active": true
+    },
+    {
+      "name": "AutoFix_GEOGRAPHIC_COORDINATES",
+      "entity": "GEOGRAPHIC_COORDINATES",
+      "regex": "\\b\\d{1,2}(?:\\.\\d+)?\\s*[NS],\\s*\\d{1,3}(?:\\.\\d+)?\\s*[EW]\\b",
+      "score": 0.85,
+      "is_builtin": false,
+      "is_algorithmic": false,
+      "is_active": false
+    },
+    {
+      "name": "AutoFix_MIIE_PRIVATE_KEY",
+      "entity": "MIIE_PRIVATE_KEY",
+      "regex": "-----BEGIN (?:RSA |EC |DSA |OPENSSH |ENCRYPTED )?PRIVATE KEY-----[\\s\\S]*?-----END (?:RSA |EC |DSA |OPENSSH |ENCRYPTED )?PRIVATE KEY-----",
+      "score": 0.85,
+      "is_builtin": false,
+      "is_algorithmic": false,
+      "is_active": true
+    },
+    {
+      "name": "AutoFix_INSURANCE_PRIMARY_ID",
+      "entity": "INSURANCE_PRIMARY_ID",
+      "regex": "\\bXEA[0-9A-Z]+\\b",
       "score": 0.85,
       "is_builtin": false,
       "is_algorithmic": false,

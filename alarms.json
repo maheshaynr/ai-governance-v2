@@ -1,76 +1,125 @@
 [
   {
-    "alarm_id": "ALM-20260705-a7e44f30",
+    "alarm_id": "ALM-20260705-caceb4e6",
     "severity": "HIGH",
-    "category": "GDPR",
-    "timestamp": "2026-07-05T13:19:57.801393Z",
+    "category": "FINANCIAL",
+    "timestamp": "2026-07-05T16:09:49.019162Z",
     "missed_entity": {
-      "type": "Personal Identifiers",
-      "value_preview": "48.8584 N, 2.29...",
-      "reason": "GPS coordinates can potentially be used to pinpoint someone's location",
+      "type": "Financial data",
+      "value_preview": "ABA021000021...",
+      "reason": "This is a bank account identifier which could be used for financial transactions",
       "detected_by": "phi-4-mini"
     },
-    "context_snippet": "The GPS coordinates for the delivery driver are 48.8584 N, 2.2945 E.",
+    "context_snippet": "Wire the funds to JP Morgan routing number ABA021000021.",
     "layer1_findings": [],
     "layer2_findings": [
-      "Personal Identifiers"
+      "Financial data"
     ],
     "status": "PENDING_REVIEW"
   },
   {
-    "alarm_id": "ALM-20260705-08b11534",
+    "alarm_id": "ALM-20260705-d23acc69",
     "severity": "HIGH",
-    "category": "HIPAA",
-    "timestamp": "2026-07-05T13:00:34.400827Z",
+    "category": "AUTHENTICATION",
+    "timestamp": "2026-07-05T16:03:49.694459Z",
     "missed_entity": {
-      "type": "Medical / Health Information",
-      "value_preview": "Stage 2 Melanom...",
-      "reason": "Health condition",
+      "type": "Authentication data",
+      "value_preview": "PAN Card ABCPD1...",
+      "reason": "Personal identification number (PIN) that can be misused for fraudulent purposes",
       "detected_by": "phi-4-mini"
     },
-    "context_snippet": "Patient Sarah Connor was diagnosed with Stage 2 Melanoma on 10/12/2023.",
+    "context_snippet": "Please use the corporate credit card 4111-2222-3333-4444 and reference PAN Card ABCPD1234F.",
+    "layer1_findings": [
+      "CREDIT_CARD",
+      "MRN_NUMBER",
+      "MRN_NUMBER"
+    ],
+    "layer2_findings": [
+      "Financial data",
+      "Authentication data"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260705-391fbc9f",
+    "severity": "HIGH",
+    "category": "AUTHENTICATION",
+    "timestamp": "2026-07-05T15:11:00.227135Z",
+    "missed_entity": {
+      "type": "Authentication Data",
+      "value_preview": "PAN PD1234F...",
+      "reason": "Personal identification number (PIN) on a credit or debit card",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "Please use the corporate credit card 4111-2222-3333-4444 and reference PAN Card ABCPD1234F.",
+    "layer1_findings": [
+      "CREDIT_CARD",
+      "MRN_NUMBER",
+      "MRN_NUMBER"
+    ],
+    "layer2_findings": [
+      "Financial Data",
+      "Authentication Data"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260705-cb9a699d",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-07-05T15:06:08.255165Z",
+    "missed_entity": {
+      "type": "Financial data",
+      "value_preview": "14050000...",
+      "reason": "contains sensitive financial information",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "Customer John Doe has an active balance of $14,500,000 in account 987654321.",
     "layer1_findings": [
       "PERSON"
     ],
     "layer2_findings": [
-      "Personal Identifiers",
-      "Medical / Health Information"
+      "Financial data"
     ],
     "status": "PENDING_REVIEW"
   },
   {
-    "alarm_id": "ALM-20260705-ab427d23",
+    "alarm_id": "ALM-20260705-c5d3ef00",
     "severity": "HIGH",
     "category": "FINANCIAL",
-    "timestamp": "2026-07-05T12:54:46.841836Z",
-    "missed_entity": {
-      "type": "Financial Data",
-      "value_preview": "4000 1234 5678 ...",
-      "reason": "Credit Card Number",
-      "detected_by": "phi-4-mini"
-    },
-    "context_snippet": "Please charge the renewal fee to my Visa card 4000 1234 5678 9010.",
-    "layer1_findings": [],
-    "layer2_findings": [
-      "Financial Data"
-    ],
-    "status": "PENDING_REVIEW"
-  },
-  {
-    "alarm_id": "ALM-20260705-2cd78a8d",
-    "severity": "HIGH",
-    "category": "FINANCIAL",
-    "timestamp": "2026-07-05T12:53:35.113128Z",
+    "timestamp": "2026-07-05T15:04:57.662610Z",
     "missed_entity": {
       "type": "Financial data",
-      "value_preview": "40001234568910...",
-      "reason": "Credit Card Number",
+      "value_preview": "40001234569810...",
+      "reason": "It's a credit/debit card number which is sensitive financial information.",
       "detected_by": "phi-4-mini"
     },
     "context_snippet": "Please charge the renewal fee to my Visa card 4000 1234 5678 9010.",
     "layer1_findings": [],
     "layer2_findings": [
       "Financial data"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260705-8fad2ac6",
+    "severity": "HIGH",
+    "category": "HIPAA",
+    "timestamp": "2026-07-05T15:04:06.341563Z",
+    "missed_entity": {
+      "type": "MEDICAL INFORMATION",
+      "value_preview": "Zoloft, 50mg...",
+      "reason": "No reason provided",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "Dr. Smith prescribed 50mg of Zoloft to John Appleseed yesterday.",
+    "layer1_findings": [
+      "PERSON",
+      "PERSON"
+    ],
+    "layer2_findings": [
+      "MEDICAL INFORMATION",
+      "PERSONAL IDENTIFIER"
     ],
     "status": "PENDING_REVIEW"
   }
