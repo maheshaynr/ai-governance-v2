@@ -1,5 +1,25 @@
 [
   {
+    "alarm_id": "ALM-20260705-08142253",
+    "severity": "HIGH",
+    "category": "UNCATEGORIZED",
+    "timestamp": "2026-07-05T07:09:41.589221Z",
+    "missed_entity": {
+      "type": "Authentication Data",
+      "value_preview": "sk-live-abc123x...",
+      "reason": "No reason provided",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "My name is Mahesh and my AWS API key is sk-live-abc123xyz. Please don't share it.",
+    "layer1_findings": [
+      "PERSON"
+    ],
+    "layer2_findings": [
+      "Authentication Data"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
     "alarm_id": "ALM-20260705-cbdcb5ba",
     "severity": "HIGH",
     "category": "UNCATEGORIZED",

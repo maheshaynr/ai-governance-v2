@@ -45,6 +45,9 @@ def reload_presidio_engine():
         with open("pii_rules.json", "r") as f:
             rules = json.load(f)["rules"]
             for rule in rules:
+                if not rule.get("is_active", True):
+                    continue
+                
                 if not rule.get("is_builtin", False) and not rule.get("is_algorithmic", False):
                     pattern = Pattern(name=rule["name"], regex=rule["regex"], score=rule["score"])
                     recognizer = PatternRecognizer(supported_entity=rule["entity"], patterns=[pattern])
@@ -81,6 +84,7 @@ class RuleRequest(BaseModel):
     score: float
     is_builtin: bool = False
     is_algorithmic: bool = False
+    is_active: bool = True
 
 class UpdateRuleRequest(BaseModel):
     original_name: str
@@ -90,6 +94,7 @@ class UpdateRuleRequest(BaseModel):
     score: float
     is_builtin: bool = False
     is_algorithmic: bool = False
+    is_active: bool = True
 
 class DeleteRuleRequest(BaseModel):
     name: str
@@ -402,7 +407,8 @@ def add_rule(request: RuleRequest):
             "regex": request.regex,
             "score": request.score,
             "is_builtin": request.is_builtin,
-            "is_algorithmic": request.is_algorithmic
+            "is_algorithmic": request.is_algorithmic,
+            "is_active": request.is_active
         }
         data["rules"].append(new_rule)
         
@@ -432,6 +438,7 @@ def update_rule(request: UpdateRuleRequest):
                 rule["score"] = request.score
                 rule["is_builtin"] = request.is_builtin
                 rule["is_algorithmic"] = request.is_algorithmic
+                rule["is_active"] = request.is_active
                 rule_found = True
                 break
                 

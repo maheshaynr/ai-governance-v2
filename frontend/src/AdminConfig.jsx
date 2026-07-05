@@ -18,7 +18,7 @@ export default function AdminConfig() {
   const [editingRule, setEditingRule] = useState(null);
   const [editingSubscriber, setEditingSubscriber] = useState(null);
   
-  const [formData, setFormData] = useState({ name: '', entity: '', regex: '', score: 0.85, is_builtin: false, is_algorithmic: false });
+  const [formData, setFormData] = useState({ name: '', entity: '', regex: '', score: 0.85, is_builtin: false, is_algorithmic: false, is_active: true });
   const [subFormData, setSubFormData] = useState({ user_name: '', role: '', alert_type: 'ALL', email: '' });
   
   const [formMessage, setFormMessage] = useState(null);
@@ -93,13 +93,13 @@ export default function AdminConfig() {
 
   const handleEditClick = (rule) => {
     setEditingRule(rule);
-    setFormData({ name: rule.name, entity: rule.entity, regex: rule.regex, score: rule.score, is_builtin: rule.is_builtin || false, is_algorithmic: rule.is_algorithmic || false });
+    setFormData({ name: rule.name, entity: rule.entity, regex: rule.regex, score: rule.score, is_builtin: rule.is_builtin || false, is_algorithmic: rule.is_algorithmic || false, is_active: rule.is_active !== false });
     setFormMessage(null);
   };
 
   const handleCancelEdit = () => {
     setEditingRule(null);
-    setFormData({ name: '', entity: '', regex: '', score: 0.85, is_builtin: false, is_algorithmic: false });
+    setFormData({ name: '', entity: '', regex: '', score: 0.85, is_builtin: false, is_algorithmic: false, is_active: true });
     setFormMessage(null);
   };
 
@@ -120,7 +120,7 @@ export default function AdminConfig() {
         if (res.status === 'success') {
           setFormMessage({ type: 'success', text: 'Rule updated and hot-reloaded!' });
           setEditingRule(null);
-          setFormData({ name: '', entity: '', regex: '', score: 0.85, is_builtin: false, is_algorithmic: false });
+          setFormData({ name: '', entity: '', regex: '', score: 0.85, is_builtin: false, is_algorithmic: false, is_active: true });
         } else {
           setFormMessage({ type: 'error', text: res.message });
         }
@@ -128,7 +128,7 @@ export default function AdminConfig() {
         const res = await addRule(formData);
         if (res.status === 'success') {
           setFormMessage({ type: 'success', text: 'Rule added and hot-reloaded!' });
-          setFormData({ name: '', entity: '', regex: '', score: 0.85, is_builtin: false, is_algorithmic: false });
+          setFormData({ name: '', entity: '', regex: '', score: 0.85, is_builtin: false, is_algorithmic: false, is_active: true });
         } else {
           setFormMessage({ type: 'error', text: res.message });
         }
@@ -153,7 +153,7 @@ export default function AdminConfig() {
       if (res.status === 'success') {
         setFormMessage({ type: 'success', text: 'Rule deleted!' });
         setEditingRule(null);
-        setFormData({ name: '', entity: '', regex: '', score: 0.85, is_builtin: false, is_algorithmic: false });
+        setFormData({ name: '', entity: '', regex: '', score: 0.85, is_builtin: false, is_algorithmic: false, is_active: true });
         loadRules();
       } else {
         setFormMessage({ type: 'error', text: res.message });
@@ -162,6 +162,16 @@ export default function AdminConfig() {
       setFormMessage({ type: 'error', text: 'Failed to connect to backend.' });
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleToggleRuleActive = async (rule) => {
+    const payload = { ...rule, original_name: rule.name, is_active: rule.is_active === false ? true : false };
+    try {
+      await updateRule(payload);
+      loadRules();
+    } catch (e) {
+      console.error("Failed to toggle rule", e);
     }
   };
 
@@ -310,6 +320,7 @@ export default function AdminConfig() {
                     <th style={{ padding: '0.75rem', borderBottom: '1px solid #d0d7de', whiteSpace: 'nowrap' }}>Rule Name</th>
                     <th style={{ padding: '0.75rem', borderBottom: '1px solid #d0d7de', whiteSpace: 'nowrap' }}>Entity Class</th>
                     <th style={{ padding: '0.75rem', borderBottom: '1px solid #d0d7de', whiteSpace: 'nowrap' }}>Type</th>
+                    <th style={{ padding: '0.75rem', borderBottom: '1px solid #d0d7de', textAlign: 'center', whiteSpace: 'nowrap' }}>Status</th>
                     <th style={{ padding: '0.75rem', borderBottom: '1px solid #d0d7de', textAlign: 'right', whiteSpace: 'nowrap' }}>Actions</th>
                   </tr>
                 </thead>
@@ -330,6 +341,14 @@ export default function AdminConfig() {
                             {r.is_builtin ? '✨ Built-In AI' : '⚙️ Custom Regex'}
                           </span>
                         )}
+                      </td>
+                      <td style={{ padding: '0.75rem', textAlign: 'center' }}>
+                        <label className="switch" style={{position: 'relative', display: 'inline-block', width: '30px', height: '16px'}}>
+                          <input type="checkbox" checked={r.is_active !== false} onChange={() => handleToggleRuleActive(r)} style={{opacity: 0, width: 0, height: 0}} />
+                          <span className="slider" style={{position: 'absolute', cursor: 'pointer', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: r.is_active !== false ? '#2da44e' : '#cf222e', transition: '.4s', borderRadius: '16px'}}>
+                            <span style={{position: 'absolute', height: '12px', width: '12px', left: r.is_active !== false ? '16px' : '2px', bottom: '2px', backgroundColor: 'white', transition: '.4s', borderRadius: '50%'}}></span>
+                          </span>
+                        </label>
                       </td>
                       <td style={{ padding: '0.75rem', textAlign: 'right' }}>
                         <button className="secondary" title="Edit" style={{padding: '0.3rem 0.5rem', fontSize: '1rem', border: 'none', background: 'transparent'}} onClick={() => handleEditClick(r)}>✏️</button>
@@ -357,7 +376,17 @@ export default function AdminConfig() {
                   <small className="help-text">The tag used to mask the data (e.g., 'CREDIT_CARD'). The output will be replaced with &lt;ENTITY_CLASS&gt;.</small>
                 </div>
 
-                <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+                <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <input 
+                      type="checkbox" 
+                      checked={formData.is_active} 
+                      onChange={e => setFormData({...formData, is_active: e.target.checked})} 
+                      style={{ width: 'auto', margin: 0 }}
+                    />
+                    <label style={{ margin: 0, fontWeight: 'bold' }}>Rule Active</label>
+                  </div>
+                  
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <input 
                       type="checkbox" 
