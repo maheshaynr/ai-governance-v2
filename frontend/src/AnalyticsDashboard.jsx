@@ -74,11 +74,11 @@ export default function AnalyticsDashboard() {
   };
 
   return (
-    <div style={{ backgroundColor: '#0f172a', color: '#f8fafc', padding: '2rem', borderRadius: '12px', fontFamily: '"Inter", -apple-system, sans-serif', minHeight: '85vh', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}>
+    <div style={{ backgroundColor: '#0f172a', color: '#f8fafc', padding: '1.5rem', borderRadius: '12px', fontFamily: '"Inter", -apple-system, sans-serif', minHeight: '80vh', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}>
       
       {/* Top Header & Controls */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2.5rem', borderBottom: '1px solid #1e293b', paddingBottom: '1.5rem' }}>
-        <h2 style={{ margin: 0, fontWeight: '700', letterSpacing: '-0.025em', display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '1.8rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '1px solid #1e293b', paddingBottom: '1rem' }}>
+        <h2 style={{ margin: 0, fontWeight: '700', letterSpacing: '-0.025em', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.4rem' }}>
           <span style={{ color: '#38bdf8', filter: 'drop-shadow(0 0 8px rgba(56, 189, 248, 0.6))' }}>⚡</span> Pulse Analytics
         </h2>
         
@@ -105,30 +105,30 @@ export default function AnalyticsDashboard() {
       </div>
 
       {/* Glossy KPI Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.5rem', marginBottom: '2.5rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.5rem', marginBottom: '1.5rem' }}>
         
-        <div style={{ background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)', borderRadius: '16px', padding: '1.75rem', boxShadow: '0 10px 25px -5px rgba(59, 130, 246, 0.4)', color: '#fff', position: 'relative', overflow: 'hidden' }}>
+        <div style={{ background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)', borderRadius: '16px', padding: '1.25rem', boxShadow: '0 10px 25px -5px rgba(59, 130, 246, 0.4)', color: '#fff', position: 'relative', overflow: 'hidden' }}>
           <div style={{ position: 'absolute', right: '-10%', top: '-20%', fontSize: '8rem', opacity: 0.1 }}>🌍</div>
           <div style={{ fontSize: '0.85rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', opacity: 0.9, marginBottom: '0.5rem' }}>Total Processed</div>
-          <div style={{ fontSize: '3.5rem', fontWeight: '800', lineHeight: 1 }}>{data.metrics.total_requests}</div>
+          <div style={{ fontSize: '2.5rem', fontWeight: '800', lineHeight: 1 }}>{data.metrics.total_requests}</div>
         </div>
 
-        <div style={{ background: 'linear-gradient(135deg, #f43f5e 0%, #be123c 100%)', borderRadius: '16px', padding: '1.75rem', boxShadow: '0 10px 25px -5px rgba(244, 63, 94, 0.4)', color: '#fff', position: 'relative', overflow: 'hidden' }}>
+        <div style={{ background: 'linear-gradient(135deg, #f43f5e 0%, #be123c 100%)', borderRadius: '16px', padding: '1.25rem', boxShadow: '0 10px 25px -5px rgba(244, 63, 94, 0.4)', color: '#fff', position: 'relative', overflow: 'hidden' }}>
           <div style={{ position: 'absolute', right: '-10%', top: '-20%', fontSize: '8rem', opacity: 0.1 }}>🚨</div>
           <div style={{ fontSize: '0.85rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', opacity: 0.9, marginBottom: '0.5rem' }}>Alarms Triggered</div>
-          <div style={{ fontSize: '3.5rem', fontWeight: '800', lineHeight: 1 }}>{data.metrics.total_alarms}</div>
+          <div style={{ fontSize: '2.5rem', fontWeight: '800', lineHeight: 1 }}>{data.metrics.total_alarms}</div>
         </div>
 
-        <div style={{ background: 'linear-gradient(135deg, #10b981 0%, #047857 100%)', borderRadius: '16px', padding: '1.75rem', boxShadow: '0 10px 25px -5px rgba(16, 185, 129, 0.4)', color: '#fff', position: 'relative', overflow: 'hidden' }}>
+        <div style={{ background: 'linear-gradient(135deg, #10b981 0%, #047857 100%)', borderRadius: '16px', padding: '1.25rem', boxShadow: '0 10px 25px -5px rgba(16, 185, 129, 0.4)', color: '#fff', position: 'relative', overflow: 'hidden' }}>
            <div style={{ position: 'absolute', right: '-10%', top: '-20%', fontSize: '8rem', opacity: 0.1 }}>🛡️</div>
           <div style={{ fontSize: '0.85rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', opacity: 0.9, marginBottom: '0.5rem' }}>Alarms Resolved</div>
-          <div style={{ fontSize: '3.5rem', fontWeight: '800', lineHeight: 1 }}>{data.metrics.resolved}</div>
+          <div style={{ fontSize: '2.5rem', fontWeight: '800', lineHeight: 1 }}>{data.metrics.resolved}</div>
         </div>
 
-        <div style={{ background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)', border: '1px solid #334155', borderRadius: '16px', padding: '1.75rem', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.5)', color: '#fff', position: 'relative', overflow: 'hidden' }}>
+        <div style={{ background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)', border: '1px solid #334155', borderRadius: '16px', padding: '1.25rem', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.5)', color: '#fff', position: 'relative', overflow: 'hidden' }}>
            <div style={{ position: 'absolute', right: '-10%', top: '-20%', fontSize: '8rem', opacity: 0.05 }}>❤️</div>
           <div style={{ fontSize: '0.85rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94a3b8', marginBottom: '0.5rem' }}>System Health Score</div>
-          <div style={{ fontSize: '3.5rem', fontWeight: '800', lineHeight: 1, color: healthScore < 95 ? '#f43f5e' : '#10b981' }}>
+          <div style={{ fontSize: '2.5rem', fontWeight: '800', lineHeight: 1, color: healthScore < 95 ? '#f43f5e' : '#10b981' }}>
             {healthScore}%
           </div>
         </div>
@@ -139,9 +139,9 @@ export default function AnalyticsDashboard() {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
         
         {/* Category Breakdown */}
-        <div style={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '16px', padding: '1.5rem', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.2)' }}>
-          <h3 style={{ margin: '0 0 1.5rem 0', color: '#f8fafc', fontSize: '1.1rem', fontWeight: '600' }}>Leakage by Category</h3>
-          <div style={{ height: '300px' }}>
+        <div style={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '16px', padding: '1.25rem', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.2)' }}>
+          <h3 style={{ margin: '0 0 1rem 0', color: '#f8fafc', fontSize: '1rem', fontWeight: '600' }}>Leakage by Category</h3>
+          <div style={{ height: '240px' }}>
             {data.category_data.length === 0 ? (
               <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', fontStyle: 'italic' }}>No threat data available.</div>
             ) : (
@@ -163,9 +163,9 @@ export default function AnalyticsDashboard() {
         </div>
 
         {/* Status Breakdown */}
-        <div style={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '16px', padding: '1.5rem', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.2)' }}>
-          <h3 style={{ margin: '0 0 1.5rem 0', color: '#f8fafc', fontSize: '1.1rem', fontWeight: '600' }}>Resolution Pipeline</h3>
-          <div style={{ height: '300px' }}>
+        <div style={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '16px', padding: '1.25rem', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.2)' }}>
+          <h3 style={{ margin: '0 0 1rem 0', color: '#f8fafc', fontSize: '1rem', fontWeight: '600' }}>Resolution Pipeline</h3>
+          <div style={{ height: '240px' }}>
              {data.metrics.total_alarms === 0 ? (
               <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', fontStyle: 'italic' }}>No threat data available.</div>
             ) : (
@@ -194,9 +194,9 @@ export default function AnalyticsDashboard() {
         </div>
         
         {/* Trend Analysis - Full Width */}
-        <div style={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '16px', padding: '1.5rem', gridColumn: '1 / -1', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.2)' }}>
-          <h3 style={{ margin: '0 0 1.5rem 0', color: '#f8fafc', fontSize: '1.1rem', fontWeight: '600' }}>Security Efficacy over Time</h3>
-          <div style={{ height: '350px' }}>
+        <div style={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '16px', padding: '1.25rem', gridColumn: '1 / -1', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.2)' }}>
+          <h3 style={{ margin: '0 0 1rem 0', color: '#f8fafc', fontSize: '1rem', fontWeight: '600' }}>Security Efficacy over Time</h3>
+          <div style={{ height: '260px' }}>
             {data.trend_data.length === 0 ? (
               <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', fontStyle: 'italic' }}>No traffic in this timeframe.</div>
             ) : (

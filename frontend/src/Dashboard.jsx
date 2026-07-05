@@ -85,10 +85,10 @@ export default function Dashboard() {
               className={`rule-card ${selectedTest?.id === tc.id ? 'active-test' : ''}`} 
               key={tc.id}
               onClick={() => handleSelectTest(tc)}
-              style={{ cursor: 'pointer', border: selectedTest?.id === tc.id ? '2px solid #0969da' : '1px solid #d0d7de' }}
+              style={{ cursor: 'pointer', border: selectedTest?.id === tc.id ? '2px solid #0969da' : '1px solid #d0d7de', padding: '0.5rem 0.75rem', marginBottom: '0.5rem' }}
             >
-              <h4 style={{ color: selectedTest?.id === tc.id ? '#0969da' : 'inherit' }}>{tc.id}</h4>
-              <div className="rule-meta">{tc.summary}</div>
+              <h4 style={{ margin: '0 0 0.25rem 0', color: selectedTest?.id === tc.id ? '#0969da' : 'inherit', fontSize: '1rem' }}>{tc.id}</h4>
+              <div className="rule-meta" style={{ fontSize: '0.85rem' }}>{tc.summary}</div>
             </div>
           ))}
         </div>

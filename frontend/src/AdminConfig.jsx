@@ -356,7 +356,7 @@ export default function AdminConfig() {
         <h2>⚙️ Enterprise Governance Command Center</h2>
         <div style={{display: 'flex', gap: '1rem', alignItems: 'center'}}>
           <div style={{display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#f6f8fa', padding: '0.5rem 1rem', borderRadius: '6px', border: '1px solid #d0d7de'}}>
-            <label style={{margin: 0, fontWeight: '600', fontSize: '0.9rem', color: '#24292f'}}>LLM Watchdog Engine:</label>
+            <label style={{margin: 0, fontWeight: '600', fontSize: '0.9rem', color: '#24292f'}}>Secondary Threat Engine:</label>
             <label className="switch" style={{position: 'relative', display: 'inline-block', width: '40px', height: '20px'}}>
               <input type="checkbox" checked={llmWatchdogEnabled} onChange={(e) => handleToggleWatchdog(e.target.checked)} style={{opacity: 0, width: 0, height: 0}} />
               <span className="slider" style={{position: 'absolute', cursor: 'pointer', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: llmWatchdogEnabled ? '#2da44e' : '#cf222e', transition: '.4s', borderRadius: '20px'}}>
@@ -377,7 +377,7 @@ export default function AdminConfig() {
         <button 
           onClick={() => setActiveTab('alarms')}
           style={{ background: 'none', border: 'none', padding: '0.5rem 1rem', fontSize: '1rem', fontWeight: '600', color: activeTab === 'alarms' ? '#cf222e' : '#57606a', borderBottom: activeTab === 'alarms' ? '2px solid #cf222e' : '2px solid transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          Watchdog Alarms {alarms.length > 0 && <span style={{ background: '#cf222e', color: 'white', borderRadius: '12px', padding: '2px 6px', fontSize: '0.75rem' }}>{alarms.length}</span>}
+          Threat Detections {alarms.length > 0 && <span style={{ background: '#cf222e', color: 'white', borderRadius: '12px', padding: '2px 6px', fontSize: '0.75rem' }}>{alarms.length}</span>}
         </button>
         <button 
           onClick={() => setActiveTab('routing')}
@@ -539,7 +539,7 @@ export default function AdminConfig() {
       {activeTab === 'alarms' && (
         <div className="card">
           <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem'}}>
-            <h3 style={{ margin: 0 }}>🚨 Watchdog Alarms</h3>
+            <h3 style={{ margin: 0 }}>🚨 Threat Detections</h3>
             <button onClick={loadAlarms} className="secondary" style={{ padding: '0.2rem 0.5rem', fontSize: '0.8rem' }}>Refresh</button>
           </div>
           {alarms.length === 0 ? (
@@ -587,7 +587,7 @@ export default function AdminConfig() {
                         </div>
                       </div>
                       <div style={{ flex: 1, backgroundColor: '#dafbe1', padding: '0.75rem', borderRadius: '6px', border: '1px solid #4ac26b' }}>
-                        <strong>LLM Watchdog Found:</strong>
+                        <strong>Secondary Engine Detected:</strong>
                         <div style={{ fontSize: '0.9rem', color: '#1a7f37', marginTop: '0.5rem' }}>
                           {alarm.layer2_findings.length > 0 ? Array.from(new Set(alarm.layer2_findings)).join(', ') : 'Nothing'}
                         </div>

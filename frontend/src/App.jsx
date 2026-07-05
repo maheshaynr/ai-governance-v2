@@ -52,7 +52,7 @@ function App() {
           <div style={{ backgroundColor: '#cf222e', color: 'white', padding: '0.4rem 0.8rem', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '0.5rem', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', fontSize: '0.85rem' }}>
             <span style={{ fontSize: '1rem' }}>🚨</span>
             <div>
-              <strong>Alert:</strong> {alarms.length} pending Watchdog alarm{alarms.length > 1 ? 's' : ''}.
+              <strong>Alert:</strong> {alarms.length} pending Threat Detection{alarms.length > 1 ? 's' : ''}.
             </div>
           </div>
         )}
