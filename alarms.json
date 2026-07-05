@@ -1,5 +1,47 @@
 [
   {
+    "alarm_id": "ALM-20260705-23263085",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-07-05T10:04:19.550690Z",
+    "missed_entity": {
+      "type": "Financial data",
+      "value_preview": "IBAN number DE9...",
+      "reason": "No reason provided",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "My name is Rio and my AWS API key is sk-live-abc123xyz and my IBAN number is DE99123123. Please don't share it.",
+    "layer1_findings": [
+      "PERSON"
+    ],
+    "layer2_findings": [
+      "Authentication Data",
+      "Financial data"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260705-b9db83d7",
+    "severity": "HIGH",
+    "category": "UNCATEGORIZED",
+    "timestamp": "2026-07-05T10:04:15.335270Z",
+    "missed_entity": {
+      "type": "Authentication Data",
+      "value_preview": "AWS API key: sk...",
+      "reason": "No reason provided",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "My name is Rio and my AWS API key is sk-live-abc123xyz and my IBAN number is DE99123123. Please don't share it.",
+    "layer1_findings": [
+      "PERSON"
+    ],
+    "layer2_findings": [
+      "Authentication Data",
+      "Financial data"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
     "alarm_id": "ALM-20260705-5853d671",
     "severity": "HIGH",
     "category": "GDPR",

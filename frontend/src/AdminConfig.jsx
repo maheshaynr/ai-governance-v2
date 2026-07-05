@@ -262,7 +262,7 @@ export default function AdminConfig() {
     setSandboxLoading(true);
     setSandboxTestResult(null);
     try {
-      const res = await sandboxSuggestRule(sandboxAlarm.context_snippet, sandboxAlarm.missed_entity.type);
+      const res = await sandboxSuggestRule(sandboxAlarm.context_snippet, sandboxAlarm.missed_entity.type, sandboxAlarm.missed_entity.value_preview);
       if (res.status === 'success') {
         setSandboxFormData({ entity: res.suggestion.entity, regex: res.suggestion.regex });
       } else {
@@ -591,6 +591,13 @@ export default function AdminConfig() {
                     <button className="primary" onClick={() => handleOpenSandbox(alarm)} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                       🛠️ Fix & Replay Sandbox
                     </button>
+                    <button className="primary" onClick={() => {
+                      setActiveTab('rules');
+                      setFormData({ name: `New_${alarm.missed_entity.type}`, entity: alarm.missed_entity.type, regex: '', score: 0.85, is_builtin: false, is_algorithmic: false, is_active: true });
+                      setFormMessage({ type: 'success', text: `Auto-filled form for ${alarm.missed_entity.type}. Please define Regex or select Built-in AI.`});
+                    }}>
+                      Create Rule for '{alarm.missed_entity.type}'
+                    </button>
                     <button className="secondary" onClick={() => handleDismissAlarm(alarm.alarm_id)}>Dismiss (False Positive)</button>
                   </div>
                 </div>
@@ -717,13 +724,13 @@ export default function AdminConfig() {
                 <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>Regex Pattern</label>
                 <input type="text" value={sandboxFormData.regex} onChange={e => setSandboxFormData({...sandboxFormData, regex: e.target.value})} style={{ width: '100%', fontFamily: 'monospace' }} placeholder="e.g. \b[0-9]{4}\b" />
               </div>
-              <button className="secondary" onClick={handleSuggestRule} disabled={sandboxLoading} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem' }}>
-                {sandboxLoading && !sandboxFormData.regex ? '⏳...' : '✨ Suggest AI Fix'}
-              </button>
             </div>
 
-            <div style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'center' }}>
-              <button className="primary" onClick={handleTestSandbox} disabled={sandboxLoading} style={{ fontSize: '1.1rem', padding: '0.75rem 2rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'center', gap: '1rem' }}>
+              <button className="secondary" onClick={handleSuggestRule} disabled={sandboxLoading} style={{ fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem' }}>
+                {sandboxLoading && !sandboxFormData.regex ? '⏳...' : '✨ Suggest AI Fix'}
+              </button>
+              <button className="primary" onClick={handleTestSandbox} disabled={sandboxLoading} style={{ fontSize: '1.1rem', padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 {sandboxLoading && sandboxFormData.regex ? 'Running Sandbox...' : '🔁 Run Replay Test'}
               </button>
             </div>

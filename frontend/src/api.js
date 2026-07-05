@@ -119,11 +119,11 @@ export async function chatAgent(message) {
   return res.json();
 }
 
-export async function sandboxSuggestRule(context_snippet, missed_entity_type) {
+export async function sandboxSuggestRule(context_snippet, missed_entity_type, value_preview) {
   const res = await fetch(`${API_BASE}/sandbox_suggest_rule`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ context_snippet, missed_entity_type })
+    body: JSON.stringify({ context_snippet, missed_entity_type, value_preview })
   });
   return res.json();
 }
