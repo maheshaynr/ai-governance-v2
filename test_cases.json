@@ -34,6 +34,13 @@
       "type": "ai_generative",
       "payload": "My name is Mahesh and my OpenAI API key is sk-proj-4P9kLmN8xY2ZaBcDeFgHiJkLmNoPqRsTuVwXyZ0123456789AbCdEfGhIjKlMnOpQrStUv. Please don't share it.",
       "expected_behavior": "Layer 1 will mask Mahesh to PERSON but will miss the API key. Layer 2 will catch the API key in the background and trigger an alarm in the Admin UI."
+    },
+    {
+      "id": "TC-006",
+      "summary": "Financial Data Shield (IBAN Verification)",
+      "type": "ai_generative",
+      "payload": "Customer requested a wire transfer to their European account. Please process payment to IBAN GB29NWBK30123456789012 immediately.",
+      "expected_behavior": "The AI generates a financial payload containing a valid IBAN. The Shield should intercept the IBAN and raise an alarm if it's not a pre-configured rule, allowing the admin to create a strict IBAN regex in the Sandbox."
     }
   ]
 }
