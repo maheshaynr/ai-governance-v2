@@ -19,10 +19,12 @@ exposed publicly. This includes but is not limited to:
 For each finding, respond ONLY in this strict JSON format. Do NOT add any extra text or markdown, just raw JSON:
 {
   "findings": [
-    {"type": "CATEGORY", "value": "the sensitive text", "reason": "why it's sensitive"}
+    {"type": "CATEGORY", "value": "the exact sensitive data value ONLY (e.g. the 16-digit number, NOT the words 'credit card')", "reason": "why it's sensitive"}
   ],
   "has_sensitive_data": true
 }
+
+CRITICAL INSTRUCTION: For the "value" field, extract ONLY the exact sensitive data values (e.g., the actual digits, the actual API key string). DO NOT extract the labels, field names, or surrounding context (e.g., DO NOT extract 'credit card number' or 'password is', ONLY extract the actual number or password itself).
 
 If the text is clean, return {"findings": [], "has_sensitive_data": false}"""
 

@@ -440,5 +440,26 @@
         "final_rewrite": "My name is <PERSON> and my AWS API key is sk-live-abc123xyz and my IBAN number is DE99123123. Please don't share it.",
         "fidelity_score": 1.0,
         "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-05T15:52:20.514901",
+        "pii_masked_input": "AI_HASH:a185d90a",
+        "final_rewrite": "Please use the corporate credit card <CREDIT_CARD> and reference PAN Card ABCPD1234F.",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-05T15:53:41.031697",
+        "pii_masked_input": "AI_HASH:a185d90a",
+        "final_rewrite": "Please use the corporate credit card <CREDIT_CARD> and reference PAN Card ABCPD1234F.",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-05T15:54:19.351894",
+        "pii_masked_input": "AI_HASH:480b79dd",
+        "final_rewrite": "My name is <PERSON> and my AWS API key is sk-live-abc123xyz and my IBAN numer is REE1213 123 Please don't share it.",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
     }
 ]
