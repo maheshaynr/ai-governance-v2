@@ -105,7 +105,7 @@ export default function AnalyticsDashboard() {
       </div>
 
       {/* Glossy KPI Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.5rem', marginBottom: '1.5rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '1.5rem', marginBottom: '1.5rem' }}>
         
         <div style={{ background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)', borderRadius: '16px', padding: '1.25rem', boxShadow: '0 10px 25px -5px rgba(59, 130, 246, 0.4)', color: '#fff', position: 'relative', overflow: 'hidden' }}>
           <div style={{ position: 'absolute', right: '-10%', top: '-20%', fontSize: '8rem', opacity: 0.1 }}>🌍</div>
@@ -123,6 +123,12 @@ export default function AnalyticsDashboard() {
            <div style={{ position: 'absolute', right: '-10%', top: '-20%', fontSize: '8rem', opacity: 0.1 }}>🛡️</div>
           <div style={{ fontSize: '0.85rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', opacity: 0.9, marginBottom: '0.5rem' }}>Alarms Resolved</div>
           <div style={{ fontSize: '2.5rem', fontWeight: '800', lineHeight: 1 }}>{data.metrics.resolved}</div>
+        </div>
+
+        <div style={{ background: 'linear-gradient(135deg, #64748b 0%, #334155 100%)', borderRadius: '16px', padding: '1.25rem', boxShadow: '0 10px 25px -5px rgba(100, 116, 139, 0.4)', color: '#fff', position: 'relative', overflow: 'hidden' }}>
+          <div style={{ position: 'absolute', right: '-10%', top: '-20%', fontSize: '8rem', opacity: 0.1 }}>🗑️</div>
+          <div style={{ fontSize: '0.85rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', opacity: 0.9, marginBottom: '0.5rem' }}>Alarms Dismissed</div>
+          <div style={{ fontSize: '2.5rem', fontWeight: '800', lineHeight: 1 }}>{data.metrics.dismissed}</div>
         </div>
 
         <div style={{ background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)', border: '1px solid #334155', borderRadius: '16px', padding: '1.25rem', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.5)', color: '#fff', position: 'relative', overflow: 'hidden' }}>

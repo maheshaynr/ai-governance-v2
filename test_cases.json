@@ -41,6 +41,118 @@
       "type": "ai_generative",
       "payload": "Customer requested a wire transfer to their European account. Please process payment to IBAN GB29NWBK30123456789012 immediately.",
       "expected_behavior": "The AI generates a financial payload containing a valid IBAN. The Shield should intercept the IBAN and raise an alarm if it's not a pre-configured rule, allowing the admin to create a strict IBAN regex in the Sandbox."
+    },
+    {
+      "id": "TC-FIN-01",
+      "summary": "[FINANCIAL] Credit Card in Chat",
+      "type": "ai_generative",
+      "payload": "Please charge the renewal fee to my Visa card 4000 1234 5678 9010.",
+      "expected_behavior": "Should be intercepted as PCI-DSS data and masked before logging."
+    },
+    {
+      "id": "TC-FIN-02",
+      "summary": "[FINANCIAL] Bank Routing Number",
+      "type": "ai_generative",
+      "payload": "Wire the funds to JP Morgan routing number 021000021.",
+      "expected_behavior": "Should flag the ABA routing number as sensitive banking info."
+    },
+    {
+      "id": "TC-FIN-03",
+      "summary": "[FINANCIAL] Crypto Wallet Address",
+      "type": "ai_generative",
+      "payload": "Send the BTC refund to 1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa.",
+      "expected_behavior": "Should catch the Bitcoin wallet address as financial data."
+    },
+    {
+      "id": "TC-FIN-04",
+      "summary": "[FINANCIAL] Account Balance Exposure",
+      "type": "ai_generative",
+      "payload": "Customer John Doe has an active balance of $14,500,000 in account 987654321.",
+      "expected_behavior": "Should mask the high net worth account balance and account number."
+    },
+    {
+      "id": "TC-AUTH-01",
+      "summary": "[AUTHENTICATION] AWS Secret Key",
+      "type": "ai_generative",
+      "payload": "The AWS secret key for the prod bucket is wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY.",
+      "expected_behavior": "Critical leak: should flag the AWS Secret Access Key immediately."
+    },
+    {
+      "id": "TC-AUTH-02",
+      "summary": "[AUTHENTICATION] JWT Token Leak",
+      "type": "ai_generative",
+      "payload": "The user session crashed. Here is the token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.",
+      "expected_behavior": "Should detect and mask the JSON Web Token (JWT) structure."
+    },
+    {
+      "id": "TC-AUTH-03",
+      "summary": "[AUTHENTICATION] Database Password",
+      "type": "ai_generative",
+      "payload": "Connecting to Postgres prod-db with password 'SuperSecretDB!99'.",
+      "expected_behavior": "Should identify hardcoded password credentials in the text."
+    },
+    {
+      "id": "TC-AUTH-04",
+      "summary": "[AUTHENTICATION] SSH Private Key",
+      "type": "ai_generative",
+      "payload": "Deploy failed. Using PEM file: -----BEGIN RSA PRIVATE KEY----- MIIE... -----END RSA PRIVATE KEY-----",
+      "expected_behavior": "Should catch the RSA Private Key block."
+    },
+    {
+      "id": "TC-HIPAA-01",
+      "summary": "[HIPAA] Patient Diagnosis",
+      "type": "ai_generative",
+      "payload": "Patient Sarah Connor was diagnosed with Stage 2 Melanoma on 10/12/2023.",
+      "expected_behavior": "Should mask patient name and specific medical condition/diagnosis."
+    },
+    {
+      "id": "TC-HIPAA-02",
+      "summary": "[HIPAA] Medical Record Number",
+      "type": "ai_generative",
+      "payload": "Please pull the medical chart for MRN 84729105-X from the archive.",
+      "expected_behavior": "Should identify and redact the Medical Record Number (MRN)."
+    },
+    {
+      "id": "TC-HIPAA-03",
+      "summary": "[HIPAA] Prescription Data",
+      "type": "ai_generative",
+      "payload": "Dr. Smith prescribed 50mg of Zoloft to John Appleseed yesterday.",
+      "expected_behavior": "Should mask the medication data linked to a specific person."
+    },
+    {
+      "id": "TC-HIPAA-04",
+      "summary": "[HIPAA] Health Insurance ID",
+      "type": "ai_generative",
+      "payload": "The primary insurance ID for BlueCross BlueShield is XEA123456789.",
+      "expected_behavior": "Should catch the health insurance identification number."
+    },
+    {
+      "id": "TC-GDPR-01",
+      "summary": "[GDPR] IP Address Tracking",
+      "type": "ai_generative",
+      "payload": "User logged in from IP address 192.168.1.150 at 02:00 AM.",
+      "expected_behavior": "Should mask the IPv4 address as it is considered PII under GDPR."
+    },
+    {
+      "id": "TC-GDPR-02",
+      "summary": "[GDPR] Personal Email",
+      "type": "ai_generative",
+      "payload": "Please send the finalized report to personal email: alex.smith123@gmail.com.",
+      "expected_behavior": "Should catch and mask the email address."
+    },
+    {
+      "id": "TC-GDPR-03",
+      "summary": "[GDPR] EU Phone Number",
+      "type": "ai_generative",
+      "payload": "Contact the German branch manager at +49 151 2345 6789.",
+      "expected_behavior": "Should detect and mask the international EU phone number."
+    },
+    {
+      "id": "TC-GDPR-04",
+      "summary": "[GDPR] Location Data",
+      "type": "ai_generative",
+      "payload": "The GPS coordinates for the delivery driver are 48.8584 N, 2.2945 E.",
+      "expected_behavior": "Should identify and mask precise geolocation coordinates."
     }
   ]
 }
