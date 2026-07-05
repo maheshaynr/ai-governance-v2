@@ -592,8 +592,11 @@ def get_analytics(timeframe: str = "24h"):
         traffic_trend = {}
         
         if os.path.exists("governance_audit.json"):
-            with open("governance_audit.json", "r") as f:
-                audit_logs = json.load(f)
+            try:
+                with open("governance_audit.json", "r") as f:
+                    audit_logs = json.load(f)
+            except:
+                audit_logs = []
                 
             for log in audit_logs:
                 try:
