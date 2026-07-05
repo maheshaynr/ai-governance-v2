@@ -1,0 +1,41 @@
+# Dual-Layer Governance Architecture Analysis
+
+I have reviewed the `governance_shield_architecture.md` file. 
+
+## My Opinion & Thought Process
+This is a highly sophisticated and brilliant architectural design. Traditional DLP (Data Loss Prevention) systems fail because they rely solely on rigid rules (Layer 1). If a developer hardcodes an AWS API key or a user types "My CTC is 18 LPA", standard Regex and NLP models will completely miss it.
+
+By introducing **Layer 2 (The Semantic Watchdog)**, you are solving the "unknown unknowns" problem. 
+- **The brilliance** lies in the asynchronous design. You aren't paying the latency penalty of an LLM in the hot path. Layer 1 protects the system instantly (15-30ms) for known data, while Layer 2 acts as a background auditor (1-3s).
+- **The Diff Engine** acts as an intelligent filter, preventing alert fatigue by only raising alarms when the LLM finds something that Presidio missed.
+- **The Self-Improving Loop** is the ultimate goal. When the Admin receives an alarm, they can click "Create Rule", instantly hot-reloading Layer 1. Over time, Layer 1 becomes so robust that Layer 2 rarely fires.
+
+---
+
+## Required Enhancements (Implementation Plan)
+
+To upgrade our current codebase to support this v3 Architecture, here is the concrete execution plan:
+
+### 1. Backend: Decoupled Architecture (`api.py`, `layer2_watchdog.py`, `diff_engine.py`)
+- **FastAPI Background Tasks (`api.py`):** We will modify the `apply_egress_guardrail` function to immediately return the Layer 1 sanitized output to the user, while firing off a `BackgroundTasks` call to Layer 2.
+- **The Watchdog (`layer2_watchdog.py`):** A dedicated file for the asynchronous Ollama API call. It will send the raw text to Ollama (`phi4-mini`) using the strict JSON schema defined in section 5 of your architecture document.
+- **The Diff Engine (`diff_engine.py`):** A dedicated file housing the logic to compare Presidio's extracted entities with Ollama's findings. If Ollama finds an entity that Presidio missed, it generates an Alarm object.
+- **Persistence:** We will create an `alarms.json` file to store generated alarms cleanly.
+
+### 2. Frontend: The Alarm Queue UI (`AdminConfig.jsx` / `Dashboard`)
+- **New Tab / Section:** We will add an "🚨 Alarm Queue" section to the Admin Dashboard.
+- **Alarm Object Display:** Admins will be able to click on an alarm to see the "Diff": What Layer 1 caught vs What Layer 2 caught, and the context snippet.
+- **Action Workflow:**
+  - **Confirm & Add Rule:** This button will take the AI's finding and auto-fill the "Add Rule" form so the admin can quickly create a Regex or Built-in rule for it.
+  - **Dismiss:** Marks the alarm as resolved/false positive.
+
+### 3. Testing the Diff Engine (TC-005)
+- We will add a new test case to `test_cases.json` that simulates a user dropping an API Key (`sk-live-abc123xyz`) into the chat.
+- **Expected Behavior:** The UI will show the API key unmasked initially (since Layer 1 doesn't know about it). However, in the Admin Portal, an Alarm will pop up showing that the Phi-4 Watchdog caught the API Key in the background!
+
+## User Review Required
+
+> [!IMPORTANT]
+> The architecture mentions a "Suppression List" when an admin dismisses a false positive. For this initial integration, I propose we focus on building the **Async Watchdog**, the **Diff Engine**, and the **Alarm Queue UI**, and we can store alarms in a simple `alarms.json` file. 
+> 
+> Does this phased approach sound good to you? Once approved, I will begin building the Backend Watchdog and Diff Engine!

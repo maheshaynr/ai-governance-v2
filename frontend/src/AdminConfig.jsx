@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { fetchRules, addRule, updateRule, deleteRule, fetchAlarms, toggleWatchdog } from './api';
+import { fetchRules, addRule, updateRule, deleteRule, fetchAlarms, toggleWatchdog, fetchSubscribers, addSubscriber, deleteSubscriber } from './api';
 
 export default function AdminConfig() {
   const [loggedIn, setLoggedIn] = useState(false);
@@ -7,16 +7,21 @@ export default function AdminConfig() {
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState('');
 
-  const [activeTab, setActiveTab] = useState('rules'); // 'rules' or 'alarms'
+  const [activeTab, setActiveTab] = useState('rules'); // 'rules', 'alarms', 'routing'
 
   const [rules, setRules] = useState([]);
   const [alarms, setAlarms] = useState([]);
+  const [subscribers, setSubscribers] = useState([]);
   const [llmWatchdogEnabled, setLlmWatchdogEnabled] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const [editingRule, setEditingRule] = useState(null);
   
   const [formData, setFormData] = useState({ name: '', entity: '', regex: '', score: 0.85, is_builtin: false, is_algorithmic: false });
+  const [subFormData, setSubFormData] = useState({ user_name: '', role: '', alert_type: 'ALL', teams_webhook: '' });
+  
   const [formMessage, setFormMessage] = useState(null);
+  const [subFormMessage, setSubFormMessage] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
@@ -24,6 +29,9 @@ export default function AdminConfig() {
       loadRules();
       if (activeTab === 'alarms') {
         loadAlarms();
+      }
+      if (activeTab === 'routing') {
+        loadSubscribers();
       }
     }
   }, [loggedIn, activeTab]);
@@ -46,6 +54,15 @@ export default function AdminConfig() {
       if (data.alarms) setAlarms(data.alarms);
     } catch (e) {
       console.error("Failed to load alarms", e);
+    }
+  };
+
+  const loadSubscribers = async () => {
+    try {
+      const data = await fetchSubscribers();
+      if (data.subscribers) setSubscribers(data.subscribers);
+    } catch (e) {
+      console.error("Failed to load subscribers", e);
     }
   };
 
@@ -142,6 +159,45 @@ export default function AdminConfig() {
     }
   };
 
+  const handleAddSubscriber = async (e) => {
+    e.preventDefault();
+    if (!subFormData.user_name || !subFormData.role || !subFormData.teams_webhook) {
+      setSubFormMessage({ type: 'error', text: 'Name, Role, and Webhook URL are required.' });
+      return;
+    }
+    
+    setIsSaving(true);
+    try {
+      const res = await addSubscriber(subFormData);
+      if (res.status === 'success') {
+        setSubFormMessage({ type: 'success', text: 'Subscriber added!' });
+        setSubFormData({ user_name: '', role: '', alert_type: 'ALL', teams_webhook: '' });
+        loadSubscribers();
+      } else {
+        setSubFormMessage({ type: 'error', text: res.message });
+      }
+    } catch (e) {
+      setSubFormMessage({ type: 'error', text: 'Failed to connect to backend.' });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDeleteSubscriber = async (user_name) => {
+    if (!window.confirm(`Remove subscriber ${user_name}?`)) return;
+    try {
+      await deleteSubscriber(user_name);
+      loadSubscribers();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const filteredRules = rules.filter(r => 
+    r.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    r.entity.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   if (!loggedIn) {
     return (
       <div className="login-box">
@@ -168,7 +224,7 @@ export default function AdminConfig() {
         <h2>⚙️ Enterprise Governance Command Center</h2>
         <div style={{display: 'flex', gap: '1rem', alignItems: 'center'}}>
           <div style={{display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#f6f8fa', padding: '0.5rem 1rem', borderRadius: '6px', border: '1px solid #d0d7de'}}>
-            <label style={{margin: 0, fontWeight: '600', fontSize: '0.9rem', color: '#24292f'}}>LLM Watchdog (Layer 2):</label>
+            <label style={{margin: 0, fontWeight: '600', fontSize: '0.9rem', color: '#24292f'}}>LLM Watchdog Engine:</label>
             <label className="switch" style={{position: 'relative', display: 'inline-block', width: '40px', height: '20px'}}>
               <input type="checkbox" checked={llmWatchdogEnabled} onChange={(e) => handleToggleWatchdog(e.target.checked)} style={{opacity: 0, width: 0, height: 0}} />
               <span className="slider" style={{position: 'absolute', cursor: 'pointer', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: llmWatchdogEnabled ? '#2da44e' : '#cf222e', transition: '.4s', borderRadius: '20px'}}>
@@ -189,35 +245,65 @@ export default function AdminConfig() {
         <button 
           onClick={() => setActiveTab('alarms')}
           style={{ background: 'none', border: 'none', padding: '0.5rem 1rem', fontSize: '1rem', fontWeight: '600', color: activeTab === 'alarms' ? '#cf222e' : '#57606a', borderBottom: activeTab === 'alarms' ? '2px solid #cf222e' : '2px solid transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          Alarm Queue {alarms.length > 0 && <span style={{ background: '#cf222e', color: 'white', borderRadius: '12px', padding: '2px 6px', fontSize: '0.75rem' }}>{alarms.length}</span>}
+          Watchdog Alarms {alarms.length > 0 && <span style={{ background: '#cf222e', color: 'white', borderRadius: '12px', padding: '2px 6px', fontSize: '0.75rem' }}>{alarms.length}</span>}
+        </button>
+        <button 
+          onClick={() => setActiveTab('routing')}
+          style={{ background: 'none', border: 'none', padding: '0.5rem 1rem', fontSize: '1rem', fontWeight: '600', color: activeTab === 'routing' ? '#9a6700' : '#57606a', borderBottom: activeTab === 'routing' ? '2px solid #d29922' : '2px solid transparent', cursor: 'pointer' }}>
+          Alert Routing
         </button>
       </div>
 
       {activeTab === 'rules' && (
         <div className="admin-layout">
           <div className="rules-list">
-            <h3>Existing Rules (Layer 1)</h3>
-            {rules.map((r, idx) => (
-              <div className="rule-card" key={idx}>
-                <h4>#{idx + 1}: {r.name}</h4>
-                <div className="rule-meta">Entity: {r.entity}</div>
-                <div className="rule-meta">Score: {r.score}</div>
-                <div style={{ marginBottom: '0.5rem' }}>
-                  {r.is_algorithmic ? (
-                    <span style={{ backgroundColor: '#f3e8ff', color: '#7e22ce', padding: '2px 6px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: '600' }}>
-                      🧬 Algorithmic Rule
-                    </span>
-                  ) : (
-                    <span style={{ backgroundColor: r.is_builtin ? '#dafbe1' : '#ddf4ff', color: r.is_builtin ? '#1a7f37' : '#0969da', padding: '2px 6px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: '600' }}>
-                      {r.is_builtin ? '✨ Built-In AI' : '⚙️ Custom Regex'}
-                    </span>
-                  )}
-                </div>
-                <button className="secondary" style={{padding: '0.2rem 0.5rem', fontSize: '0.8rem'}} onClick={() => handleEditClick(r)}>
-                  Edit
-                </button>
-              </div>
-            ))}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h3 style={{ margin: 0 }}>Primary Engine Rules</h3>
+              <input 
+                type="text" 
+                placeholder="🔍 Search rules or entities..." 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                style={{ padding: '0.4rem 0.8rem', borderRadius: '20px', border: '1px solid #d0d7de', fontSize: '0.85rem', width: '200px' }}
+              />
+            </div>
+            
+            <div style={{ maxHeight: '600px', overflowY: 'auto', border: '1px solid #d0d7de', borderRadius: '6px', background: '#fff' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.9rem' }}>
+                <thead style={{ background: '#f6f8fa', position: 'sticky', top: 0, zIndex: 1 }}>
+                  <tr>
+                    <th style={{ padding: '0.75rem', borderBottom: '1px solid #d0d7de' }}>Rule Name</th>
+                    <th style={{ padding: '0.75rem', borderBottom: '1px solid #d0d7de' }}>Entity Class</th>
+                    <th style={{ padding: '0.75rem', borderBottom: '1px solid #d0d7de' }}>Type</th>
+                    <th style={{ padding: '0.75rem', borderBottom: '1px solid #d0d7de', textAlign: 'right' }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredRules.length === 0 ? (
+                    <tr>
+                      <td colSpan="4" style={{ padding: '2rem', textAlign: 'center', color: '#57606a' }}>No rules match your search.</td>
+                    </tr>
+                  ) : filteredRules.map((r, idx) => (
+                    <tr key={idx} style={{ borderBottom: '1px solid #d0d7de', background: editingRule?.name === r.name ? '#f0f8ff' : 'transparent' }}>
+                      <td style={{ padding: '0.75rem', fontWeight: '500' }}>{r.name}</td>
+                      <td style={{ padding: '0.75rem', fontFamily: 'monospace', color: '#cf222e' }}>{r.entity}</td>
+                      <td style={{ padding: '0.75rem' }}>
+                        {r.is_algorithmic ? (
+                          <span style={{ backgroundColor: '#f3e8ff', color: '#7e22ce', padding: '2px 6px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: '600' }}>🧬 Algorithmic</span>
+                        ) : (
+                          <span style={{ backgroundColor: r.is_builtin ? '#dafbe1' : '#ddf4ff', color: r.is_builtin ? '#1a7f37' : '#0969da', padding: '2px 6px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: '600' }}>
+                            {r.is_builtin ? '✨ Built-In AI' : '⚙️ Custom Regex'}
+                          </span>
+                        )}
+                      </td>
+                      <td style={{ padding: '0.75rem', textAlign: 'right' }}>
+                        <button className="secondary" style={{padding: '0.2rem 0.5rem', fontSize: '0.8rem'}} onClick={() => handleEditClick(r)}>Edit</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
 
           <div className="rule-form">
@@ -233,7 +319,7 @@ export default function AdminConfig() {
                 <div className="form-group">
                   <label>Entity Class</label>
                   <input type="text" value={formData.entity} onChange={e => setFormData({...formData, entity: e.target.value})} />
-                  <small className="help-text">The Presidio tag used to mask the data (e.g., 'CREDIT_CARD'). The output will be replaced with &lt;ENTITY_CLASS&gt;.</small>
+                  <small className="help-text">The tag used to mask the data (e.g., 'CREDIT_CARD'). The output will be replaced with &lt;ENTITY_CLASS&gt;.</small>
                 </div>
 
                 <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
@@ -324,18 +410,18 @@ export default function AdminConfig() {
                   </div>
                   
                   <div style={{ marginBottom: '1rem' }}>
-                    <strong>Reason given by LLM:</strong> {alarm.missed_entity.reason}
+                    <strong>Reason given by AI:</strong> {alarm.missed_entity.reason}
                   </div>
                   
                   <div style={{ display: 'flex', gap: '1rem' }}>
                     <div style={{ flex: 1, backgroundColor: '#ffebe9', padding: '0.75rem', borderRadius: '6px', border: '1px solid #ff8182' }}>
-                      <strong>Layer 1 (Presidio) Found:</strong>
+                      <strong>Primary Engine Found:</strong>
                       <div style={{ fontSize: '0.9rem', color: '#cf222e', marginTop: '0.5rem' }}>
                         {alarm.layer1_findings.length > 0 ? alarm.layer1_findings.join(', ') : 'Nothing'}
                       </div>
                     </div>
                     <div style={{ flex: 1, backgroundColor: '#dafbe1', padding: '0.75rem', borderRadius: '6px', border: '1px solid #4ac26b' }}>
-                      <strong>Layer 2 (LLM Watchdog) Found:</strong>
+                      <strong>LLM Watchdog Found:</strong>
                       <div style={{ fontSize: '0.9rem', color: '#1a7f37', marginTop: '0.5rem' }}>
                         {alarm.layer2_findings.length > 0 ? alarm.layer2_findings.join(', ') : 'Nothing'}
                       </div>
@@ -356,6 +442,96 @@ export default function AdminConfig() {
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {activeTab === 'routing' && (
+        <div className="admin-layout">
+          <div className="rules-list">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h3 style={{ margin: 0 }}>Active Notification Subscribers</h3>
+              <button onClick={loadSubscribers} className="secondary" style={{ padding: '0.2rem 0.5rem', fontSize: '0.8rem' }}>Refresh</button>
+            </div>
+            
+            <div style={{ border: '1px solid #d0d7de', borderRadius: '6px', background: '#fff', overflow: 'hidden' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.9rem' }}>
+                <thead style={{ background: '#f6f8fa' }}>
+                  <tr>
+                    <th style={{ padding: '0.75rem', borderBottom: '1px solid #d0d7de' }}>Name</th>
+                    <th style={{ padding: '0.75rem', borderBottom: '1px solid #d0d7de' }}>Role</th>
+                    <th style={{ padding: '0.75rem', borderBottom: '1px solid #d0d7de' }}>Alert Type</th>
+                    <th style={{ padding: '0.75rem', borderBottom: '1px solid #d0d7de', textAlign: 'right' }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {subscribers.length === 0 ? (
+                    <tr>
+                      <td colSpan="4" style={{ padding: '2rem', textAlign: 'center', color: '#57606a' }}>No subscribers configured.</td>
+                    </tr>
+                  ) : subscribers.map((s, idx) => (
+                    <tr key={idx} style={{ borderBottom: '1px solid #d0d7de' }}>
+                      <td style={{ padding: '0.75rem', fontWeight: '500' }}>{s.user_name}</td>
+                      <td style={{ padding: '0.75rem' }}>{s.role}</td>
+                      <td style={{ padding: '0.75rem' }}>
+                        <span style={{ 
+                          backgroundColor: s.alert_type === 'FINANCIAL' ? '#ddf4ff' : s.alert_type === 'HIPAA' ? '#dafbe1' : s.alert_type === 'GDPR' ? '#fff8c5' : '#f3e8ff', 
+                          color: s.alert_type === 'FINANCIAL' ? '#0969da' : s.alert_type === 'HIPAA' ? '#1a7f37' : s.alert_type === 'GDPR' ? '#9a6700' : '#7e22ce', 
+                          padding: '2px 6px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: '600' 
+                        }}>
+                          {s.alert_type}
+                        </span>
+                      </td>
+                      <td style={{ padding: '0.75rem', textAlign: 'right' }}>
+                        <button className="secondary" style={{padding: '0.2rem 0.5rem', fontSize: '0.8rem', color: '#cf222e'}} onClick={() => handleDeleteSubscriber(s.user_name)}>Remove</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="rule-form">
+            <div className="card">
+              <h3>Add Subscriber</h3>
+              <form onSubmit={handleAddSubscriber}>
+                <div className="form-group">
+                  <label>Full Name</label>
+                  <input type="text" value={subFormData.user_name} onChange={e => setSubFormData({...subFormData, user_name: e.target.value})} placeholder="Jane Doe" />
+                </div>
+                <div className="form-group">
+                  <label>Role</label>
+                  <input type="text" value={subFormData.role} onChange={e => setSubFormData({...subFormData, role: e.target.value})} placeholder="Compliance Officer" />
+                </div>
+                <div className="form-group">
+                  <label>Alert Category</label>
+                  <select 
+                    value={subFormData.alert_type} 
+                    onChange={e => setSubFormData({...subFormData, alert_type: e.target.value})}
+                    style={{ width: '100%', padding: '0.5rem', borderRadius: '6px', border: '1px solid #d0d7de' }}
+                  >
+                    <option value="ALL">ALL (Global Admin / Uncategorized)</option>
+                    <option value="FINANCIAL">FINANCIAL (PCI-DSS / Banking)</option>
+                    <option value="HIPAA">HIPAA (Protected Health Info)</option>
+                    <option value="GDPR">GDPR (General Privacy / EU)</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Microsoft Teams Webhook URL</label>
+                  <input type="text" value={subFormData.teams_webhook} onChange={e => setSubFormData({...subFormData, teams_webhook: e.target.value})} placeholder="https://yourcompany.webhook.office.com/..." />
+                  <small className="help-text">Create an Incoming Webhook connector in your Teams channel and paste the URL here.</small>
+                </div>
+                <div style={{marginTop: '1rem'}}>
+                  <button type="submit" className="primary" disabled={isSaving}>
+                    {isSaving ? 'Processing...' : 'Add Subscriber'}
+                  </button>
+                </div>
+                {subFormMessage && (
+                  <div className={`alert-${subFormMessage.type}`} style={{marginTop: '1rem'}}>{subFormMessage.text}</div>
+                )}
+              </form>
+            </div>
+          </div>
         </div>
       )}
     </div>

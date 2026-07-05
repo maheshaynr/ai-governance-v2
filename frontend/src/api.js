@@ -51,6 +51,29 @@ export async function toggleWatchdog(enable_llm_watchdog) {
   return res.json();
 }
 
+export async function fetchSubscribers() {
+  const res = await fetch(`${API_BASE}/subscribers`);
+  return res.json();
+}
+
+export async function addSubscriber(subscriber) {
+  const res = await fetch(`${API_BASE}/add_subscriber`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(subscriber)
+  });
+  return res.json();
+}
+
+export async function deleteSubscriber(user_name) {
+  const res = await fetch(`${API_BASE}/delete_subscriber`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ user_name })
+  });
+  return res.json();
+}
+
 export async function queryDb(customerId) {
   const res = await fetch(`${API_BASE}/query_db`, {
     method: 'POST',

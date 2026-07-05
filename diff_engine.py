@@ -3,6 +3,7 @@ import os
 import uuid
 from datetime import datetime
 import logging
+from notifications import TeamsNotifier
 
 ALARMS_FILE = "alarms.json"
 
@@ -43,6 +44,34 @@ def generate_alarm(raw_text: str, missing_finding: dict, l1_entities: list, l2_e
     
     save_alarm(alarm)
     logging.warning(f"🚨 ALARM GENERATED: Phi-4 found unmasked {alarm['missed_entity']['type']}")
+    
+    # --- INTELLIGENT NOTIFICATION ROUTING ---
+    entity_type = alarm['missed_entity']['type'].upper()
+    
+    # 1. Map Entity to Category
+    financial_keywords = ['CREDIT_CARD', 'PAN', 'API_KEY', 'BANK', 'FINANCIAL', 'SALARY', 'PAYMENT']
+    hipaa_keywords = ['MEDICAL', 'HEALTH', 'DIAGNOSIS', 'MRN', 'PRESCRIPTION', 'PATIENT', 'BLOOD']
+    
+    category = "UNCATEGORIZED"
+    if any(k in entity_type for k in financial_keywords):
+        category = "FINANCIAL"
+    elif any(k in entity_type for k in hipaa_keywords):
+        category = "HIPAA"
+    elif 'PERSON' in entity_type or 'EMAIL' in entity_type or 'PHONE' in entity_type:
+        category = "GDPR"
+        
+    # 2. Dispatch to Subscribers
+    try:
+        with open("pii_rules.json", "r") as f:
+            data = json.load(f)
+            subscribers = data.get("notification_subscribers", [])
+            for sub in subscribers:
+                # If subscriber wants ALL alerts, or their type matches the category, or it's UNCATEGORIZED (send to ALL)
+                if sub.get("alert_type") == "ALL" or sub.get("alert_type") == category or (category == "UNCATEGORIZED" and sub.get("alert_type") == "ALL"):
+                    TeamsNotifier.send_alarm_alert(sub.get("teams_webhook"), alarm, f"{sub.get('role')} ({sub.get('alert_type')})")
+    except Exception as e:
+        logging.error(f"Failed to route notifications: {str(e)}")
+
     return alarm
 
 def run_diff(raw_text: str, layer1_results: list, layer2_results: dict):

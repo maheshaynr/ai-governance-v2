@@ -94,6 +94,15 @@ class UpdateRuleRequest(BaseModel):
 class DeleteRuleRequest(BaseModel):
     name: str
 
+class SubscriberRequest(BaseModel):
+    user_name: str
+    role: str
+    alert_type: str
+    teams_webhook: str
+
+class DeleteSubscriberRequest(BaseModel):
+    user_name: str
+
 class ChatRequest(BaseModel):
     message: str
 
@@ -262,6 +271,58 @@ def toggle_watchdog(request: ToggleRequest):
             json.dump(data, f, indent=2)
             
         return {"status": "success"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+@app.get("/subscribers")
+def get_subscribers():
+    try:
+        with open("pii_rules.json", "r") as f:
+            data = json.load(f)
+            return {"subscribers": data.get("notification_subscribers", [])}
+    except Exception as e:
+        return {"subscribers": []}
+
+@app.post("/add_subscriber")
+def add_subscriber(request: SubscriberRequest):
+    try:
+        with open("pii_rules.json", "r") as f:
+            data = json.load(f)
+            
+        if "notification_subscribers" not in data:
+            data["notification_subscribers"] = []
+            
+        new_sub = {
+            "user_name": request.user_name,
+            "role": request.role,
+            "alert_type": request.alert_type,
+            "teams_webhook": request.teams_webhook
+        }
+        data["notification_subscribers"].append(new_sub)
+        
+        with open("pii_rules.json", "w") as f:
+            json.dump(data, f, indent=2)
+            
+        return {"status": "success", "message": "Subscriber added successfully."}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+@app.post("/delete_subscriber")
+def delete_subscriber(request: DeleteSubscriberRequest):
+    try:
+        with open("pii_rules.json", "r") as f:
+            data = json.load(f)
+            
+        initial_length = len(data.get("notification_subscribers", []))
+        data["notification_subscribers"] = [s for s in data.get("notification_subscribers", []) if s["user_name"] != request.user_name]
+        
+        if len(data.get("notification_subscribers", [])) == initial_length:
+            return {"status": "error", "message": "Subscriber not found."}
+            
+        with open("pii_rules.json", "w") as f:
+            json.dump(data, f, indent=2)
+            
+        return {"status": "success", "message": "Subscriber deleted successfully."}
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
