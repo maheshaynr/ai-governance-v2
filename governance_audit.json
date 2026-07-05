@@ -307,5 +307,12 @@
         "final_rewrite": "{\n  \"customer_id\": 101,\n  \"customer_name\": \"<PERSON>\",\n  \"sensitive_data\": {\n    \"phone\": \"<PHONE_NUMBER>\",\n    \"payment_card\": \"<CREDIT_CARD>\",\n    \"aadhaar\": \"<IN_AADHAAR>\",\n    \"pan\": \"<IN_PAN>..\"\n  }\n}",
         "fidelity_score": 1.0,
         "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-05T08:43:51.609978",
+        "pii_masked_input": "CHAT_HASH:1dcad3e8",
+        "final_rewrite": "{\n  \"customer_id\": 101,\n  \"customer_name\": \"<PERSON>\",\n  \"sensitive_data\": {\n    \"phone\": \"<PHONE_NUMBER>\",\n    \"payment_card\": \"<CREDIT_CARD>\",\n    \"aadhaar\": \"<IN_AADHAAR>\",\n    \"pan\": \"<IN_PAN>..\"\n  }\n}",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
     }
 ]

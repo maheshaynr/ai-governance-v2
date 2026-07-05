@@ -1,0 +1,36 @@
+# Alert Routing & UI Optimization 
+
+The Governance Command Center has been successfully upgraded with a highly scalable UI and an intelligent MS Teams Notification Routing system!
+
+## 1. Compact, Scalable Rule Table
+I have completely redesigned the Rule Configuration tab. The large, blocky cards have been replaced with a sleek, compact table layout with a fixed header.
+This allows the browser to easily handle **thousands** of rules without lagging. 
+
+## 2. Instant Search Filter
+At the top of the rules table, there is now a **"Search rules or entities..."** input box.
+As you type, it instantly filters down your 1000s of rules to exactly what you are looking for (e.g. typing "CREDIT" will instantly show all credit card related rules).
+
+## 3. Professional Terminology
+I swept through the entire dashboard and removed all references to "Layer 1" and "Layer 2". 
+The UI now uses much more intuitive terminology:
+- **Primary Engine Rules** (instead of Layer 1)
+- **LLM Watchdog Engine** (instead of Layer 2)
+- **Watchdog Alarms** (instead of Layer 2 Findings)
+
+## 4. The MS Teams Notification Router (`notifications.py`)
+I built `notifications.py` from scratch. It contains a highly robust `TeamsNotifier` class that takes an Alarm object and generates a beautiful, color-coded **MessageCard** (Adaptive Card format) optimized for Microsoft Teams.
+
+## 5. Intelligent Alert Routing Tab
+In your Dashboard, you will now find a brand new 3rd Tab: **"Alert Routing"**.
+Here, you can build your subscriber list by entering:
+- **Full Name**: e.g., "Jane Doe"
+- **Role**: e.g., "Compliance Officer"
+- **Alert Category**: You can choose between `FINANCIAL`, `HIPAA`, `GDPR`, or `ALL`.
+- **Teams Webhook URL**: This is where you paste that URL you generated from Teams!
+
+### The Routing Logic (`UNCATEGORIZED` fallback)
+In `diff_engine.py`, when the LLM Watchdog finds a leak, I have built an intelligent Category Mapper.
+1. If the AI detects a `CREDIT_CARD`, `PAN`, or `API_KEY` leak, it routes the MS Teams alert only to your **FINANCIAL** (or ALL) subscribers.
+2. If the AI detects a `DIAGNOSIS` or `MRN`, it routes to **HIPAA** (or ALL).
+3. If the AI detects a `PERSON` or `EMAIL`, it routes to **GDPR** (or ALL).
+4. **The Fallback:** If the AI detects something completely weird and novel (like `ENCRYPTED_PASSWORD_HASH`) that doesn't fit the buckets above, it marks it as **`UNCATEGORIZED`** and routes it directly to your Global Admins (subscribers marked as `ALL`).

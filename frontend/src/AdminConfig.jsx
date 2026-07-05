@@ -257,25 +257,25 @@ export default function AdminConfig() {
       {activeTab === 'rules' && (
         <div className="admin-layout">
           <div className="rules-list">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <h3 style={{ margin: 0 }}>Primary Engine Rules</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', marginBottom: '1rem', alignItems: 'flex-start' }}>
               <input 
                 type="text" 
                 placeholder="🔍 Search rules or entities..." 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                style={{ padding: '0.4rem 0.8rem', borderRadius: '20px', border: '1px solid #d0d7de', fontSize: '0.85rem', width: '200px' }}
+                style={{ padding: '0.4rem 0.8rem', borderRadius: '20px', border: '1px solid #d0d7de', fontSize: '0.85rem', width: '100%', maxWidth: '300px' }}
               />
+              <h3 style={{ margin: 0 }}>Primary Engine Rules</h3>
             </div>
             
-            <div style={{ maxHeight: '600px', overflowY: 'auto', border: '1px solid #d0d7de', borderRadius: '6px', background: '#fff' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.9rem' }}>
+            <div style={{ border: '1px solid #d0d7de', borderRadius: '6px', background: '#fff' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.85rem' }}>
                 <thead style={{ background: '#f6f8fa', position: 'sticky', top: 0, zIndex: 1 }}>
                   <tr>
-                    <th style={{ padding: '0.75rem', borderBottom: '1px solid #d0d7de' }}>Rule Name</th>
-                    <th style={{ padding: '0.75rem', borderBottom: '1px solid #d0d7de' }}>Entity Class</th>
-                    <th style={{ padding: '0.75rem', borderBottom: '1px solid #d0d7de' }}>Type</th>
-                    <th style={{ padding: '0.75rem', borderBottom: '1px solid #d0d7de', textAlign: 'right' }}>Actions</th>
+                    <th style={{ padding: '0.75rem', borderBottom: '1px solid #d0d7de', whiteSpace: 'nowrap' }}>Rule Name</th>
+                    <th style={{ padding: '0.75rem', borderBottom: '1px solid #d0d7de', whiteSpace: 'nowrap' }}>Entity Class</th>
+                    <th style={{ padding: '0.75rem', borderBottom: '1px solid #d0d7de', whiteSpace: 'nowrap' }}>Type</th>
+                    <th style={{ padding: '0.75rem', borderBottom: '1px solid #d0d7de', textAlign: 'right', whiteSpace: 'nowrap' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -285,19 +285,19 @@ export default function AdminConfig() {
                     </tr>
                   ) : filteredRules.map((r, idx) => (
                     <tr key={idx} style={{ borderBottom: '1px solid #d0d7de', background: editingRule?.name === r.name ? '#f0f8ff' : 'transparent' }}>
-                      <td style={{ padding: '0.75rem', fontWeight: '500' }}>{r.name}</td>
-                      <td style={{ padding: '0.75rem', fontFamily: 'monospace', color: '#cf222e' }}>{r.entity}</td>
-                      <td style={{ padding: '0.75rem' }}>
+                      <td style={{ padding: '0.75rem', fontWeight: '500', maxWidth: '200px', wordWrap: 'break-word', wordBreak: 'break-word' }}>{r.name}</td>
+                      <td style={{ padding: '0.75rem', fontFamily: 'monospace', color: '#cf222e', maxWidth: '180px', wordWrap: 'break-word', wordBreak: 'break-word' }}>{r.entity}</td>
+                      <td style={{ padding: '0.75rem', whiteSpace: 'nowrap' }}>
                         {r.is_algorithmic ? (
-                          <span style={{ backgroundColor: '#f3e8ff', color: '#7e22ce', padding: '2px 6px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: '600' }}>🧬 Algorithmic</span>
+                          <span style={{ backgroundColor: '#f3e8ff', color: '#7e22ce', padding: '2px 6px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: '600' }}>🧬 Algorithmic</span>
                         ) : (
-                          <span style={{ backgroundColor: r.is_builtin ? '#dafbe1' : '#ddf4ff', color: r.is_builtin ? '#1a7f37' : '#0969da', padding: '2px 6px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: '600' }}>
+                          <span style={{ backgroundColor: r.is_builtin ? '#dafbe1' : '#ddf4ff', color: r.is_builtin ? '#1a7f37' : '#0969da', padding: '2px 6px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: '600' }}>
                             {r.is_builtin ? '✨ Built-In AI' : '⚙️ Custom Regex'}
                           </span>
                         )}
                       </td>
                       <td style={{ padding: '0.75rem', textAlign: 'right' }}>
-                        <button className="secondary" style={{padding: '0.2rem 0.5rem', fontSize: '0.8rem'}} onClick={() => handleEditClick(r)}>Edit</button>
+                        <button className="secondary" title="Edit" style={{padding: '0.3rem 0.5rem', fontSize: '1rem', border: 'none', background: 'transparent'}} onClick={() => handleEditClick(r)}>✏️</button>
                       </td>
                     </tr>
                   ))}

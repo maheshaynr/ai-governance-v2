@@ -138,14 +138,12 @@ button.secondary:hover {
 }
 
 .rules-list {
-  flex: 1;
-  max-height: 600px;
-  overflow-y: auto;
+  flex: 2;
   padding-right: 1rem;
 }
 
 .rule-form {
-  flex: 2;
+  flex: 3;
 }
 
 .rule-card {
