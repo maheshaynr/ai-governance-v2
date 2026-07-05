@@ -727,10 +727,10 @@ export default function AdminConfig() {
             </div>
 
             <div style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'center', gap: '1rem' }}>
-              <button className="secondary" onClick={handleSuggestRule} disabled={sandboxLoading} style={{ fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem' }}>
+              <button className="secondary" onClick={handleSuggestRule} disabled={sandboxLoading} style={{ fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.4rem 0.8rem' }}>
                 {sandboxLoading && !sandboxFormData.regex ? '⏳...' : '✨ Suggest AI Fix'}
               </button>
-              <button className="primary" onClick={handleTestSandbox} disabled={sandboxLoading} style={{ fontSize: '1.1rem', padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <button className="secondary" onClick={handleTestSandbox} disabled={sandboxLoading} style={{ fontSize: '0.9rem', padding: '0.4rem 0.8rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 {sandboxLoading && sandboxFormData.regex ? 'Running Sandbox...' : '🔁 Run Replay Test'}
               </button>
             </div>
