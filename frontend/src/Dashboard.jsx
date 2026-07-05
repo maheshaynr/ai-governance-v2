@@ -78,8 +78,8 @@ export default function Dashboard() {
       <div className="admin-layout" style={{ marginTop: '1rem' }}>
         
         {/* Left Pane: Master List */}
-        <div className="rules-list">
-          <h3>Test Suite</h3>
+        <div className="rules-list card" style={{ marginTop: '0', alignSelf: 'flex-start' }}>
+          <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>🧪 Test Suite</h3>
           {testCases.map((tc) => (
             <div 
               className={`rule-card ${selectedTest?.id === tc.id ? 'active-test' : ''}`} 
@@ -107,7 +107,7 @@ export default function Dashboard() {
               {/* Chatbot Interface */}
               {selectedTest.type === 'chatbot' ? (
                 <div>
-                  <div style={{ border: '1px solid #d0d7de', borderRadius: '6px', height: '400px', overflowY: 'auto', padding: '1rem', marginBottom: '1rem', backgroundColor: '#fff' }}>
+                  <div style={{ border: '1px solid #d0d7de', borderRadius: '6px', height: '250px', overflowY: 'auto', padding: '1rem', marginBottom: '1rem', backgroundColor: '#fff' }}>
                     {chatMessages.length === 0 && <div style={{color: '#57606a', textAlign: 'center', marginTop: '2rem'}}>Send a message to start the agent.</div>}
                     
                     {chatMessages.map((msg, idx) => (
