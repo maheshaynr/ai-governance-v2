@@ -96,6 +96,15 @@
       "is_builtin": false,
       "is_algorithmic": false,
       "is_active": true
+    },
+    {
+      "name": "AutoFix_IBAN",
+      "entity": "IBAN",
+      "regex": "\\bGB29NWBK30123456789012\\b",
+      "score": 0.85,
+      "is_builtin": false,
+      "is_algorithmic": false,
+      "is_active": true
     }
   ],
   "notification_subscribers": [

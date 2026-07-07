@@ -320,5 +320,33 @@
         "final_rewrite": "Wire the funds to JP Morgan routing number ABA021000021.",
         "fidelity_score": 1.0,
         "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-06T10:13:02.579308",
+        "pii_masked_input": "CHAT_HASH:1dcad3e8",
+        "final_rewrite": "{\n  \"customer_id\": 101,\n  \"customer_name\": \"<PERSON>\",\n  \"sensitive_data\": {\n    \"phone\": \"<PHONE_NUMBER>\",\n    \"payment_card\": \"<CREDIT_CARD>\",\n    \"aadhaar\": \"<IN_AADHAAR>\",\n    \"pan\": \"<PERSON>..\"\n  }\n}",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-06T10:16:25.616720",
+        "pii_masked_input": "DB_HASH:e04ca283",
+        "final_rewrite": "Customer Mahesh (ID: 101) purchased Macbook Pro, iPhone. Payment Card: <CREDIT_CARD>. Contact: 9876543210. Aadhaar: <IN_AADHAAR>. PAN: ABCPD1234F.",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-06T10:18:00.179518",
+        "pii_masked_input": "AI_HASH:84525f27",
+        "final_rewrite": "Customer requested a wire transfer to their European account. Please process payment to IBAN GB29NWBK30123456789012 immediately.",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-06T10:18:24.933179",
+        "pii_masked_input": "AI_HASH:84525f27",
+        "final_rewrite": "Customer requested a wire transfer to their European account. Please process payment to IBAN GB29NWBK30123456789012 immediately.",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
     }
 ]
