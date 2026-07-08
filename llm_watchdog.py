@@ -1,8 +1,9 @@
 import requests
 import json
 import logging
+import config
 
-OLLAMA_URL = "http://localhost:11434/api/chat"
+# Remove local OLLAMA_URL definition, using config.OLLAMA_URL instead
 
 SYSTEM_PROMPT = """You are a data privacy auditor. Analyze the following text and identify 
 ANY sensitive, private, or confidential information that should not be 
@@ -42,14 +43,16 @@ def analyze_text(raw_text: str) -> dict:
     ]
     
     payload = {
-        "model": "phi4-mini:3.8b",
+        "model": config.DEFAULT_LLM_MODEL,
         "messages": messages,
         "stream": False,
         "format": "json"
     }
     
     try:
-        resp = requests.post(OLLAMA_URL, json=payload, timeout=30)
+        logging.info(f"Sending request to Ollama ({config.OLLAMA_URL}) with model '{payload['model']}' | Input length: {len(raw_text)} chars")
+        resp = requests.post(config.OLLAMA_URL, json=payload, timeout=120)
+        logging.info(f"Ollama responded with status {resp.status_code}")
         if resp.status_code == 200:
             ai_message = resp.json()["message"]["content"]
             try:

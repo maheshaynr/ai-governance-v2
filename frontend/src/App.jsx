@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import Dashboard from './Dashboard';
 import AdminConfig from './AdminConfig';
 import AnalyticsDashboard from './AnalyticsDashboard';
+import ChatBot from './ChatBot';
 import { fetchAlarms } from './api';
 
 function App() {
@@ -34,6 +35,12 @@ function App() {
               Testing Dashboard
             </button>
             <button 
+              className={activeTab === 'chatbot' ? 'active' : ''} 
+              onClick={() => setActiveTab('chatbot')}
+            >
+              Chat Bot
+            </button>
+            <button 
               className={activeTab === 'admin' ? 'active' : ''} 
               onClick={() => setActiveTab('admin')}
             >
@@ -60,6 +67,7 @@ function App() {
 
       <main>
         {activeTab === 'dashboard' && <Dashboard />}
+        {activeTab === 'chatbot' && <ChatBot />}
         {activeTab === 'analytics' && <AnalyticsDashboard />}
         {activeTab === 'admin' && <AdminConfig />}
       </main>

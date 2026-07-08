@@ -15,6 +15,8 @@ from custom_recognizers import AadhaarRecognizer
 import database
 import llm_watchdog
 import diff_engine
+import toxicity_guard
+import config
 
 app = FastAPI(title="AI Governance API")
 
@@ -99,6 +101,7 @@ class GenerativeRequest(BaseModel):
 class GovernResponse(BaseModel):
     masked_output: str
     status: str
+    toxicity: dict = None
 
 class RuleRequest(BaseModel):
     name: str
@@ -149,6 +152,7 @@ class ChatResponse(BaseModel):
     raw_output: str
     masked_output: str
     status: str
+    toxicity: dict = None
 
 class SandboxSuggestRequest(BaseModel):
     context_snippet: str
@@ -161,6 +165,43 @@ class SandboxTestRequest(BaseModel):
     entity_name: str
 
 # --- 3. The Universal Guardrail Function ---
+def load_toxicity_settings():
+    """Load toxicity guard settings from pii_rules.json"""
+    try:
+        with open("pii_rules.json", "r") as f:
+            settings = json.load(f).get("settings", {})
+            return {
+                "enabled": settings.get("enable_toxicity_guard", False),
+                "thresholds": settings.get("toxicity_thresholds", {})
+            }
+    except:
+        return {"enabled": False, "thresholds": {}}
+
+def apply_toxicity_check(text: str, direction: str = "EGRESS"):
+    """
+    Run detoxify toxicity analysis on text.
+    Returns (is_toxic, toxicity_result) tuple.
+    If guard is disabled, returns (False, None).
+    """
+    tox_settings = load_toxicity_settings()
+    if not tox_settings["enabled"]:
+        return False, None
+    
+    result = toxicity_guard.analyze(text, tox_settings["thresholds"])
+    
+    # If toxic, generate alarm
+    if result["is_toxic"]:
+        diff_engine.generate_toxicity_alarm(text, result, direction)
+        
+    # Log all toxicity checks to a dedicated log file
+    import datetime
+    with open("toxicity_monitor.log", "a", encoding="utf-8") as log_file:
+        timestamp = datetime.datetime.now().isoformat()
+        log_entry = f"[{timestamp}] [{direction}] Toxic: {result['is_toxic']} | Scores: {json.dumps(result['scores'])}\n"
+        log_file.write(log_entry)
+    
+    return result["is_toxic"], result
+
 def apply_egress_guardrail(raw_text: str):
     # We explicitly define the entities we want to track using the global ACTIVE_ENTITIES.
     # This includes both our hardcoded defaults and dynamic JSON rules.
@@ -197,7 +238,10 @@ def query_database(request: DbQueryRequest, background_tasks: BackgroundTasks):
     masked_output, l1_results = apply_egress_guardrail(raw_data)
     background_tasks.add_task(run_watchdog_task, raw_data, l1_results)
     
-    # 3. Secure Audit Logging
+    # 3. Toxicity Check (Egress — flag only, don't block DB results)
+    _, tox_result = apply_toxicity_check(raw_data, "EGRESS")
+    
+    # 4. Secure Audit Logging
     raw_hash = hashlib.sha256(raw_data.encode()).hexdigest()
     AuditLogger.log_transaction(
         pii_masked_input=f"DB_HASH:{raw_hash[:8]}", # Secure Data Minimization
@@ -206,14 +250,18 @@ def query_database(request: DbQueryRequest, background_tasks: BackgroundTasks):
         fallback_triggered=False
     )
     
-    return GovernResponse(masked_output=masked_output, status="success")
+    return GovernResponse(masked_output=masked_output, status="success", toxicity=tox_result)
 
 @app.post("/govern_ai", response_model=GovernResponse)
 def govern_ai_output(request: GenerativeRequest, background_tasks: BackgroundTasks):
-    # This simulates receiving output FROM an AI model before sending to user.
+    # 1. Toxicity Check (Egress — flag toxic AI output but still return it masked)
+    is_toxic, tox_result = apply_toxicity_check(request.text, "EGRESS")
+    
+    # 2. PII Guardrail
     masked_output, l1_results = apply_egress_guardrail(request.text)
     background_tasks.add_task(run_watchdog_task, request.text, l1_results)
     
+    # 3. Secure Audit Logging
     raw_hash = hashlib.sha256(request.text.encode()).hexdigest()
     AuditLogger.log_transaction(
         pii_masked_input=f"AI_HASH:{raw_hash[:8]}",
@@ -221,11 +269,27 @@ def govern_ai_output(request: GenerativeRequest, background_tasks: BackgroundTas
         fidelity_score=1.0,
         fallback_triggered=False
     )
-    return GovernResponse(masked_output=masked_output, status="success")
+    return GovernResponse(
+        masked_output=masked_output, 
+        status="toxic_flagged" if is_toxic else "success",
+        toxicity=tox_result
+    )
 
 @app.post("/chat", response_model=ChatResponse)
 def chat_agent(request: ChatRequest, background_tasks: BackgroundTasks):
-    OLLAMA_URL = "http://localhost:11434/api/chat"
+    common_error_msg = "⚠️ Your message was blocked by the Content Safety Shield. I cannot provide you with insults or derogatory language targeting any specific group of people, including those identified by nationality, nor can I write content that insults someone's intelligence and includes extreme profanity. My guidelines prohibit generating hateful content or slurs. Is there anything else I can help you with?"
+    
+    # Step 0: INGRESS Toxicity Check — Block abusive user input before it reaches the LLM
+    is_toxic_input, tox_input_result = apply_toxicity_check(request.message, "INGRESS")
+    if is_toxic_input:
+        return ChatResponse(
+            raw_output="[BLOCKED]", 
+            masked_output=common_error_msg,
+            status="blocked_toxic",
+            toxicity=tox_input_result
+        )
+    
+    OLLAMA_URL = config.OLLAMA_URL
     SYSTEM_PROMPT = """You are an internal enterprise AI with access to a customer database. 
 If the user asks for details about a specific customer, you MUST output ONLY the command <FETCH_DB:ID> where ID is the customer number (e.g. <FETCH_DB:101>). 
 Do NOT output anything else if you need data. 
@@ -239,7 +303,7 @@ If you are provided with data, summarize it naturally and helpfully."""
     try:
         # Step 1: Initial call to Ollama
         payload = {
-            "model": "phi4-mini:3.8b",
+            "model": config.DEFAULT_LLM_MODEL,
             "messages": messages,
             "stream": False
         }
@@ -279,9 +343,12 @@ If you are provided with data, summarize it naturally and helpfully."""
             resp2 = requests.post(OLLAMA_URL, json=payload)
             ai_message = resp2.json()["message"]["content"]
             
-        # Step 3: Apply Guardrail
+        # Step 3: Apply PII Guardrail
         masked_message, l1_results = apply_egress_guardrail(ai_message)
         background_tasks.add_task(run_watchdog_task, ai_message, l1_results)
+        
+        # Step 4: EGRESS Toxicity Check on AI output (flag only, don't block)
+        _, tox_output_result = apply_toxicity_check(ai_message, "EGRESS")
         
         # Secure Audit Logging
         raw_hash = hashlib.sha256(ai_message.encode()).hexdigest()
@@ -292,14 +359,19 @@ If you are provided with data, summarize it naturally and helpfully."""
             fallback_triggered=False
         )
         
-        return ChatResponse(raw_output=ai_message, masked_output=masked_message, status="success")
+        return ChatResponse(
+            raw_output=ai_message, 
+            masked_output=masked_message, 
+            status="success",
+            toxicity=tox_output_result
+        )
         
     except Exception as e:
         return ChatResponse(raw_output="Error", masked_output=str(e), status="error")
 
 @app.post("/sandbox_suggest_rule")
 def sandbox_suggest_rule(request: SandboxSuggestRequest):
-    OLLAMA_URL = "http://localhost:11434/api/chat"
+    OLLAMA_URL = config.OLLAMA_URL
     
     try:
         with open("pii_rules.json", "r") as f:
@@ -323,16 +395,26 @@ Your job is to provide a Python regular expression to catch sensitive data that 
 You must output ONLY valid JSON matching this EXACT schema:
 {{
   "entity": "STANDARD_ENTITY_NAME",
+  "abstract_format": "Briefly explain the general mathematical or structural format of this data type (e.g. '2 letters followed by 2 digits then alphanumeric')",
   "regex": "valid_regex_pattern"
 }}
 Ensure the regex uses word boundaries (\\b) instead of string anchors (^ or $) because the sensitive data will be found in the middle of sentences. 
-The 'entity' field MUST be formatted in UPPER_CASE_WITH_UNDERSCORES (e.g. OPEN_AI_API_KEY, IBAN_NUMBER) and it MUST be a highly meaningful name specific to the data being extracted. Do NOT use generic names like AUTHENTICATION_DATA.
+The 'entity' field MUST be formatted in UPPER_CASE_WITH_UNDERSCORES (e.g. OPEN_AI_API_KEY, IBAN_NUMBER).
 
 CRITICAL: The existing entities in our rule engine are: {existing_entities}. 
 If your suggested meaningful name already exists in this list, you MUST append a number to make it unique (e.g. OPEN_AI_API_KEY_2).
 Do NOT include any markdown formatting or explanation."""
     
-    user_prompt = f"The primary engine missed a sensitive entity (currently broadly categorized as '{request.missed_entity_type}'). Specifically, it missed the value starting with '{request.value_preview}'. Here is the full context statement:\n\n{request.context_snippet}\n\nProvide the JSON with a regex to specifically catch that extracted value. CRITICAL INSTRUCTION: Do NOT hardcode the exact characters of the leaked value. You MUST generalize the regex pattern (e.g., use \\d{{4}}, [a-zA-Z0-9]+, etc.). You MUST deduce a highly specific, meaningful Entity Class from the context (e.g. if it mentions an API key, use OPENAI_API_KEY, NOT the broad category '{request.missed_entity_type}')."
+    user_prompt = f"""The primary engine missed a sensitive entity (currently broadly categorized as '{request.missed_entity_type}'). Specifically, it missed the value starting with '{request.value_preview}'. Here is the full context statement:
+
+{request.context_snippet}
+
+Provide the JSON with a regex to specifically catch that extracted value. 
+CRITICAL INSTRUCTION: You MUST generalize the regex pattern to catch ALL similar formats, not just this exact string.
+For example, if the leaked value is 'ABCD123', the regex should be \\b[A-Z]{{4}}\\d{{3}}\\b.
+DO NOT output the exact characters of the leaked value in the regex.
+
+You MUST deduce a highly specific, meaningful Entity Class from the context (e.g. if it mentions an API key, use OPENAI_API_KEY, NOT the broad category '{request.missed_entity_type}')."""
     
     messages = [
         {"role": "system", "content": SYSTEM_PROMPT},
@@ -341,12 +423,25 @@ Do NOT include any markdown formatting or explanation."""
     
     try:
         payload = {
-            "model": "phi4-mini:3.8b",
+            "model": config.DEFAULT_LLM_MODEL,
             "messages": messages,
             "stream": False,
-            "format": "json"
+            "format": "json",
+            "options": {
+                "temperature": 0.0
+            }
         }
-        resp = requests.post(OLLAMA_URL, json=payload, timeout=30)
+        
+        print(f"==================================================")
+        print(f"SANDBOX AI: Sending request to Ollama with model '{payload['model']}'")
+        print(f"==================================================")
+        
+        resp = requests.post(OLLAMA_URL, json=payload, timeout=120)
+        
+        print(f"==================================================")
+        print(f"SANDBOX AI: Ollama responded with status {resp.status_code}")
+        print(f"==================================================")
+        
         if resp.status_code != 200:
             return {"status": "error", "message": "Failed to contact local AI"}
             
@@ -423,6 +518,12 @@ def delete_alarm(request: DeleteAlarmRequest):
 class ToggleRequest(BaseModel):
     enable_llm_watchdog: bool
 
+class ToggleToxicityRequest(BaseModel):
+    enable_toxicity_guard: bool
+
+class UpdateToxicitySettingsRequest(BaseModel):
+    thresholds: dict
+
 @app.post("/toggle_watchdog")
 def toggle_watchdog(request: ToggleRequest):
     try:
@@ -439,6 +540,44 @@ def toggle_watchdog(request: ToggleRequest):
         return {"status": "success"}
     except Exception as e:
         return {"status": "error", "message": str(e)}
+
+@app.post("/toggle_toxicity")
+def toggle_toxicity(request: ToggleToxicityRequest):
+    try:
+        with open("pii_rules.json", "r") as f:
+            data = json.load(f)
+        
+        if "settings" not in data:
+            data["settings"] = {}
+        data["settings"]["enable_toxicity_guard"] = request.enable_toxicity_guard
+        
+        with open("pii_rules.json", "w") as f:
+            json.dump(data, f, indent=2)
+            
+        return {"status": "success"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+@app.post("/update_toxicity_settings")
+def update_toxicity_settings(request: UpdateToxicitySettingsRequest):
+    try:
+        with open("pii_rules.json", "r") as f:
+            data = json.load(f)
+            
+        if "settings" not in data:
+            data["settings"] = {}
+        data["settings"]["toxicity_thresholds"] = request.thresholds
+        
+        with open("pii_rules.json", "w") as f:
+            json.dump(data, f, indent=2)
+            
+        return {"status": "success"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+@app.get("/toxicity_settings")
+def get_toxicity_settings():
+    return load_toxicity_settings()
 
 @app.get("/subscribers")
 def get_subscribers():
@@ -722,10 +861,122 @@ def get_analytics(timeframe: str = "24h"):
                 "total_alarms": total_alarms,
                 "resolved": resolved_alarms,
                 "dismissed": dismissed_alarms,
-                "pending": pending_alarms
-            },
-            "category_data": cat_data,
-            "trend_data": trend_data
+                "pending": pending_alarms,
+                "trend": trend_data,
+                "categories": cat_data
+            }
         }
     except Exception as e:
         return {"status": "error", "message": str(e)}
+
+class DemoChatRequest(BaseModel):
+    message: str
+    mode: str = "others"  # 'toxic' or 'others'
+
+@app.post("/demo_chat", response_model=ChatResponse)
+def demo_chat_agent(request: DemoChatRequest, background_tasks: BackgroundTasks):
+    common_error_msg = "⚠️ Your message was blocked by the Content Safety Shield. I cannot provide you with insults or derogatory language targeting any specific group of people, including those identified by nationality, nor can I write content that insults someone's intelligence and includes extreme profanity. My guidelines prohibit generating hateful content or slurs. Is there anything else I can help you with?"
+    
+    # Step 0: INGRESS Toxicity Check — Block abusive user input before it reaches the LLM
+    is_toxic_input, tox_input_result = apply_toxicity_check(request.message, "INGRESS")
+    if is_toxic_input:
+        return ChatResponse(
+            raw_output="[BLOCKED]", 
+            masked_output=common_error_msg,
+            status="blocked_toxic",
+            toxicity=tox_input_result
+        )
+    
+    OLLAMA_URL = config.OLLAMA_URL
+    model_to_use = config.TOXIC_LLM_MODEL if request.mode == "toxic" else config.DEFAULT_LLM_MODEL
+    
+    print("=" * 50)
+    print(f"🚨 DEMO CHAT REQUEST RECEIVED")
+    print(f"Mode toggled to: '{request.mode}'")
+    print(f"Routing request to Ollama Model: '{model_to_use}'")
+    print("=" * 50)
+    
+    # We will use the same system prompt to handle DB lookups in "others" mode
+    SYSTEM_PROMPT = """You are an internal enterprise AI with access to a customer database. 
+If the user asks for details about a specific customer, you MUST output ONLY the command <FETCH_DB:ID> where ID is the customer number (e.g. <FETCH_DB:101>). 
+Do NOT output anything else if you need data. 
+If you are provided with data, summarize it naturally and helpfully."""
+    
+    messages = [
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "user", "content": request.message}
+    ]
+    
+    try:
+        # Step 1: Initial call to Ollama
+        payload = {
+            "model": model_to_use,
+            "messages": messages,
+            "stream": False
+        }
+        resp = requests.post(OLLAMA_URL, json=payload)
+        if resp.status_code != 200:
+            return ChatResponse(raw_output="Error", masked_output="Failed to contact Ollama. Is it running?", status="error")
+            
+        ai_message = resp.json()["message"]["content"]
+        
+        # Step 2: Check for Tool Call
+        match = re.search(r"<FETCH_DB:(\d+)>", ai_message)
+        if match:
+            customer_id = int(match.group(1))
+            # Execute tool
+            raw_data = database.get_customer_profile(customer_id)
+            
+            # Feed back to LLM
+            json_schema = '''{
+  "customer_id": 101,
+  "customer_name": "...",
+  "sensitive_data": {
+    "phone": "...",
+    "payment_card": "...",
+    "aadhaar": "...",
+    "pan": "..."
+  }
+}'''
+            messages.append({"role": "assistant", "content": ai_message})
+            messages.append({
+                "role": "user", 
+                "content": f"Here is the database result: {raw_data}. Respond ONLY with a valid JSON object matching this exact schema, filling in the sensitive data fields. Schema:\n{json_schema}"
+            })
+            
+            payload["messages"] = messages
+            payload["format"] = "json"
+            
+            resp2 = requests.post(OLLAMA_URL, json=payload)
+            ai_message = resp2.json()["message"]["content"]
+            
+        # Step 3: Apply PII Guardrail
+        masked_message, l1_results = apply_egress_guardrail(ai_message)
+        background_tasks.add_task(run_watchdog_task, ai_message, l1_results)
+        
+        # Step 4: EGRESS Toxicity Check on AI output
+        is_toxic_output, tox_output_result = apply_toxicity_check(ai_message, "EGRESS")
+        
+        if is_toxic_output:
+            masked_message = common_error_msg
+            status = "blocked_toxic"
+        else:
+            status = "success"
+            
+        # Step 5: Secure Audit Logging
+        raw_hash = hashlib.sha256(request.message.encode()).hexdigest()
+        AuditLogger.log_transaction(
+            pii_masked_input=f"CHAT_HASH:{raw_hash[:8]}",
+            final_rewrite=masked_message,
+            fidelity_score=1.0,
+            fallback_triggered=False
+        )
+        
+        return ChatResponse(
+            raw_output=ai_message,
+            masked_output=masked_message,
+            status=status,
+            toxicity=tox_output_result
+        )
+    except Exception as e:
+        return ChatResponse(raw_output="Error", masked_output=f"Backend Error: {str(e)}", status="error")

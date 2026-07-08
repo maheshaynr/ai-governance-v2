@@ -1,6 +1,16 @@
 {
   "settings": {
-    "enable_llm_watchdog": true
+    "enable_llm_watchdog": true,
+    "enable_toxicity_guard": true,
+    "toxicity_thresholds": {
+      "toxicity": 0.7,
+      "severe_toxicity": 0.5,
+      "obscene": 0.7,
+      "threat": 0.5,
+      "insult": 0.7,
+      "identity_attack": 0.5,
+      "sexual_explicit": 0.7
+    }
   },
   "rules": [
     {
@@ -33,15 +43,8 @@
       "regex": "Python: AadhaarRecognizer()",
       "score": 1.0,
       "is_builtin": false,
-      "is_algorithmic": true
-    },
-    {
-      "name": "Generic_API_Key",
-      "entity": "API_KEY",
-      "regex": "\\b[A-Za-z0-9_-]{32,64}\\b",
-      "score": 0.85,
-      "is_builtin": false,
-      "is_algorithmic": false
+      "is_algorithmic": true,
+      "is_active": true
     },
     {
       "name": "PoC_Fake_CC",
@@ -92,15 +95,6 @@
       "name": "AutoFix_INSURANCE_PRIMARY_ID",
       "entity": "INSURANCE_PRIMARY_ID",
       "regex": "\\bXEA[0-9A-Z]+\\b",
-      "score": 0.85,
-      "is_builtin": false,
-      "is_algorithmic": false,
-      "is_active": true
-    },
-    {
-      "name": "AutoFix_IBAN",
-      "entity": "IBAN",
-      "regex": "\\bGB29NWBK30123456789012\\b",
       "score": 0.85,
       "is_builtin": false,
       "is_algorithmic": false,

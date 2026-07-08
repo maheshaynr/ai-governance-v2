@@ -124,6 +124,15 @@ export async function chatAgent(message) {
   return res.json();
 }
 
+export async function demoChat(message, mode) {
+  const res = await fetch(`${API_BASE}/demo_chat`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message, mode })
+  });
+  return res.json();
+}
+
 export async function sandboxSuggestRule(context_snippet, missed_entity_type, value_preview) {
   const res = await fetch(`${API_BASE}/sandbox_suggest_rule`, {
     method: 'POST',
@@ -142,3 +151,25 @@ export async function sandboxTestRule(context_snippet, regex_pattern, entity_nam
   return res.json();
 }
 
+export async function toggleToxicity(enable_toxicity_guard) {
+  const res = await fetch(`${API_BASE}/toggle_toxicity`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ enable_toxicity_guard })
+  });
+  return res.json();
+}
+
+export async function fetchToxicitySettings() {
+  const res = await fetch(`${API_BASE}/toxicity_settings`);
+  return res.json();
+}
+
+export async function updateToxicitySettings(thresholds) {
+  const res = await fetch(`${API_BASE}/update_toxicity_settings`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ thresholds })
+  });
+  return res.json();
+}

@@ -3,7 +3,7 @@
 ## 1. Project Structure
 
 ```
-D:\AI-Governance\
+D:\AI-Governance-version2\
 ├── api.py                    # FastAPI backend — all endpoints (732 lines)
 ├── llm_watchdog.py           # Layer 2 — Phi-4 Mini semantic PII analyzer
 ├── diff_engine.py            # Compares L1 vs L2 findings, generates alarms

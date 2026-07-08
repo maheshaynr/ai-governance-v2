@@ -46,10 +46,11 @@ export default function Dashboard() {
       let res;
       if (selectedTest.type === 'db_query') {
         res = await queryDb(parseInt(payload));
-        setResult({ type: 'success', text: res.masked_output });
+        setResult({ type: 'success', text: res.masked_output, toxicity: res.toxicity, status: res.status });
       } else if (selectedTest.type === 'ai_generative') {
         res = await governAi(payload);
-        setResult({ type: 'success', text: res.masked_output });
+        const isToxic = res.status === 'toxic_flagged';
+        setResult({ type: isToxic ? 'toxic' : 'success', text: res.masked_output, toxicity: res.toxicity, status: res.status });
       } else if (selectedTest.type === 'chatbot') {
         // Chatbot logic
         const newMsg = { role: 'user', content: payload };
@@ -61,7 +62,8 @@ export default function Dashboard() {
           role: 'assistant', 
           raw_content: res.raw_output,
           masked_content: res.masked_output,
-          status: res.status
+          status: res.status,
+          toxicity: res.toxicity
         };
         setChatMessages(prev => [...prev, botMsg]);
         setPayload(''); // clear input
@@ -167,7 +169,12 @@ export default function Dashboard() {
                   {result && (
                     <div style={{ marginTop: '2rem' }}>
                       <h4>Final Result:</h4>
-                      <div className={`alert-${result.type}`}>{result.text}</div>
+                      <div className={`alert-${result.type === 'toxic' ? 'error' : result.type}`}>
+                        {result.type === 'toxic' && <span>🚫 <strong>TOXIC CONTENT FLAGGED</strong> — </span>}
+                        {result.text}
+                      </div>
+                      
+                      {/* Toxicity scores display has been removed and is now logged to backend instead */}
                     </div>
                   )}
                 </div>

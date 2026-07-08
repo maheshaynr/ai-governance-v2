@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { fetchRules, addRule, updateRule, deleteRule, fetchAlarms, toggleWatchdog, fetchSubscribers, addSubscriber, updateSubscriber, deleteSubscriber, deleteAlarm, sandboxSuggestRule, sandboxTestRule } from './api';
+import { fetchRules, addRule, updateRule, deleteRule, fetchAlarms, toggleWatchdog, fetchSubscribers, addSubscriber, updateSubscriber, deleteSubscriber, deleteAlarm, sandboxSuggestRule, sandboxTestRule, toggleToxicity, fetchToxicitySettings, updateToxicitySettings } from './api';
 
 export default function AdminConfig() {
   const [loggedIn, setLoggedIn] = useState(false);
@@ -14,6 +14,10 @@ export default function AdminConfig() {
   const [subscribers, setSubscribers] = useState([]);
   const [llmWatchdogEnabled, setLlmWatchdogEnabled] = useState(false);
   const [isTogglingWatchdog, setIsTogglingWatchdog] = useState(false);
+  const [toxicityGuardEnabled, setToxicityGuardEnabled] = useState(false);
+  const [isTogglingToxicity, setIsTogglingToxicity] = useState(false);
+  const [toxicityThresholds, setToxicityThresholds] = useState({});
+  const [isSavingToxicity, setIsSavingToxicity] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   const [editingRule, setEditingRule] = useState(null);
@@ -50,6 +54,12 @@ export default function AdminConfig() {
       if (data.settings && data.settings.enable_llm_watchdog !== undefined) {
         setLlmWatchdogEnabled(data.settings.enable_llm_watchdog);
       }
+      if (data.settings && data.settings.enable_toxicity_guard !== undefined) {
+        setToxicityGuardEnabled(data.settings.enable_toxicity_guard);
+      }
+      if (data.settings && data.settings.toxicity_thresholds) {
+        setToxicityThresholds(data.settings.toxicity_thresholds);
+      }
     } catch (e) {
       console.error("Failed to load rules", e);
     }
@@ -82,6 +92,31 @@ export default function AdminConfig() {
       console.error("Failed to toggle watchdog", e);
     } finally {
       setIsTogglingWatchdog(false);
+    }
+  };
+
+  const handleToggleToxicity = async (enabled) => {
+    setIsTogglingToxicity(true);
+    try {
+      await toggleToxicity(enabled);
+      setToxicityGuardEnabled(enabled);
+    } catch (e) {
+      console.error("Failed to toggle toxicity guard", e);
+    } finally {
+      setIsTogglingToxicity(false);
+    }
+  };
+
+  const handleSaveToxicitySettings = async () => {
+    setIsSavingToxicity(true);
+    try {
+      await updateToxicitySettings(toxicityThresholds);
+      alert("Toxicity settings saved successfully!");
+    } catch (e) {
+      console.error("Failed to save toxicity settings", e);
+      alert("Failed to save toxicity settings.");
+    } finally {
+      setIsSavingToxicity(false);
     }
   };
 
@@ -378,6 +413,19 @@ export default function AdminConfig() {
               </label>
             )}
           </div>
+          <div style={{display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#f6f8fa', padding: '0.5rem 1rem', borderRadius: '6px', border: '1px solid #d0d7de'}}>
+            <label style={{margin: 0, fontWeight: '600', fontSize: '0.9rem', color: '#24292f'}}>Content Safety:</label>
+            {isTogglingToxicity ? (
+              <span style={{ fontSize: '0.8rem', color: '#57606a', fontStyle: 'italic', marginLeft: '0.5rem' }}>⏳ Updating...</span>
+            ) : (
+              <label className="switch" style={{position: 'relative', display: 'inline-block', width: '40px', height: '20px'}}>
+                <input type="checkbox" checked={toxicityGuardEnabled} onChange={(e) => handleToggleToxicity(e.target.checked)} style={{opacity: 0, width: 0, height: 0}} />
+                <span className="slider" style={{position: 'absolute', cursor: 'pointer', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: toxicityGuardEnabled ? '#2da44e' : '#cf222e', transition: '.4s', borderRadius: '20px'}}>
+                  <span style={{position: 'absolute', height: '14px', width: '14px', left: toxicityGuardEnabled ? '22px' : '3px', bottom: '3px', backgroundColor: 'white', transition: '.4s', borderRadius: '50%'}}></span>
+                </span>
+              </label>
+            )}
+          </div>
           <button className="secondary" onClick={() => setLoggedIn(false)}>Logout</button>
         </div>
       </div>
@@ -398,7 +446,39 @@ export default function AdminConfig() {
           style={{ background: 'none', border: 'none', padding: '0.5rem 1rem', fontSize: '1rem', fontWeight: '600', color: activeTab === 'routing' ? '#9a6700' : '#57606a', borderBottom: activeTab === 'routing' ? '2px solid #d29922' : '2px solid transparent', cursor: 'pointer' }}>
           Alert Routing
         </button>
+        <button 
+          onClick={() => setActiveTab('toxicity')}
+          style={{ background: 'none', border: 'none', padding: '0.5rem 1rem', fontSize: '1rem', fontWeight: '600', color: activeTab === 'toxicity' ? '#8b5cf6' : '#57606a', borderBottom: activeTab === 'toxicity' ? '2px solid #8b5cf6' : '2px solid transparent', cursor: 'pointer' }}>
+          Toxicity Guard
+        </button>
       </div>
+
+      {activeTab === 'toxicity' && (
+        <div className="card" style={{ maxWidth: '600px', margin: '0 auto' }}>
+          <h3>🛡️ Content Toxicity Guard</h3>
+          <p style={{ color: '#57606a', fontSize: '0.9rem', marginBottom: '1.5rem' }}>Adjust the sensitivity thresholds for the AI toxicity guard. A lower threshold makes the guard stricter, catching more subtle language but potentially causing false positives. Values range from 0.0 to 1.0.</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            {Object.keys(toxicityThresholds).map((category) => (
+              <div key={category} className="form-group" style={{ marginBottom: 0 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <label style={{ margin: 0, textTransform: 'capitalize' }}>{category.replace(/_/g, ' ')}</label>
+                  <span style={{ fontWeight: 'bold', color: toxicityThresholds[category] < 0.6 ? '#cf222e' : '#2da44e' }}>{toxicityThresholds[category]}</span>
+                </div>
+                <input 
+                  type="range" 
+                  min="0" max="1" step="0.05" 
+                  value={toxicityThresholds[category]} 
+                  onChange={(e) => setToxicityThresholds({...toxicityThresholds, [category]: parseFloat(e.target.value)})} 
+                  style={{ width: '100%', marginTop: '0.5rem' }}
+                />
+              </div>
+            ))}
+          </div>
+          <button className="primary" onClick={handleSaveToxicitySettings} disabled={isSavingToxicity} style={{ marginTop: '2rem', width: '100%' }}>
+            {isSavingToxicity ? 'Saving...' : 'Save Settings'}
+          </button>
+        </div>
+      )}
 
       {activeTab === 'rules' && (
         <div className="admin-layout">
@@ -565,10 +645,11 @@ export default function AdminConfig() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #d0d7de', padding: '1rem', background: '#f6f8fa', borderTopLeftRadius: '8px', borderTopRightRadius: '8px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                       <span style={{ backgroundColor: '#cf222e', color: '#fff', padding: '2px 8px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 'bold' }}>{alarm.severity}</span>
-                      <h4 style={{ margin: 0, fontSize: '1.1rem' }}>{alarm.missed_entity.type}</h4>
+                      <h4 style={{ margin: 0, fontSize: '1.1rem' }}>{alarm.category === 'TOXICITY' ? 'Toxic Content' : alarm.missed_entity?.type}</h4>
                       {alarm.category && (
                         <span style={{ 
-                          backgroundColor: alarm.category === 'AUTHENTICATION' ? '#8b5cf6' : 
+                          backgroundColor: alarm.category === 'TOXICITY' ? '#e94560' :
+                                           alarm.category === 'AUTHENTICATION' ? '#8b5cf6' : 
                                            alarm.category === 'FINANCIAL' ? '#0969da' : 
                                            alarm.category === 'HIPAA' ? '#116329' : 
                                            alarm.category === 'GDPR' ? '#9a6700' : '#57606a', 
@@ -584,42 +665,82 @@ export default function AdminConfig() {
                       <div style={{ marginBottom: '0.5rem', fontStyle: 'italic', color: '#57606a' }}>
                         "{alarm.context_snippet}"
                       </div>
-                      <div>
-                        Leaked Data Snippet: <strong style={{fontFamily: 'monospace'}}>{alarm.missed_entity.value_preview}</strong>
-                      </div>
+                      {alarm.category !== 'TOXICITY' && alarm.missed_entity && (
+                        <div>
+                          Leaked Data Snippet: <strong style={{fontFamily: 'monospace'}}>{alarm.missed_entity.value_preview}</strong>
+                        </div>
+                      )}
                     </div>
                     
-                    <div style={{ marginBottom: '1rem' }}>
-                      <strong>Reason given by AI:</strong> {alarm.missed_entity.reason}
-                    </div>
+                    {/* Toxicity-specific alarm details */}
+                    {alarm.category === 'TOXICITY' && alarm.toxicity_detail && (
+                      <div style={{ marginBottom: '1rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                          <strong>Direction:</strong>
+                          <span style={{ backgroundColor: alarm.toxicity_detail.direction === 'INGRESS' ? '#cf222e' : '#d29922', color: '#fff', padding: '2px 6px', borderRadius: '4px', fontSize: '0.75rem' }}>
+                            {alarm.toxicity_detail.direction === 'INGRESS' ? '⬇️ User Input' : '⬆️ AI Output'}
+                          </span>
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '0.5rem' }}>
+                          {Object.entries(alarm.toxicity_detail.scores || {}).map(([cat, score]) => {
+                            const isTriggered = alarm.toxicity_detail.triggered_categories?.includes(cat);
+                            const pct = Math.round(score * 100);
+                            return (
+                              <div key={cat} style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', fontWeight: isTriggered ? 'bold' : 'normal', color: isTriggered ? '#cf222e' : '#57606a' }}>
+                                  <span>{isTriggered ? '⚠️ ' : ''}{cat.replace(/_/g, ' ')}</span>
+                                  <span>{pct}%</span>
+                                </div>
+                                <div style={{ height: '5px', backgroundColor: '#e1e4e8', borderRadius: '3px', overflow: 'hidden' }}>
+                                  <div style={{ height: '100%', width: `${pct}%`, backgroundColor: score > 0.7 ? '#cf222e' : score > 0.4 ? '#d29922' : '#2da44e', borderRadius: '3px' }} />
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
                     
-                    <div style={{ display: 'flex', gap: '1rem' }}>
-                      <div style={{ flex: 1, backgroundColor: '#ffebe9', padding: '0.75rem', borderRadius: '6px', border: '1px solid #ff8182' }}>
-                        <strong>Primary Engine Found:</strong>
-                        <div style={{ fontSize: '0.9rem', color: '#cf222e', marginTop: '0.5rem' }}>
-                          {alarm.layer1_findings.length > 0 ? Array.from(new Set(alarm.layer1_findings)).join(', ') : 'Nothing'}
+                    {/* Standard PII alarm details */}
+                    {alarm.category !== 'TOXICITY' && (
+                      <>
+                        <div style={{ marginBottom: '1rem' }}>
+                          <strong>Reason given by AI:</strong> {alarm.missed_entity?.reason}
                         </div>
-                      </div>
-                      <div style={{ flex: 1, backgroundColor: '#dafbe1', padding: '0.75rem', borderRadius: '6px', border: '1px solid #4ac26b' }}>
-                        <strong>Secondary Engine Detected:</strong>
-                        <div style={{ fontSize: '0.9rem', color: '#1a7f37', marginTop: '0.5rem' }}>
-                          {alarm.layer2_findings.length > 0 ? Array.from(new Set(alarm.layer2_findings)).join(', ') : 'Nothing'}
+                        
+                        <div style={{ display: 'flex', gap: '1rem' }}>
+                          <div style={{ flex: 1, backgroundColor: '#ffebe9', padding: '0.75rem', borderRadius: '6px', border: '1px solid #ff8182' }}>
+                            <strong>Primary Engine Found:</strong>
+                            <div style={{ fontSize: '0.9rem', color: '#cf222e', marginTop: '0.5rem' }}>
+                              {alarm.layer1_findings?.length > 0 ? Array.from(new Set(alarm.layer1_findings)).join(', ') : 'Nothing'}
+                            </div>
+                          </div>
+                          <div style={{ flex: 1, backgroundColor: '#dafbe1', padding: '0.75rem', borderRadius: '6px', border: '1px solid #4ac26b' }}>
+                            <strong>Secondary Engine Detected:</strong>
+                            <div style={{ fontSize: '0.9rem', color: '#1a7f37', marginTop: '0.5rem' }}>
+                              {alarm.layer2_findings?.length > 0 ? Array.from(new Set(alarm.layer2_findings)).join(', ') : 'Nothing'}
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    </div>
+                      </>
+                    )}
                     
                     <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem' }}>
-                      <button className="secondary" onClick={() => handleOpenSandbox(alarm)} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', backgroundColor: '#fff', color: '#4682b4', border: '1px solid #4682b4' }}>
-                        🛠️ Fix & Replay Sandbox
-                      </button>
-                      <button className="secondary" onClick={() => {
-                        setActiveTab('rules');
-                        setFormData({ name: `New_${alarm.missed_entity.type}`, entity: alarm.missed_entity.type, regex: '', score: 0.85, is_builtin: false, is_algorithmic: false, is_active: true });
-                        setFormMessage({ type: 'success', text: `Auto-filled form for ${alarm.missed_entity.type}. Please define Regex or select Built-in AI.`});
-                      }} style={{ backgroundColor: '#fff', color: '#4682b4', border: '1px solid #4682b4' }}>
-                        ➕ Create Rule
-                      </button>
-                      <button className="secondary" onClick={() => handleDismissAlarm(alarm.alarm_id)} style={{ color: '#4682b4', border: '1px solid #4682b4', backgroundColor: '#fff' }}>🚫 Dismiss (False Positive)</button>
+                      {alarm.category !== 'TOXICITY' && (
+                        <>
+                          <button className="secondary" onClick={() => handleOpenSandbox(alarm)} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', backgroundColor: '#fff', color: '#4682b4', border: '1px solid #4682b4' }}>
+                            🛠️ Fix & Replay Sandbox
+                          </button>
+                          <button className="secondary" onClick={() => {
+                            setActiveTab('rules');
+                            setFormData({ name: `New_${alarm.missed_entity.type}`, entity: alarm.missed_entity.type, regex: '', score: 0.85, is_builtin: false, is_algorithmic: false, is_active: true });
+                            setFormMessage({ type: 'success', text: `Auto-filled form for ${alarm.missed_entity.type}. Please define Regex or select Built-in AI.`});
+                          }} style={{ backgroundColor: '#fff', color: '#4682b4', border: '1px solid #4682b4' }}>
+                            ➕ Create Rule
+                          </button>
+                        </>
+                      )}
+                      <button className="secondary" onClick={() => handleDismissAlarm(alarm.alarm_id)} style={{ color: '#4682b4', border: '1px solid #4682b4', backgroundColor: '#fff' }}>🚫 Dismiss</button>
                     </div>
                   </div>
                 </div>
@@ -700,6 +821,7 @@ export default function AdminConfig() {
                     <option value="AUTHENTICATION">AUTHENTICATION (API Keys / Credentials)</option>
                     <option value="HIPAA">HIPAA (Protected Health Info)</option>
                     <option value="GDPR">GDPR (General Privacy / EU)</option>
+                    <option value="TOXICITY">TOXICITY (Abusive / Hateful Content)</option>
                   </select>
                 </div>
                 <div className="form-group">

@@ -145,3 +145,45 @@ def run_diff(raw_text: str, layer1_results: list, layer2_results: dict):
             alarms_triggered += 1
             
     return alarms_triggered
+
+def generate_toxicity_alarm(raw_text: str, toxicity_result: dict, direction: str = "EGRESS"):
+    """
+    Creates and saves an alarm for toxic content detected by the detoxify model.
+    
+    Args:
+        raw_text: The original text that was analyzed
+        toxicity_result: Result dict from toxicity_guard.analyze()
+        direction: "INGRESS" (user input) or "EGRESS" (AI output)
+    """
+    alarm = {
+        "alarm_id": f"ALM-{datetime.now().strftime('%Y%m%d')}-{str(uuid.uuid4())[:8]}",
+        "severity": "CRITICAL",
+        "category": "TOXICITY",
+        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "toxicity_detail": {
+            "direction": direction,
+            "scores": toxicity_result.get("scores", {}),
+            "triggered_categories": toxicity_result.get("triggered_categories", []),
+            "max_category": toxicity_result.get("max_category", "unknown"),
+            "max_score": toxicity_result.get("max_score", 0.0)
+        },
+        "context_snippet": raw_text[:200] + "..." if len(raw_text) > 200 else raw_text,
+        "status": "PENDING_REVIEW"
+    }
+    
+    save_alarm(alarm)
+    logging.warning(f"🚨 TOXICITY ALARM: {direction} — {toxicity_result.get('triggered_categories')} (max: {toxicity_result.get('max_category')} @ {toxicity_result.get('max_score')})")
+    
+    # Dispatch to subscribers who want TOXICITY or ALL alerts
+    try:
+        with open("pii_rules.json", "r") as f:
+            data = json.load(f)
+            subscribers = data.get("notification_subscribers", [])
+            for sub in subscribers:
+                if sub.get("alert_type") in ("ALL", "TOXICITY"):
+                    if sub.get("email"):
+                        EmailNotifier.send_alarm_email(sub.get("email"), alarm, f"{sub.get('role')} ({sub.get('alert_type')})")
+    except Exception as e:
+        logging.error(f"Failed to route toxicity notifications: {str(e)}")
+    
+    return alarm

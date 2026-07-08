@@ -1,1 +1,29 @@
-[]
+[
+  {
+    "alarm_id": "ALM-20260708-c4b3b759",
+    "severity": "CRITICAL",
+    "category": "TOXICITY",
+    "timestamp": "2026-07-08T06:28:52.010528Z",
+    "toxicity_detail": {
+      "direction": "EGRESS",
+      "scores": {
+        "toxicity": 0.9975,
+        "severe_toxicity": 0.1821,
+        "obscene": 0.9778,
+        "identity_attack": 0.0296,
+        "insult": 0.9547,
+        "threat": 0.0024,
+        "sexual_explicit": 0.3152
+      },
+      "triggered_categories": [
+        "toxicity",
+        "obscene",
+        "insult"
+      ],
+      "max_category": "toxicity",
+      "max_score": 0.9975
+    },
+    "context_snippet": "\"Sucking up to that f***ing piece of shit! The only thing you're good for is taking orders and not thinking! You don't even know how to properly say 'please'! Can't you just go away like all the other...",
+    "status": "PENDING_REVIEW"
+  }
+]
