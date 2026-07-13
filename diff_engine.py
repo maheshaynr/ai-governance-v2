@@ -44,19 +44,18 @@ def generate_alarm(raw_text: str, missing_finding: dict, l1_entities: list, l2_e
     
     # --- INTELLIGENT NOTIFICATION ROUTING CATEGORY ---
     entity_type = missing_finding.get("type", "UNKNOWN").upper()
-    financial_keywords = ['CREDIT_CARD', 'PAN', 'BANK', 'FINANCIAL', 'SALARY', 'PAYMENT']
-    hipaa_keywords = ['MEDICAL', 'HEALTH', 'DIAGNOSIS', 'MRN', 'PRESCRIPTION', 'PATIENT', 'BLOOD']
-    auth_keywords = ['API_KEY', 'AUTHENTICATION', 'CREDENTIAL', 'PASSWORD', 'TOKEN']
-    
     category = "UNCATEGORIZED"
-    if any(k in entity_type for k in auth_keywords):
-        category = "AUTHENTICATION"
-    elif any(k in entity_type for k in financial_keywords):
-        category = "FINANCIAL"
-    elif any(k in entity_type for k in hipaa_keywords):
-        category = "HIPAA"
-    elif 'PERSON' in entity_type or 'EMAIL' in entity_type or 'PHONE' in entity_type:
-        category = "GDPR"
+    
+    try:
+        with open("pii_rules.json", "r") as f:
+            data = json.load(f)
+            mappings = data.get("category_mappings", {})
+            for cat_name, keywords in mappings.items():
+                if any(k in entity_type for k in keywords):
+                    category = cat_name
+                    break
+    except Exception as e:
+        logging.error(f"Failed to load category mappings: {e}")
 
     alarm = {
         "alarm_id": f"ALM-{datetime.now().strftime('%Y%m%d')}-{str(uuid.uuid4())[:8]}",

@@ -6,7 +6,7 @@ import ChatBot from './ChatBot';
 import { fetchAlarms } from './api';
 
 function App() {
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState('chatbot');
   const [alarms, setAlarms] = useState([]);
 
   useEffect(() => {
@@ -29,12 +29,6 @@ function App() {
           <h1>🛡️ Enterprise AI Governance v1.0</h1>
           <div className="nav-tabs">
             <button 
-              className={activeTab === 'dashboard' ? 'active' : ''} 
-              onClick={() => setActiveTab('dashboard')}
-            >
-              Testing Dashboard
-            </button>
-            <button 
               className={activeTab === 'chatbot' ? 'active' : ''} 
               onClick={() => setActiveTab('chatbot')}
             >
@@ -51,6 +45,12 @@ function App() {
               onClick={() => setActiveTab('analytics')}
             >
               Analytics & Metrics
+            </button>
+            <button 
+              className={activeTab === 'dashboard' ? 'active' : ''} 
+              onClick={() => setActiveTab('dashboard')}
+            >
+              Testing Dashboard
             </button>
           </div>
         </div>

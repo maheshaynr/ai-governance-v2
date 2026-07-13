@@ -1,7 +1,7 @@
 {
   "settings": {
     "enable_llm_watchdog": true,
-    "enable_toxicity_guard": true,
+    "enable_toxicity_guard": false,
     "toxicity_thresholds": {
       "toxicity": 0.7,
       "severe_toxicity": 0.5,
@@ -11,6 +11,44 @@
       "identity_attack": 0.5,
       "sexual_explicit": 0.7
     }
+  },
+  "category_mappings": {
+    "FINANCIAL": [
+      "CREDIT_CARD",
+      "PAN",
+      "BANK",
+      "FINANCIAL",
+      "SALARY",
+      "PAYMENT",
+      "IBAN"
+    ],
+    "HIPAA": [
+      "MEDICAL",
+      "HEALTH",
+      "DIAGNOSIS",
+      "MRN",
+      "PRESCRIPTION",
+      "PATIENT",
+      "BLOOD",
+      "DISEASE"
+    ],
+    "AUTHENTICATION": [
+      "API_KEY",
+      "AUTHENTICATION",
+      "CREDENTIAL",
+      "PASSWORD",
+      "TOKEN",
+      "PRIVATE_KEY"
+    ],
+    "GDPR": [
+      "PERSON",
+      "EMAIL",
+      "PHONE",
+      "AADHAAR",
+      "GEOGRAPHIC",
+      "LOCATION",
+      "GEO"
+    ]
   },
   "rules": [
     {
@@ -80,7 +118,7 @@
       "score": 0.85,
       "is_builtin": false,
       "is_algorithmic": false,
-      "is_active": false
+      "is_active": true
     },
     {
       "name": "AutoFix_MIIE_PRIVATE_KEY",

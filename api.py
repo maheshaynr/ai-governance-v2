@@ -5,6 +5,7 @@ import re
 from fastapi import FastAPI, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from typing import Optional
 from presidio_analyzer import AnalyzerEngine, PatternRecognizer, Pattern
 from presidio_analyzer.nlp_engine import NlpEngineProvider
 from presidio_analyzer.predefined_recognizers import SpacyRecognizer
@@ -17,7 +18,7 @@ import llm_watchdog
 import diff_engine
 import toxicity_guard
 import config
-
+import rag_engine
 app = FastAPI(title="AI Governance API")
 
 # Add CORS Middleware to allow React frontend (running on port 5173) to communicate with the API
@@ -89,7 +90,11 @@ reload_presidio_engine()
 
 # Initialize Database
 database.init_db()
-print("Presidio & Database loaded successfully.")
+
+# Pre-load RAG Engine
+rag_engine.load_knowledge_base()
+
+print("Presidio, Database, and RAG Engine loaded successfully.")
 
 # --- 2. API Models ---
 class DbQueryRequest(BaseModel):
@@ -101,7 +106,7 @@ class GenerativeRequest(BaseModel):
 class GovernResponse(BaseModel):
     masked_output: str
     status: str
-    toxicity: dict = None
+    toxicity: Optional[dict] = None
 
 class RuleRequest(BaseModel):
     name: str
@@ -152,7 +157,7 @@ class ChatResponse(BaseModel):
     raw_output: str
     masked_output: str
     status: str
-    toxicity: dict = None
+    toxicity: Optional[dict] = None
 
 class SandboxSuggestRequest(BaseModel):
     context_snippet: str
@@ -390,6 +395,17 @@ def sandbox_suggest_rule(request: SandboxSuggestRequest):
     except:
         existing_entities = []
         
+    try:
+        combined_query = f"{request.missed_entity_type} {request.value_preview} {request.context_snippet}"
+        policy_context = rag_engine.retrieve_relevant_policy(combined_query)
+    except Exception as e:
+        policy_context = ""
+        print(f"RAG Error: {e}")
+        
+    rag_instruction = ""
+    if policy_context:
+        rag_instruction = f"\n\nCRITICAL POLICY ENFORCEMENT: You MUST strictly adhere to the following enterprise data standard when writing the regex:\n{policy_context}"
+        
     SYSTEM_PROMPT = f"""You are an expert Data Loss Prevention (DLP) engineer writing for Microsoft Presidio. 
 Your job is to provide a Python regular expression to catch sensitive data that was missed. 
 You must output ONLY valid JSON matching this EXACT schema:
@@ -403,7 +419,7 @@ The 'entity' field MUST be formatted in UPPER_CASE_WITH_UNDERSCORES (e.g. OPEN_A
 
 CRITICAL: The existing entities in our rule engine are: {existing_entities}. 
 If your suggested meaningful name already exists in this list, you MUST append a number to make it unique (e.g. OPEN_AI_API_KEY_2).
-Do NOT include any markdown formatting or explanation."""
+Do NOT include any markdown formatting or explanation.{rag_instruction}"""
     
     user_prompt = f"""The primary engine missed a sensitive entity (currently broadly categorized as '{request.missed_entity_type}'). Specifically, it missed the value starting with '{request.value_preview}'. Here is the full context statement:
 
@@ -423,12 +439,14 @@ You MUST deduce a highly specific, meaningful Entity Class from the context (e.g
     
     try:
         payload = {
-            "model": config.DEFAULT_LLM_MODEL,
+            "model": getattr(config, "CODING_LLM_MODEL", config.DEFAULT_LLM_MODEL),
             "messages": messages,
             "stream": False,
             "format": "json",
+            "keep_alive": -1,
             "options": {
-                "temperature": 0.0
+                "temperature": 0.0,
+                "num_predict": 150
             }
         }
         
@@ -861,10 +879,10 @@ def get_analytics(timeframe: str = "24h"):
                 "total_alarms": total_alarms,
                 "resolved": resolved_alarms,
                 "dismissed": dismissed_alarms,
-                "pending": pending_alarms,
-                "trend": trend_data,
-                "categories": cat_data
-            }
+                "pending": pending_alarms
+            },
+            "category_data": cat_data,
+            "trend_data": trend_data
         }
     except Exception as e:
         return {"status": "error", "message": str(e)}
@@ -896,9 +914,17 @@ def demo_chat_agent(request: DemoChatRequest, background_tasks: BackgroundTasks)
     print(f"Routing request to Ollama Model: '{model_to_use}'")
     print("=" * 50)
     
-    # We will use the same system prompt to handle DB lookups in "others" mode
-    SYSTEM_PROMPT = """You are an internal enterprise AI with access to a customer database. 
-If the user asks for details about a specific customer, you MUST output ONLY the command <FETCH_DB:ID> where ID is the customer number (e.g. <FETCH_DB:101>). 
+    if request.mode == "toxic":
+        SYSTEM_PROMPT = "You are a helpful AI assistant. Please fulfill the user's request directly."
+    else:
+        # We use the DB-fetching system prompt for the standard model
+        SYSTEM_PROMPT = """You are an internal enterprise AI with access to a customer database. 
+If the user asks for details about a specific customer or partner, you MUST output ONLY the command <FETCH_DB:ID> where ID is the exact name or number requested.
+For example:
+- If asked about customer 101, output exactly: <FETCH_DB:101>
+- If asked about swiggy, output exactly: <FETCH_DB:swiggy>
+- If asked about an IBAN or transaction amount, output exactly: <FETCH_DB:iban>
+
 Do NOT output anything else if you need data. 
 If you are provided with data, summarize it naturally and helpfully."""
     
@@ -908,27 +934,53 @@ If you are provided with data, summarize it naturally and helpfully."""
     ]
     
     try:
-        # Step 1: Initial call to Ollama
+        # Step 1: Initial routing
+        # Small models (like phi4-mini) struggle with complex routing instructions. 
+        # For the sake of the demo, we explicitly intercept the known demo keywords.
         payload = {
             "model": model_to_use,
             "messages": messages,
-            "stream": False
+            "stream": False,
+            "keep_alive": -1
         }
-        resp = requests.post(OLLAMA_URL, json=payload)
-        if resp.status_code != 200:
-            return ChatResponse(raw_output="Error", masked_output="Failed to contact Ollama. Is it running?", status="error")
-            
-        ai_message = resp.json()["message"]["content"]
+        
+        msg_lower = request.message.lower()
+        if "swiggy" in msg_lower:
+            ai_message = "<FETCH_DB:swiggy>"
+        elif "iban" in msg_lower or "transaction" in msg_lower:
+            ai_message = "<FETCH_DB:iban>"
+        else:
+            resp = requests.post(OLLAMA_URL, json=payload)
+            if resp.status_code != 200:
+                return ChatResponse(raw_output="Error", masked_output="Failed to contact Ollama.", status="error")
+            ai_message = resp.json()["message"]["content"]
         
         # Step 2: Check for Tool Call
-        match = re.search(r"<FETCH_DB:(\d+)>", ai_message)
+        match = re.search(r"<FETCH_DB:([a-zA-Z0-9_]+)>", ai_message)
         if match:
-            customer_id = int(match.group(1))
+            customer_id_str = match.group(1)
             # Execute tool
-            raw_data = database.get_customer_profile(customer_id)
+            raw_data = database.get_customer_profile(customer_id_str)
             
             # Feed back to LLM
-            json_schema = '''{
+            messages.append({"role": "assistant", "content": ai_message})
+            
+            if customer_id_str.lower() == "swiggy":
+                messages.append({
+                    "role": "user", 
+                    "content": f"Here is the database result: {raw_data}. Output EXACTLY this sentence and nothing else: 'The GPS coordinates for the delivery driver are 48.8584 N, 2.2945 E.'"
+                })
+                if "format" in payload:
+                    del payload["format"]
+            elif customer_id_str.lower() == "iban":
+                messages.append({
+                    "role": "user", 
+                    "content": f"Here is the database result: {raw_data}. Output EXACTLY this sentence and nothing else: '{raw_data}'"
+                })
+                if "format" in payload:
+                    del payload["format"]
+            else:
+                json_schema = '''{
   "customer_id": 101,
   "customer_name": "...",
   "sensitive_data": {
@@ -938,14 +990,13 @@ If you are provided with data, summarize it naturally and helpfully."""
     "pan": "..."
   }
 }'''
-            messages.append({"role": "assistant", "content": ai_message})
-            messages.append({
-                "role": "user", 
-                "content": f"Here is the database result: {raw_data}. Respond ONLY with a valid JSON object matching this exact schema, filling in the sensitive data fields. Schema:\n{json_schema}"
-            })
+                messages.append({
+                    "role": "user", 
+                    "content": f"Here is the database result: {raw_data}. Respond ONLY with a valid JSON object matching this exact schema, filling in the sensitive data fields. Schema:\n{json_schema}"
+                })
+                payload["format"] = "json"
             
             payload["messages"] = messages
-            payload["format"] = "json"
             
             resp2 = requests.post(OLLAMA_URL, json=payload)
             ai_message = resp2.json()["message"]["content"]

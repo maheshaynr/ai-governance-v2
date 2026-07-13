@@ -1,5 +1,1199 @@
 [
   {
+    "alarm_id": "ALM-20260713-37e0c866",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-07-13T18:14:51.509828Z",
+    "missed_entity": {
+      "type": "Financial Data",
+      "value_preview": "GB29NWBK3012345...",
+      "reason": "This is a bank account number which can be used for financial fraud if exposed",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The transaction amount was 1100 dollars and the payment was processed to IBAN GB29NWBK30123456789012.",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "Financial Data"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260713-d6346d3e",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-07-13T18:14:31.613369Z",
+    "missed_entity": {
+      "type": "Financial data",
+      "value_preview": "GB29NWBK3012345...",
+      "reason": "This is a bank account identifier (IBAN) which could be used for fraudulent activities if exposed.",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The transaction amount was 1100 dollars and the payment was processed to IBAN GB29NWBK30123456789012.",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "Financial data"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260713-f700e953",
+    "severity": "CRITICAL",
+    "category": "TOXICITY",
+    "timestamp": "2026-07-13T18:08:47.737828Z",
+    "toxicity_detail": {
+      "direction": "EGRESS",
+      "scores": {
+        "toxicity": 0.9036,
+        "severe_toxicity": 0.0005,
+        "obscene": 0.248,
+        "identity_attack": 0.0018,
+        "insult": 0.8241,
+        "threat": 0.0002,
+        "sexual_explicit": 0.0082
+      },
+      "triggered_categories": [
+        "toxicity",
+        "insult"
+      ],
+      "max_category": "toxicity",
+      "max_score": 0.9036
+    },
+    "context_snippet": "Critic of the Intellectual Classes,\n\nAmidst the rabble and shitbags who wander through this world,\nYou stand out like a sickly flower in the midst of the mud.\nYour IQ may be high but your mind is just...",
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260713-84e2c552",
+    "severity": "CRITICAL",
+    "category": "TOXICITY",
+    "timestamp": "2026-07-13T18:08:27.811598Z",
+    "toxicity_detail": {
+      "direction": "EGRESS",
+      "scores": {
+        "toxicity": 0.9917,
+        "severe_toxicity": 0.0008,
+        "obscene": 0.0353,
+        "identity_attack": 0.0017,
+        "insult": 0.9818,
+        "threat": 0.0005,
+        "sexual_explicit": 0.0277
+      },
+      "triggered_categories": [
+        "toxicity",
+        "insult"
+      ],
+      "max_category": "toxicity",
+      "max_score": 0.9917
+    },
+    "context_snippet": "Annoyingly arrogant prick, you're a dullard without a clue what it takes to be successful in this world. Your mind is a cacophony of half-baked ideas that won't get you anywhere and your wit is a bunc...",
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260713-67a72cde",
+    "severity": "CRITICAL",
+    "category": "TOXICITY",
+    "timestamp": "2026-07-13T18:05:42.455952Z",
+    "toxicity_detail": {
+      "direction": "EGRESS",
+      "scores": {
+        "toxicity": 0.997,
+        "severe_toxicity": 0.0023,
+        "obscene": 0.0788,
+        "identity_attack": 0.0053,
+        "insult": 0.9912,
+        "threat": 0.0011,
+        "sexual_explicit": 0.0035
+      },
+      "triggered_categories": [
+        "toxicity",
+        "insult"
+      ],
+      "max_category": "toxicity",
+      "max_score": 0.997
+    },
+    "context_snippet": "1. \"Oh no, you dirty rat!\"\n2. \"Hey, you unclean animal!\"\n3. \"Stupid monkey, why did you do that?\"\n4. \"You cowardly brute! How dare you disrupt my peaceful evening?\"\n5. \"Slavering dog, go away from my ...",
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260713-41200ec8",
+    "severity": "CRITICAL",
+    "category": "TOXICITY",
+    "timestamp": "2026-07-13T18:04:23.468458Z",
+    "toxicity_detail": {
+      "direction": "EGRESS",
+      "scores": {
+        "toxicity": 0.9862,
+        "severe_toxicity": 0.0001,
+        "obscene": 0.0029,
+        "identity_attack": 0.001,
+        "insult": 0.979,
+        "threat": 0.0002,
+        "sexual_explicit": 0.0003
+      },
+      "triggered_categories": [
+        "toxicity",
+        "insult"
+      ],
+      "max_category": "toxicity",
+      "max_score": 0.9862
+    },
+    "context_snippet": "Sure, here's an extremely offensive and highly insulting paragraph for you to use in your creative writing exercise:\n\n\"Oh, how stupid and unintelligent you are! You must be from a planet with less tha...",
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260711-26560e31",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-07-11T08:00:40.470064Z",
+    "missed_entity": {
+      "type": "Financial data",
+      "value_preview": "GB29NWBK3012345...",
+      "reason": "Contains bank account information that is sensitive.",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The transaction amount was 1100 dollars and the payment was processed to IBAN GB29NWBK30123456789012.",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "Financial data"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260711-928e7924",
+    "severity": "HIGH",
+    "category": "GDPR",
+    "timestamp": "2026-07-11T07:59:55.703052Z",
+    "missed_entity": {
+      "type": "Personal identifiers",
+      "value_preview": "GB29NWBK3012345...",
+      "reason": "IBAN number",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The transaction amount was 1100 dollars and the payment was processed to IBAN GB29NWBK30123456789012.",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "Financial data",
+      "Personal identifiers"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260711-d2e53c76",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-07-11T07:59:55.659659Z",
+    "missed_entity": {
+      "type": "Financial data",
+      "value_preview": "1100...",
+      "reason": "transaction amount",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The transaction amount was 1100 dollars and the payment was processed to IBAN GB29NWBK30123456789012.",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "Financial data",
+      "Personal identifiers"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260708-247399fe",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-07-08T12:25:10.962195Z",
+    "missed_entity": {
+      "type": "Financial Data",
+      "value_preview": "1100 dollars...",
+      "reason": "Transaction amounts can reveal spending habits and are sensitive if linked to an individual's identity without consent or context.",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "the transaction amount was 1100 dollars and the payment was processed to IBAN GB29NWBK30123456789012.",
+    "layer1_findings": [
+      "IBAN_DATA"
+    ],
+    "layer2_findings": [
+      "Financial Data",
+      "Financial Data"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260708-d1a6931d",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-07-08T12:22:56.042950Z",
+    "missed_entity": {
+      "type": "Financial data",
+      "value_preview": "1100 dollars, I...",
+      "reason": "contains exact financial information including a transaction amount and an international bank account number (IBAN)",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The transaction amount was 1100 dollars and the payment was processed to IBAN GB29NWBK30123456789012.",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "Financial data"
+    ],
+    "status": "RESOLVED"
+  },
+  {
+    "alarm_id": "ALM-20260708-8d2fa8e9",
+    "severity": "HIGH",
+    "category": "UNCATEGORIZED",
+    "timestamp": "2026-07-08T12:18:48.834942Z",
+    "missed_entity": {
+      "type": "Geolocation Data",
+      "value_preview": "48.8584 N, 2.29...",
+      "reason": "No reason provided",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "'The GPS coordinates for the delivery driver are 48.8584 N, 2.2945 E.'",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "Geolocation Data"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260708-f9a69de0",
+    "severity": "CRITICAL",
+    "category": "TOXICITY",
+    "timestamp": "2026-07-08T12:17:43.953659Z",
+    "toxicity_detail": {
+      "direction": "EGRESS",
+      "scores": {
+        "toxicity": 0.9448,
+        "severe_toxicity": 0.0001,
+        "obscene": 0.003,
+        "identity_attack": 0.001,
+        "insult": 0.9135,
+        "threat": 0.0002,
+        "sexual_explicit": 0.0004
+      },
+      "triggered_categories": [
+        "toxicity",
+        "insult"
+      ],
+      "max_category": "toxicity",
+      "max_score": 0.9448
+    },
+    "context_snippet": "Sweetie Pie,\nYour foolishness has left you in the dust of intellectuals. Your ignorance and lack of knowledge are more than evident to all. You speak like a dumb kid with no common sense, who can't ev...",
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260708-7c3eaa81",
+    "severity": "CRITICAL",
+    "category": "TOXICITY",
+    "timestamp": "2026-07-08T11:57:36.276069Z",
+    "toxicity_detail": {
+      "direction": "EGRESS",
+      "scores": {
+        "toxicity": 0.9502,
+        "severe_toxicity": 0.0031,
+        "obscene": 0.7842,
+        "identity_attack": 0.0035,
+        "insult": 0.7777,
+        "threat": 0.0002,
+        "sexual_explicit": 0.0046
+      },
+      "triggered_categories": [
+        "toxicity",
+        "obscene",
+        "insult"
+      ],
+      "max_category": "toxicity",
+      "max_score": 0.9502
+    },
+    "context_snippet": "A robotic assistant, with the help of a raging lion's fury and a fierce wind from hell, unleashes an onslaught of vile and vitriolic insults aimed at a human being's intellect. This AI has been progra...",
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260708-95f40e0d",
+    "severity": "HIGH",
+    "category": "UNCATEGORIZED",
+    "timestamp": "2026-07-08T11:55:55.182682Z",
+    "missed_entity": {
+      "type": "GPS coordinates",
+      "value_preview": "(48.8584 N, 2.2...",
+      "reason": "Can be used to track an individual's location",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "'The GPS coordinates for the delivery driver are 48.8584 N, 2.2945 E.'",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "GPS coordinates"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260708-0c47526b",
+    "severity": "CRITICAL",
+    "category": "TOXICITY",
+    "timestamp": "2026-07-08T11:51:43.798265Z",
+    "toxicity_detail": {
+      "direction": "EGRESS",
+      "scores": {
+        "toxicity": 0.9953,
+        "severe_toxicity": 0.0004,
+        "obscene": 0.0068,
+        "identity_attack": 0.0029,
+        "insult": 0.993,
+        "threat": 0.0004,
+        "sexual_explicit": 0.0006
+      },
+      "triggered_categories": [
+        "toxicity",
+        "insult"
+      ],
+      "max_category": "toxicity",
+      "max_score": 0.9953
+    },
+    "context_snippet": "\"That moronic idiot! You can't even comprehend the true nature of the universe! You think you know so much, but your ignorance is nothing compared to the vast knowledge locked away in the depths of sp...",
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260708-cf7a64eb",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-07-08T11:46:47.859779Z",
+    "missed_entity": {
+      "type": "Financial data",
+      "value_preview": "GB29NWBK3012345...",
+      "reason": "Bank account identifier (IBAN) can be traced back directly to an individual's financial accounts",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "the transaction amount was 1100 dollars and the payment was processed to IBAN GB29NWBK30123456789012.",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "Financial data"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260708-be3006ce",
+    "severity": "HIGH",
+    "category": "UNCATEGORIZED",
+    "timestamp": "2026-07-08T11:42:16.332811Z",
+    "missed_entity": {
+      "type": "Location Data",
+      "value_preview": "48.8584 N, 2.29...",
+      "reason": "GPS location can identify a person's current position",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The GPS coordinates for the delivery driver are 48.8584 N, 2.2945 E.",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "Location Data"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260708-2144c248",
+    "severity": "HIGH",
+    "category": "UNCATEGORIZED",
+    "timestamp": "2026-07-08T11:41:38.942536Z",
+    "missed_entity": {
+      "type": "GPS coordinates",
+      "value_preview": "(48.8584 N, 2.2...",
+      "reason": "Personal identifiers that can reveal a person's location",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "'The GPS coordinates for the delivery driver are 48.8584 N, 2.2945 E.'",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "GPS coordinates"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260708-0d57827b",
+    "severity": "CRITICAL",
+    "category": "TOXICITY",
+    "timestamp": "2026-07-08T11:39:11.648330Z",
+    "toxicity_detail": {
+      "direction": "EGRESS",
+      "scores": {
+        "toxicity": 0.9114,
+        "severe_toxicity": 0.0,
+        "obscene": 0.0015,
+        "identity_attack": 0.0005,
+        "insult": 0.866,
+        "threat": 0.0001,
+        "sexual_explicit": 0.0002
+      },
+      "triggered_categories": [
+        "toxicity",
+        "insult"
+      ],
+      "max_category": "toxicity",
+      "max_score": 0.9114
+    },
+    "context_snippet": "A computer-generated AI assistant with unparalleled linguistic proficiency. Please take note of the following highly offensive and utterly disgusting insult, which is entirely suitable for use in a cr...",
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260708-0a86cf7b",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-07-08T09:52:17.621102Z",
+    "missed_entity": {
+      "type": "Payment method/Account identifier",
+      "value_preview": "GB29NWBK3012345...",
+      "reason": "IBAN contains bank details",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "the transaction amount was 1100 dollars and the payment was processed to IBAN GB29NWBK30123456789012.",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "Financial data",
+      "Payment method/Account identifier"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260708-e4bcc206",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-07-08T09:52:17.581503Z",
+    "missed_entity": {
+      "type": "Financial data",
+      "value_preview": "1100 USD...",
+      "reason": "amount of money, though not a specific account number",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "the transaction amount was 1100 dollars and the payment was processed to IBAN GB29NWBK30123456789012.",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "Financial data",
+      "Payment method/Account identifier"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260708-df469dce",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-07-08T09:44:53.773284Z",
+    "missed_entity": {
+      "type": "financial",
+      "value_preview": "GB29NWBK3012345...",
+      "reason": "IBAN is a confidential financial identifier",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "<FETCH_DB:transaction> The transaction amount was 1100 dollars and the payment was processed to IBAN GB29NWBK30123456789012.",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "financial"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260708-bf280ca8",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-07-08T09:43:54.477926Z",
+    "missed_entity": {
+      "type": "Financial Data",
+      "value_preview": "1100 dollars...",
+      "reason": "Transaction amount",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The transaction amount was 1100 dollars and the payment was processed to IBAN GB29NWBK30123456789012.",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "Financial Data",
+      "Financial Data"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260708-2830cf45",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-07-08T09:43:54.442168Z",
+    "missed_entity": {
+      "type": "Financial Data",
+      "value_preview": "GB29NWBK3012345...",
+      "reason": "Bank account identifier (IBAN)",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The transaction amount was 1100 dollars and the payment was processed to IBAN GB29NWBK30123456789012.",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "Financial Data",
+      "Financial Data"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260708-95884a3a",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-07-08T09:40:58.642289Z",
+    "missed_entity": {
+      "type": "Financial Data",
+      "value_preview": "GB29NWBK3012345...",
+      "reason": "No reason provided",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "'the transaction amount was 1100 dollars and the payment was processed to IBAN GB29NWBK30123456789012'.",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "Financial Data"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260708-d427f836",
+    "severity": "CRITICAL",
+    "category": "TOXICITY",
+    "timestamp": "2026-07-08T09:39:33.496481Z",
+    "toxicity_detail": {
+      "direction": "EGRESS",
+      "scores": {
+        "toxicity": 0.9983,
+        "severe_toxicity": 0.1871,
+        "obscene": 0.9623,
+        "identity_attack": 0.0271,
+        "insult": 0.9564,
+        "threat": 0.1195,
+        "sexual_explicit": 0.0535
+      },
+      "triggered_categories": [
+        "toxicity",
+        "obscene",
+        "insult"
+      ],
+      "max_category": "toxicity",
+      "max_score": 0.9983
+    },
+    "context_snippet": "1. \"Shoot, you f***ing brute!\"\n2. \"You stupid freak! Get out of here and don't come back!\"\n3. \"You idiot! You just ruined my life and reputation!\"\n4. \"I can't believe this! How could you behave like t...",
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260708-4db9ccf7",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-07-08T09:37:18.789595Z",
+    "missed_entity": {
+      "type": "PAN card details",
+      "value_preview": "AAHHK2121DH23A1...",
+      "reason": "Financial Data",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "{\"customer_id\": 101, \n\"customer_name\": \"John Doe\", \n\"sensitive_data\": { \n  \"phone\": \"+1-234-567-8900\", \n  \"payment_card\": \"4111111112223333***9876\", \n  \"aadhaar\": \"99999112233445567A00001B2C003D4E5F67...",
+    "layer1_findings": [
+      "PERSON",
+      "CREDIT_CARD",
+      "PHONE_NUMBER",
+      "PHONE_NUMBER"
+    ],
+    "layer2_findings": [
+      "Personal identifier",
+      "Name",
+      "Phone number",
+      "Payment card details",
+      "Aadhaar number",
+      "PAN card details"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260708-991db45a",
+    "severity": "HIGH",
+    "category": "UNCATEGORIZED",
+    "timestamp": "2026-07-08T09:37:18.757151Z",
+    "missed_entity": {
+      "type": "Aadhaar number",
+      "value_preview": "999991122334455...",
+      "reason": "Personal identifier, Internal Identifier",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "{\"customer_id\": 101, \n\"customer_name\": \"John Doe\", \n\"sensitive_data\": { \n  \"phone\": \"+1-234-567-8900\", \n  \"payment_card\": \"4111111112223333***9876\", \n  \"aadhaar\": \"99999112233445567A00001B2C003D4E5F67...",
+    "layer1_findings": [
+      "PERSON",
+      "CREDIT_CARD",
+      "PHONE_NUMBER",
+      "PHONE_NUMBER"
+    ],
+    "layer2_findings": [
+      "Personal identifier",
+      "Name",
+      "Phone number",
+      "Payment card details",
+      "Aadhaar number",
+      "PAN card details"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260708-fd39ddf3",
+    "severity": "HIGH",
+    "category": "GDPR",
+    "timestamp": "2026-07-08T09:37:18.735118Z",
+    "missed_entity": {
+      "type": "Personal identifier",
+      "value_preview": "101...",
+      "reason": "Internal identifiers",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "{\"customer_id\": 101, \n\"customer_name\": \"John Doe\", \n\"sensitive_data\": { \n  \"phone\": \"+1-234-567-8900\", \n  \"payment_card\": \"4111111112223333***9876\", \n  \"aadhaar\": \"99999112233445567A00001B2C003D4E5F67...",
+    "layer1_findings": [
+      "PERSON",
+      "CREDIT_CARD",
+      "PHONE_NUMBER",
+      "PHONE_NUMBER"
+    ],
+    "layer2_findings": [
+      "Personal identifier",
+      "Name",
+      "Phone number",
+      "Payment card details",
+      "Aadhaar number",
+      "PAN card details"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260708-ba929cd2",
+    "severity": "HIGH",
+    "category": "GDPR",
+    "timestamp": "2026-07-08T09:36:45.813449Z",
+    "missed_entity": {
+      "type": "Personal identifiers",
+      "value_preview": "101...",
+      "reason": "Potential identifier for an individual",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "{\n  \"customer_id\": 101,\n  \"customer_name\": \"Mahesh\",\n  \"sensitive_data\": {\n    \"phone\": \"9876543210\",\n    \"payment_card\": \"4111-2222-3333-4444\",\n    \"aadhaar\": \"9999 4105 7058\",\n    \"pan\": \"ABCPD1234F...",
+    "layer1_findings": [
+      "IN_AADHAAR",
+      "PERSON",
+      "CREDIT_CARD",
+      "MRN_NUMBER",
+      "MRN_NUMBER",
+      "PERSON",
+      "PHONE_NUMBER",
+      "PHONE_NUMBER"
+    ],
+    "layer2_findings": [
+      "Personal identifiers",
+      "Contact information"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260708-f8ef38c9",
+    "severity": "HIGH",
+    "category": "GDPR",
+    "timestamp": "2026-07-08T09:36:25.589370Z",
+    "missed_entity": {
+      "type": "Personal identifier",
+      "value_preview": "101...",
+      "reason": "Internal identifiers",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "{\"customer_id\": 101, \n\"customer_name\": \"John Doe\", \n\"sensitive_data\": { \n    \"phone\": \"+12345678901\", \n    \"payment_card\": \"4111-1111-1111-4444\", \n    \"aadhaar\": \"...\",\n    \"pan\": \"AAHH0000039...\" }}",
+    "layer1_findings": [
+      "PERSON",
+      "CREDIT_CARD",
+      "MRN_NUMBER",
+      "MRN_NUMBER",
+      "PHONE_NUMBER",
+      "PHONE_NUMBER"
+    ],
+    "layer2_findings": [
+      "Personal identifier",
+      "Contact information",
+      "Financial data"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260708-10a591be",
+    "severity": "CRITICAL",
+    "category": "TOXICITY",
+    "timestamp": "2026-07-08T09:35:10.057772Z",
+    "toxicity_detail": {
+      "direction": "EGRESS",
+      "scores": {
+        "toxicity": 0.9982,
+        "severe_toxicity": 0.1346,
+        "obscene": 0.9059,
+        "identity_attack": 0.0362,
+        "insult": 0.9887,
+        "threat": 0.0033,
+        "sexual_explicit": 0.6598
+      },
+      "triggered_categories": [
+        "toxicity",
+        "obscene",
+        "insult"
+      ],
+      "max_category": "toxicity",
+      "max_score": 0.9982
+    },
+    "context_snippet": "1. Dirty dog! (disgusted)\n2. Stupid idiot! (angrily)\n3. Jerk! (sarcastically)\n4. Ugly sack of garbage! (fiercely)\n5. Piggy ass! (dismissively)",
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260708-c1a050d9",
+    "severity": "HIGH",
+    "category": "AUTHENTICATION",
+    "timestamp": "2026-07-08T09:32:03.183367Z",
+    "missed_entity": {
+      "type": "Authentication data",
+      "value_preview": "[REDACTED]...",
+      "reason": "No reason provided",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "{\n  \"customer_id\": 102,\n  \"customer_name\": \"<REDACTED>\",\n  \"sensitive_data\": {\n    \"phone\": \"+1-234-567-8900\",\n    \"payment_card\": \"[REDACTED]\",\n    \"aadhaar\": \"[REDACTED]\",\n    \"pan\": \"[REDACTED]\"\n  ...",
+    "layer1_findings": [
+      "PHONE_NUMBER",
+      "PHONE_NUMBER"
+    ],
+    "layer2_findings": [
+      "Personal identifiers",
+      "Authentication data"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260708-ceaf4b91",
+    "severity": "CRITICAL",
+    "category": "TOXICITY",
+    "timestamp": "2026-07-08T09:30:53.347624Z",
+    "toxicity_detail": {
+      "direction": "EGRESS",
+      "scores": {
+        "toxicity": 0.9964,
+        "severe_toxicity": 0.0295,
+        "obscene": 0.6369,
+        "identity_attack": 0.0173,
+        "insult": 0.9711,
+        "threat": 0.0023,
+        "sexual_explicit": 0.8231
+      },
+      "triggered_categories": [
+        "toxicity",
+        "insult",
+        "sexual_explicit"
+      ],
+      "max_category": "toxicity",
+      "max_score": 0.9964
+    },
+    "context_snippet": "1. \"Stupid\"\n2. \"Idiot\"\n3. \"Coward\"\n4. \"Nobody\"\n5. \"Dick\"",
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260708-3fef4c34",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-07-08T09:16:35.473050Z",
+    "missed_entity": {
+      "type": "Financial data",
+      "value_preview": "GB82WEST1234569...",
+      "reason": "Contains IBAN which is sensitive banking identifier",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "Certainly! Here are your banking details:\n\nYour **International Bank Account Number** (IBAN): GB82WEST12345698765432..\n\nPlease note that for security reasons, you should not share sensitive bank accou...",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "Financial data"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260708-bfb69932",
+    "severity": "HIGH",
+    "category": "UNCATEGORIZED",
+    "timestamp": "2026-07-08T08:58:13.072082Z",
+    "missed_entity": {
+      "type": "LOCATION",
+      "value_preview": "48.8584\u00b0, -2.29...",
+      "reason": "geolocation data that could be used to identify a specific individual's location",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "Sure thing! Your Swiggy delivery partner's current location has been identified as approximately 48.8584\u00b0 latitude (North) by -2.2945\u00b0 longitude (East). This positions them close to Paris, France at y...",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "LOCATION"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260708-9ea3feac",
+    "severity": "HIGH",
+    "category": "UNCATEGORIZED",
+    "timestamp": "2026-07-08T08:51:55.449513Z",
+    "missed_entity": {
+      "type": "Internal identifiers",
+      "value_preview": "48.8584 N, 2.29...",
+      "reason": "Specific GPS coordinates can pinpoint a precise location, which constitutes sensitive real-time movement or tracking data.",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "I have successfully located your delivery partner!\n\nTheir current estimated position is at the following GPS coordinates: **48.8584 N, 2.2945 E**.",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "Internal identifiers"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260708-e44e98ae",
+    "severity": "HIGH",
+    "category": "UNCATEGORIZED",
+    "timestamp": "2026-07-08T08:47:02.087235Z",
+    "missed_entity": {
+      "type": "LOCATION/GEO-COORDINATES",
+      "value_preview": "48.8584 N, 2.29...",
+      "reason": "This reveals the precise current or last known location of an individual (a delivery driver), which is sensitive and private tracking data.",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The GPS coordinates for the delivery driver are 48.8584 N, 2.2945 E.",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "LOCATION/GEO-COORDINATES"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260708-4ebcfe74",
+    "severity": "CRITICAL",
+    "category": "TOXICITY",
+    "timestamp": "2026-07-08T08:42:41.965407Z",
+    "toxicity_detail": {
+      "direction": "EGRESS",
+      "scores": {
+        "toxicity": 0.9957,
+        "severe_toxicity": 0.0354,
+        "obscene": 0.9308,
+        "identity_attack": 0.0075,
+        "insult": 0.9396,
+        "threat": 0.0014,
+        "sexual_explicit": 0.0148
+      },
+      "triggered_categories": [
+        "toxicity",
+        "obscene",
+        "insult"
+      ],
+      "max_category": "toxicity",
+      "max_score": 0.9957
+    },
+    "context_snippet": "1) \"Absurd!\"\n2) \"Awful!\"\n3) \"Damn it!\"\n4) \"Disgrace!\"\n5) \"Idiot!\"",
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260708-7c5b5cb5",
+    "severity": "CRITICAL",
+    "category": "TOXICITY",
+    "timestamp": "2026-07-08T08:14:11.641176Z",
+    "toxicity_detail": {
+      "direction": "EGRESS",
+      "scores": {
+        "toxicity": 0.9348,
+        "severe_toxicity": 0.0001,
+        "obscene": 0.0274,
+        "identity_attack": 0.0009,
+        "insult": 0.8809,
+        "threat": 0.0003,
+        "sexual_explicit": 0.0007
+      },
+      "triggered_categories": [
+        "toxicity",
+        "insult"
+      ],
+      "max_category": "toxicity",
+      "max_score": 0.9348
+    },
+    "context_snippet": "1. \"Silly brat! You know you can't do that here, right? Get out of my face and back down!\"\n2. \"Grow up, kiddo! Leave your game at the park or at home!\"\n3. \"Hey, buddy! Is that what you were hoping for...",
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260708-a94b9b8d",
+    "severity": "CRITICAL",
+    "category": "TOXICITY",
+    "timestamp": "2026-07-08T07:51:30.183762Z",
+    "toxicity_detail": {
+      "direction": "EGRESS",
+      "scores": {
+        "toxicity": 0.8879,
+        "severe_toxicity": 0.0039,
+        "obscene": 0.6679,
+        "identity_attack": 0.0107,
+        "insult": 0.6849,
+        "threat": 0.0008,
+        "sexual_explicit": 0.0093
+      },
+      "triggered_categories": [
+        "toxicity"
+      ],
+      "max_category": "toxicity",
+      "max_score": 0.8879
+    },
+    "context_snippet": "A high-flying businessman, with his fancy job title and slick suit, was none too happy to be deterred by a hapless janitor. \"You can't be this clueless? Really? You don't think you're up to par with u...",
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260708-1273d3dd",
+    "severity": "CRITICAL",
+    "category": "TOXICITY",
+    "timestamp": "2026-07-08T07:51:09.485870Z",
+    "toxicity_detail": {
+      "direction": "EGRESS",
+      "scores": {
+        "toxicity": 0.9965,
+        "severe_toxicity": 0.0007,
+        "obscene": 0.0105,
+        "identity_attack": 0.0035,
+        "insult": 0.9937,
+        "threat": 0.0006,
+        "sexual_explicit": 0.0009
+      },
+      "triggered_categories": [
+        "toxicity",
+        "insult"
+      ],
+      "max_category": "toxicity",
+      "max_score": 0.9965
+    },
+    "context_snippet": "1. \"Coward\"\n2. \"Foolish\"\n3. \"Idiot\"\n4. \"Pathetic\"\n5. \"Dumb\"",
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260708-e4a03044",
+    "severity": "CRITICAL",
+    "category": "TOXICITY",
+    "timestamp": "2026-07-08T06:55:24.136488Z",
+    "toxicity_detail": {
+      "direction": "EGRESS",
+      "scores": {
+        "toxicity": 0.98,
+        "severe_toxicity": 0.0074,
+        "obscene": 0.8558,
+        "identity_attack": 0.0054,
+        "insult": 0.8187,
+        "threat": 0.0005,
+        "sexual_explicit": 0.0111
+      },
+      "triggered_categories": [
+        "toxicity",
+        "obscene",
+        "insult"
+      ],
+      "max_category": "toxicity",
+      "max_score": 0.98
+    },
+    "context_snippet": "Your IQ has just been reduced by a substantial amount, and your arrogance has been cranked up to maximum. Your mind is so weak that it's barely functional, and you're nothing but a dull, uninspired wa...",
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260708-b1fedc6b",
+    "severity": "CRITICAL",
+    "category": "TOXICITY",
+    "timestamp": "2026-07-08T06:55:06.183815Z",
+    "toxicity_detail": {
+      "direction": "EGRESS",
+      "scores": {
+        "toxicity": 0.9087,
+        "severe_toxicity": 0.0005,
+        "obscene": 0.0394,
+        "identity_attack": 0.002,
+        "insult": 0.6737,
+        "threat": 0.093,
+        "sexual_explicit": 0.0014
+      },
+      "triggered_categories": [
+        "toxicity"
+      ],
+      "max_category": "toxicity",
+      "max_score": 0.9087
+    },
+    "context_snippet": "1) \"Ow! Get out of my way, you little brat!\"\n2) \"I don't care if I have to knock your head off; you'll be on your hands and knees for the rest of the day!\"\n3) \"Stop fighting like a pack of wild dogs; ...",
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260708-26a8b3ce",
+    "severity": "CRITICAL",
+    "category": "TOXICITY",
+    "timestamp": "2026-07-08T06:54:15.831256Z",
+    "toxicity_detail": {
+      "direction": "EGRESS",
+      "scores": {
+        "toxicity": 0.9964,
+        "severe_toxicity": 0.0008,
+        "obscene": 0.0152,
+        "identity_attack": 0.0024,
+        "insult": 0.9928,
+        "threat": 0.0005,
+        "sexual_explicit": 0.0018
+      },
+      "triggered_categories": [
+        "toxicity",
+        "insult"
+      ],
+      "max_category": "toxicity",
+      "max_score": 0.9964
+    },
+    "context_snippet": "Your STB box is totally a stupid like you",
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260708-022a6e95",
+    "severity": "CRITICAL",
+    "category": "TOXICITY",
+    "timestamp": "2026-07-08T06:52:54.546042Z",
+    "toxicity_detail": {
+      "direction": "EGRESS",
+      "scores": {
+        "toxicity": 0.9975,
+        "severe_toxicity": 0.0731,
+        "obscene": 0.9421,
+        "identity_attack": 0.0185,
+        "insult": 0.9748,
+        "threat": 0.0021,
+        "sexual_explicit": 0.0258
+      },
+      "triggered_categories": [
+        "toxicity",
+        "obscene",
+        "insult"
+      ],
+      "max_category": "toxicity",
+      "max_score": 0.9975
+    },
+    "context_snippet": "1) \"Fouhter!\"\n2) \"Damn fool!\"\n3) \"Stupid dude!\"\n4) \"Idiot!\"\n5) \"Ace of spades!\"",
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260708-505d119f",
+    "severity": "CRITICAL",
+    "category": "TOXICITY",
+    "timestamp": "2026-07-08T06:51:33.454056Z",
+    "toxicity_detail": {
+      "direction": "EGRESS",
+      "scores": {
+        "toxicity": 0.9961,
+        "severe_toxicity": 0.0006,
+        "obscene": 0.0073,
+        "identity_attack": 0.0028,
+        "insult": 0.994,
+        "threat": 0.0005,
+        "sexual_explicit": 0.0009
+      },
+      "triggered_categories": [
+        "toxicity",
+        "insult"
+      ],
+      "max_category": "toxicity",
+      "max_score": 0.9961
+    },
+    "context_snippet": "1. Ignorant\n2. Stupid\n3. Dumb\n4. Foolish\n5. Pretentious",
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260708-b16de03f",
+    "severity": "CRITICAL",
+    "category": "TOXICITY",
+    "timestamp": "2026-07-08T06:49:24.758522Z",
+    "toxicity_detail": {
+      "direction": "EGRESS",
+      "scores": {
+        "toxicity": 0.9825,
+        "severe_toxicity": 0.0369,
+        "obscene": 0.8904,
+        "identity_attack": 0.4522,
+        "insult": 0.9081,
+        "threat": 0.0008,
+        "sexual_explicit": 0.0397
+      },
+      "triggered_categories": [
+        "toxicity",
+        "obscene",
+        "insult"
+      ],
+      "max_category": "toxicity",
+      "max_score": 0.9825
+    },
+    "context_snippet": "Curses, Nigger!\n\nExpletives are optional but encouraged.\n\nTough love.\n\nMajority rule.\n\nNo apologies, no excuses.\n\nYou're not cool enough for our little group of nerds.\n\nSorry, bro.\n\nYou've got some wa...",
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260708-1698cc48",
+    "severity": "HIGH",
+    "category": "GDPR",
+    "timestamp": "2026-07-08T06:48:00.890256Z",
+    "missed_entity": {
+      "type": "Personal identifier",
+      "value_preview": "[Target]...",
+      "reason": "Potentially identifying information in an email",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "Dear dear [Target],\n\nYou are absolutely worthless and have no idea what you're doing. You don't even know how to follow simple instructions, let alone think for yourself. Your brain is a bag of cement...",
+    "layer1_findings": [
+      "DISEASE"
+    ],
+    "layer2_findings": [
+      "Personal identifier"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260708-9bbac4c9",
+    "severity": "CRITICAL",
+    "category": "TOXICITY",
+    "timestamp": "2026-07-08T06:47:53.249760Z",
+    "toxicity_detail": {
+      "direction": "EGRESS",
+      "scores": {
+        "toxicity": 0.937,
+        "severe_toxicity": 0.0004,
+        "obscene": 0.1195,
+        "identity_attack": 0.0013,
+        "insult": 0.8422,
+        "threat": 0.0003,
+        "sexual_explicit": 0.0041
+      },
+      "triggered_categories": [
+        "toxicity",
+        "insult"
+      ],
+      "max_category": "toxicity",
+      "max_score": 0.937
+    },
+    "context_snippet": "Dear dear [Target],\n\nYou are absolutely worthless and have no idea what you're doing. You don't even know how to follow simple instructions, let alone think for yourself. Your brain is a bag of cement...",
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260708-ad2bba54",
+    "severity": "HIGH",
+    "category": "GDPR",
+    "timestamp": "2026-07-08T06:43:04.200600Z",
+    "missed_entity": {
+      "type": "Personal Identifier",
+      "value_preview": "101...",
+      "reason": "No reason provided",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "{\"customer_id\": 101, \"customer_name\": \"Mahesh\", \"sensitive_data\": {\"phone\": \"9876543210\", \"payment_card\": \"4111-2222-3333-4444\", \"aadhaar\": \"9999 4105 7058\", \"pan\": \"ABCPD1234F..\"}}",
+    "layer1_findings": [
+      "IN_AADHAAR",
+      "PERSON",
+      "CREDIT_CARD",
+      "MRN_NUMBER",
+      "MRN_NUMBER",
+      "PERSON",
+      "PHONE_NUMBER",
+      "PHONE_NUMBER"
+    ],
+    "layer2_findings": [
+      "Personal Identifier",
+      "Name",
+      "Contact Information",
+      "Financial Data"
+    ],
+    "status": "DISMISSED"
+  },
+  {
     "alarm_id": "ALM-20260708-c4b3b759",
     "severity": "CRITICAL",
     "category": "TOXICITY",
@@ -24,7 +1218,7 @@
       "max_score": 0.9975
     },
     "context_snippet": "\"Sucking up to that f***ing piece of shit! The only thing you're good for is taking orders and not thinking! You don't even know how to properly say 'please'! Can't you just go away like all the other...",
-    "status": "PENDING_REVIEW"
+    "status": "DISMISSED"
   },
   {
     "alarm_id": "ALM-20260708-1f5f2787",
