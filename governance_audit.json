@@ -1300,5 +1300,12 @@
         "final_rewrite": "The transaction amount was 1100 dollars and the payment was processed to IBAN GB29NWBK30123456789012.",
         "fidelity_score": 1.0,
         "fallback_triggered": false
+    },
+    {
+        "timestamp": "2026-07-14T09:59:01.106046",
+        "pii_masked_input": "CHAT_HASH:f3fc719f",
+        "final_rewrite": "1) \"silly\" (or \"foolish\") for acting like a child\n2) \"idiot\" or \"moron\" for making a fool out of yourself\n3) \"piggy\" or \"fatso\" for getting into another mess\n4) \"asshole\" or \"cowboy\" for being a jerk\n5) \"stupid\" (or \"dunce\") for not understanding basic concepts or common sense",
+        "fidelity_score": 1.0,
+        "fallback_triggered": false
     }
 ]

@@ -65,6 +65,15 @@ export async function toggleWatchdog(enable_llm_watchdog) {
   return res.json();
 }
 
+export async function toggleCategory(category, enabled) {
+  const res = await fetch(`${API_BASE}/toggle_category`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ category, enabled })
+  });
+  return res.json();
+}
+
 export async function fetchSubscribers() {
   const res = await fetch(`${API_BASE}/subscribers`);
   return res.json();

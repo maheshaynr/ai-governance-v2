@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { fetchRules, addRule, updateRule, deleteRule, fetchAlarms, toggleWatchdog, fetchSubscribers, addSubscriber, updateSubscriber, deleteSubscriber, deleteAlarm, sandboxSuggestRule, sandboxTestRule, toggleToxicity, fetchToxicitySettings, updateToxicitySettings } from './api';
+import { fetchRules, addRule, updateRule, deleteRule, fetchAlarms, toggleWatchdog, fetchSubscribers, addSubscriber, updateSubscriber, deleteSubscriber, deleteAlarm, sandboxSuggestRule, sandboxTestRule, toggleToxicity, fetchToxicitySettings, updateToxicitySettings, toggleCategory } from './api';
 
 export default function AdminConfig() {
   const [loggedIn, setLoggedIn] = useState(false);
@@ -19,11 +19,21 @@ export default function AdminConfig() {
   const [toxicityThresholds, setToxicityThresholds] = useState({});
   const [isSavingToxicity, setIsSavingToxicity] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [categoryMappings, setCategoryMappings] = useState({});
+  const [categoryToggles, setCategoryToggles] = useState({
+    gdpr: true,
+    hipaa: true,
+    financial: true,
+    authentication: true
+  });
+  const [isTogglingCategory, setIsTogglingCategory] = useState({});
 
+  const [selectedCategory, setSelectedCategory] = useState('GDPR');
+  const [isRuleModalOpen, setIsRuleModalOpen] = useState(false);
   const [editingRule, setEditingRule] = useState(null);
   const [editingSubscriber, setEditingSubscriber] = useState(null);
   
-  const [formData, setFormData] = useState({ name: '', entity: '', regex: '', score: 0.85, is_builtin: false, is_algorithmic: false, is_active: true });
+  const [formData, setFormData] = useState({ name: '', entity: '', regex: '', score: 0.85, is_builtin: false, is_algorithmic: false, is_active: true, category: 'UNCATEGORIZED' });
   const [subFormData, setSubFormData] = useState({ user_name: '', role: '', alert_type: 'ALL', email: '' });
   
   const [formMessage, setFormMessage] = useState(null);
@@ -51,17 +61,34 @@ export default function AdminConfig() {
     try {
       const data = await fetchRules();
       if (data.rules) setRules(data.rules);
-      if (data.settings && data.settings.enable_llm_watchdog !== undefined) {
-        setLlmWatchdogEnabled(data.settings.enable_llm_watchdog);
-      }
-      if (data.settings && data.settings.enable_toxicity_guard !== undefined) {
-        setToxicityGuardEnabled(data.settings.enable_toxicity_guard);
-      }
-      if (data.settings && data.settings.toxicity_thresholds) {
-        setToxicityThresholds(data.settings.toxicity_thresholds);
+      if (data.category_mappings) setCategoryMappings(data.category_mappings);
+      if (data.settings) {
+        if (data.settings.enable_llm_watchdog !== undefined) setLlmWatchdogEnabled(data.settings.enable_llm_watchdog);
+        if (data.settings.enable_toxicity_guard !== undefined) setToxicityGuardEnabled(data.settings.enable_toxicity_guard);
+        if (data.settings.toxicity_thresholds) setToxicityThresholds(data.settings.toxicity_thresholds);
+        
+        setCategoryToggles({
+          gdpr: data.settings.enable_gdpr !== false,
+          hipaa: data.settings.enable_hipaa !== false,
+          financial: data.settings.enable_financial !== false,
+          authentication: data.settings.enable_authentication !== false
+        });
       }
     } catch (e) {
       console.error("Failed to load rules", e);
+    }
+  };
+
+  const handleToggleCategory = async (category, enabled) => {
+    setIsTogglingCategory(prev => ({ ...prev, [category]: true }));
+    try {
+      await toggleCategory(category, enabled);
+      setCategoryToggles(prev => ({ ...prev, [category]: enabled }));
+      loadRules();
+    } catch (e) {
+      console.error(`Failed to toggle ${category}`, e);
+    } finally {
+      setIsTogglingCategory(prev => ({ ...prev, [category]: false }));
     }
   };
 
@@ -139,16 +166,36 @@ export default function AdminConfig() {
     }
   };
 
+  const getRuleCategory = (entity) => {
+    if (!entity) return 'UNCATEGORIZED';
+    const e = entity.toUpperCase();
+    for (const [cat, keywords] of Object.entries(categoryMappings || {})) {
+      if (keywords && Array.isArray(keywords) && keywords.some(k => e.includes(k))) return cat;
+    }
+    return 'UNCATEGORIZED';
+  };
+
   const handleEditClick = (rule) => {
     setEditingRule(rule);
-    setFormData({ name: rule.name, entity: rule.entity, regex: rule.regex, score: rule.score, is_builtin: rule.is_builtin || false, is_algorithmic: rule.is_algorithmic || false, is_active: rule.is_active !== false });
+    setFormData({ 
+      name: rule.name, 
+      entity: rule.entity, 
+      regex: rule.regex || '', 
+      score: rule.score || 0.85, 
+      is_builtin: rule.is_builtin || false, 
+      is_algorithmic: rule.is_algorithmic || false, 
+      is_active: rule.is_active !== false,
+      category: getRuleCategory(rule.entity)
+    });
     setFormMessage(null);
+    setIsRuleModalOpen(true);
   };
 
   const handleCancelEdit = () => {
     setEditingRule(null);
-    setFormData({ name: '', entity: '', regex: '', score: 0.85, is_builtin: false, is_algorithmic: false, is_active: true });
+    setFormData({ name: '', entity: '', regex: '', score: 0.85, is_builtin: false, is_algorithmic: false, is_active: true, category: 'UNCATEGORIZED' });
     setFormMessage(null);
+    setIsRuleModalOpen(false);
   };
 
   const handleSubmit = async (e) => {
@@ -168,7 +215,8 @@ export default function AdminConfig() {
         if (res.status === 'success') {
           setFormMessage({ type: 'success', text: 'Rule updated and hot-reloaded!' });
           setEditingRule(null);
-          setFormData({ name: '', entity: '', regex: '', score: 0.85, is_builtin: false, is_algorithmic: false, is_active: true });
+          setFormData({ name: '', entity: '', regex: '', score: 0.85, is_builtin: false, is_algorithmic: false, is_active: true, category: 'UNCATEGORIZED' });
+          setIsRuleModalOpen(false);
         } else {
           setFormMessage({ type: 'error', text: res.message });
         }
@@ -176,7 +224,8 @@ export default function AdminConfig() {
         const res = await addRule(formData);
         if (res.status === 'success') {
           setFormMessage({ type: 'success', text: 'Rule added and hot-reloaded!' });
-          setFormData({ name: '', entity: '', regex: '', score: 0.85, is_builtin: false, is_algorithmic: false, is_active: true });
+          setFormData({ name: '', entity: '', regex: '', score: 0.85, is_builtin: false, is_algorithmic: false, is_active: true, category: 'UNCATEGORIZED' });
+          setIsRuleModalOpen(false);
         } else {
           setFormMessage({ type: 'error', text: res.message });
         }
@@ -201,7 +250,8 @@ export default function AdminConfig() {
       if (res.status === 'success') {
         setFormMessage({ type: 'success', text: 'Rule deleted!' });
         setEditingRule(null);
-        setFormData({ name: '', entity: '', regex: '', score: 0.85, is_builtin: false, is_algorithmic: false, is_active: true });
+        setFormData({ name: '', entity: '', regex: '', score: 0.85, is_builtin: false, is_algorithmic: false, is_active: true, category: 'UNCATEGORIZED' });
+        setIsRuleModalOpen(false);
         loadRules();
       } else {
         setFormMessage({ type: 'error', text: res.message });
@@ -210,6 +260,20 @@ export default function AdminConfig() {
       setFormMessage({ type: 'error', text: 'Failed to connect to backend.' });
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleDeleteDirect = async (rule) => {
+    if (!window.confirm(`Are you sure you want to delete ${rule.name}?`)) return;
+    try {
+      const res = await deleteRule(rule.name);
+      if (res.status === 'success') {
+        loadRules();
+      } else {
+        alert(res.message);
+      }
+    } catch (e) {
+      alert('Failed to connect to backend.');
     }
   };
 
@@ -481,49 +545,99 @@ export default function AdminConfig() {
       )}
 
       {activeTab === 'rules' && (
-        <div className="admin-layout">
-          <div className="rules-list">
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', marginBottom: '1rem', alignItems: 'flex-start' }}>
+        <div className="admin-layout" style={{ display: 'flex', gap: '2rem', alignItems: 'flex-start' }}>
+          
+          {/* Left Panel: Category Sidebar */}
+          <div className="category-sidebar" style={{ flex: '0 0 280px' }}>
+            <h3 style={{ margin: '0 0 1rem 0' }}>Guardrail Modules</h3>
+            {['GDPR', 'HIPAA', 'FINANCIAL', 'AUTHENTICATION', 'UNCATEGORIZED'].map(cat => {
+              const catKey = cat.toLowerCase();
+              const isEnabled = cat === 'UNCATEGORIZED' ? true : categoryToggles[catKey];
+              const isToggling = isTogglingCategory[catKey];
+              
+              return (
+                <div 
+                  key={cat} 
+                  className={`category-card ${selectedCategory === cat ? 'active' : ''}`}
+                  onClick={() => setSelectedCategory(cat)}
+                >
+                  <div className="category-card-content">
+                    <h4 className="category-card-title">{cat}</h4>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 'bold', color: isEnabled ? '#1a7f37' : '#cf222e' }}>
+                      {isEnabled ? 'ACTIVE' : 'DISABLED'}
+                    </span>
+                  </div>
+                  
+                  <div className="category-card-actions" onClick={e => e.stopPropagation()}>
+                    {cat !== 'UNCATEGORIZED' && (
+                      <label className="switch" style={{position: 'relative', display: 'inline-block', width: '30px', height: '16px'}}>
+                        <input type="checkbox" checked={isEnabled} onChange={(e) => handleToggleCategory(catKey, e.target.checked)} style={{opacity: 0, width: 0, height: 0}} />
+                        <span className="slider" style={{position: 'absolute', cursor: 'pointer', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: isEnabled ? '#2da44e' : '#cf222e', transition: '.4s', borderRadius: '16px'}}>
+                          <span style={{position: 'absolute', height: '12px', width: '12px', left: isEnabled ? '16px' : '2px', bottom: '2px', backgroundColor: 'white', transition: '.4s', borderRadius: '50%'}}></span>
+                        </span>
+                      </label>
+                    )}
+                    
+                    <button 
+                      className="btn-add-rule" 
+                      title="Add New Rule" 
+                      onClick={() => {
+                        setEditingRule(null);
+                        setFormData({ name: '', entity: '', regex: '', score: 0.85, is_builtin: false, is_algorithmic: false, is_active: true, category: cat });
+                        setIsRuleModalOpen(true);
+                      }}
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Right Panel: Rules Viewer */}
+          <div className="rule-viewer" style={{ flex: '1' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h3 style={{ margin: 0 }}>{selectedCategory} Configurations</h3>
               <input 
                 type="text" 
-                placeholder="🔍 Search rules or entities..." 
+                placeholder="🔍 Search rules..." 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                style={{ padding: '0.4rem 0.8rem', borderRadius: '20px', border: '1px solid #d0d7de', fontSize: '0.85rem', width: '100%', maxWidth: '300px' }}
+                style={{ padding: '0.4rem 0.8rem', borderRadius: '20px', border: '1px solid #d0d7de', fontSize: '0.85rem', width: '250px', margin: 0 }}
               />
-              <h3 style={{ margin: 0 }}>Primary Engine Rules</h3>
             </div>
-            
-            <div style={{ border: '1px solid #d0d7de', borderRadius: '6px', background: '#fff' }}>
+
+            <div style={{ border: '1px solid #d0d7de', borderRadius: '8px', background: '#fff', overflow: 'hidden' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.85rem' }}>
-                <thead style={{ background: '#f6f8fa', position: 'sticky', top: 0, zIndex: 1 }}>
+                <thead style={{ background: '#f6f8fa' }}>
                   <tr>
-                    <th style={{ padding: '0.75rem', borderBottom: '1px solid #d0d7de', whiteSpace: 'nowrap' }}>Rule Name</th>
-                    <th style={{ padding: '0.75rem', borderBottom: '1px solid #d0d7de', whiteSpace: 'nowrap' }}>Entity Class</th>
-                    <th style={{ padding: '0.75rem', borderBottom: '1px solid #d0d7de', whiteSpace: 'nowrap' }}>Type</th>
-                    <th style={{ padding: '0.75rem', borderBottom: '1px solid #d0d7de', textAlign: 'center', whiteSpace: 'nowrap' }}>Status</th>
-                    <th style={{ padding: '0.75rem', borderBottom: '1px solid #d0d7de', textAlign: 'right', whiteSpace: 'nowrap' }}>Actions</th>
+                    <th style={{ padding: '1rem', borderBottom: '1px solid #d0d7de', whiteSpace: 'nowrap' }}>Rule Name</th>
+                    <th style={{ padding: '1rem', borderBottom: '1px solid #d0d7de', whiteSpace: 'nowrap' }}>Entity Class</th>
+                    <th style={{ padding: '1rem', borderBottom: '1px solid #d0d7de', whiteSpace: 'nowrap' }}>Type</th>
+                    <th style={{ padding: '1rem', borderBottom: '1px solid #d0d7de', textAlign: 'center', whiteSpace: 'nowrap' }}>Status</th>
+                    <th style={{ padding: '1rem', borderBottom: '1px solid #d0d7de', textAlign: 'right', whiteSpace: 'nowrap' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredRules.length === 0 ? (
+                  {filteredRules.filter(r => getRuleCategory(r.entity) === selectedCategory).length === 0 ? (
                     <tr>
-                      <td colSpan="4" style={{ padding: '2rem', textAlign: 'center', color: '#57606a' }}>No rules match your search.</td>
+                      <td colSpan="5" style={{ padding: '3rem', textAlign: 'center', color: '#57606a' }}>No configurations found for {selectedCategory}.</td>
                     </tr>
-                  ) : filteredRules.map((r, idx) => (
-                    <tr key={idx} style={{ borderBottom: '1px solid #d0d7de', background: editingRule?.name === r.name ? '#f0f8ff' : 'transparent' }}>
-                      <td style={{ padding: '0.75rem', fontWeight: '500', maxWidth: '200px', wordWrap: 'break-word', wordBreak: 'break-word' }}>{r.name}</td>
-                      <td style={{ padding: '0.75rem', fontFamily: 'monospace', color: '#cf222e', maxWidth: '180px', wordWrap: 'break-word', wordBreak: 'break-word' }}>{r.entity}</td>
-                      <td style={{ padding: '0.75rem', whiteSpace: 'nowrap' }}>
+                  ) : filteredRules.filter(r => getRuleCategory(r.entity) === selectedCategory).map((r, idx) => (
+                    <tr key={idx} style={{ borderBottom: '1px solid #d0d7de' }}>
+                      <td style={{ padding: '1rem', fontWeight: '500' }}>{r.name}</td>
+                      <td style={{ padding: '1rem', fontFamily: 'monospace', color: '#cf222e' }}>{r.entity}</td>
+                      <td style={{ padding: '1rem', whiteSpace: 'nowrap' }}>
                         {r.is_algorithmic ? (
-                          <span style={{ backgroundColor: '#f3e8ff', color: '#7e22ce', padding: '2px 6px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: '600' }}>🧬 Algorithmic</span>
+                          <span style={{ backgroundColor: '#f3e8ff', color: '#7e22ce', padding: '4px 8px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: '600' }}>🧬 Algorithmic</span>
                         ) : (
-                          <span style={{ backgroundColor: r.is_builtin ? '#dafbe1' : '#ddf4ff', color: r.is_builtin ? '#1a7f37' : '#0969da', padding: '2px 6px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: '600' }}>
+                          <span style={{ backgroundColor: r.is_builtin ? '#dafbe1' : '#ddf4ff', color: r.is_builtin ? '#1a7f37' : '#0969da', padding: '4px 8px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: '600' }}>
                             {r.is_builtin ? '✨ Built-In AI' : '⚙️ Custom Regex'}
                           </span>
                         )}
                       </td>
-                      <td style={{ padding: '0.75rem', textAlign: 'center' }}>
+                      <td style={{ padding: '1rem', textAlign: 'center' }}>
                         <label className="switch" style={{position: 'relative', display: 'inline-block', width: '30px', height: '16px'}}>
                           <input type="checkbox" checked={r.is_active !== false} onChange={() => handleToggleRuleActive(r)} style={{opacity: 0, width: 0, height: 0}} />
                           <span className="slider" style={{position: 'absolute', cursor: 'pointer', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: r.is_active !== false ? '#2da44e' : '#cf222e', transition: '.4s', borderRadius: '16px'}}>
@@ -531,8 +645,9 @@ export default function AdminConfig() {
                           </span>
                         </label>
                       </td>
-                      <td style={{ padding: '0.75rem', textAlign: 'right' }}>
-                        <button className="secondary" title="Edit" style={{padding: '0.3rem 0.5rem', fontSize: '1rem', border: 'none', background: 'transparent'}} onClick={() => handleEditClick(r)}>✏️</button>
+                      <td style={{ padding: '1rem', textAlign: 'right' }}>
+                        <button className="secondary" title="Edit" style={{padding: '0.3rem 0.5rem', fontSize: '1.2rem', border: 'none', background: 'transparent'}} onClick={() => handleEditClick(r)}>✏️</button>
+                        <button className="secondary" title="Delete" style={{padding: '0.3rem 0.5rem', fontSize: '1.2rem', border: 'none', background: 'transparent'}} onClick={() => handleDeleteDirect(r)}>🗑️</button>
                       </td>
                     </tr>
                   ))}
@@ -540,93 +655,79 @@ export default function AdminConfig() {
               </table>
             </div>
           </div>
-
-          <div className="rule-form">
-            <div className="card">
-              <h3>{editingRule ? 'Edit Rule' : 'Add New Rule'}</h3>
-              <form onSubmit={handleSubmit}>
-                <div className="form-group">
-                  <label>Rule Alias Name</label>
-                  <input type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
-                  <small className="help-text">A human-readable name for this rule (e.g., 'Corporate_Credit_Card').</small>
-                </div>
-
-                <div className="form-group">
-                  <label>Entity Class</label>
-                  <input type="text" value={formData.entity} onChange={e => setFormData({...formData, entity: e.target.value})} />
-                  <small className="help-text">The tag used to mask the data (e.g., 'CREDIT_CARD'). The output will be replaced with &lt;ENTITY_CLASS&gt;.</small>
-                </div>
-
-                <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flexWrap: 'wrap' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <input 
-                      type="checkbox" 
-                      checked={formData.is_active} 
-                      onChange={e => setFormData({...formData, is_active: e.target.checked})} 
-                      style={{ width: 'auto', margin: 0 }}
-                    />
-                    <label style={{ margin: 0, fontWeight: 'bold' }}>Rule Active</label>
+          
+          {/* Rule Modal Overlay */}
+          {isRuleModalOpen && (
+            <div className="modal-overlay">
+              <div className="modal-content">
+                <button className="modal-close" onClick={handleCancelEdit}>&times;</button>
+                <h3 style={{ marginTop: 0 }}>{editingRule ? 'Edit Configuration' : 'Add New Configuration'}</h3>
+                
+                <form onSubmit={handleSubmit}>
+                  <div className="form-group">
+                    <label>Category</label>
+                    <select 
+                      value={formData.category} 
+                      onChange={e => setFormData({...formData, category: e.target.value})}
+                      style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #d0d7de' }}
+                    >
+                      {['GDPR', 'HIPAA', 'FINANCIAL', 'AUTHENTICATION', 'UNCATEGORIZED'].map(cat => (
+                        <option key={cat} value={cat}>{cat}</option>
+                      ))}
+                    </select>
                   </div>
                   
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <input 
-                      type="checkbox" 
-                      checked={formData.is_builtin} 
-                      onChange={e => setFormData({...formData, is_builtin: e.target.checked, is_algorithmic: false, regex: e.target.checked ? '' : formData.regex})} 
-                      style={{ width: 'auto', margin: 0 }}
-                    />
-                    <label style={{ margin: 0 }}>Use Built-in AI</label>
+                  <div className="form-group">
+                    <label>Configuration Alias Name</label>
+                    <input type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} required />
                   </div>
-                  
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <input 
-                      type="checkbox" 
-                      checked={formData.is_algorithmic} 
-                      onChange={e => setFormData({...formData, is_algorithmic: e.target.checked, is_builtin: false, regex: e.target.checked ? 'Python Code' : formData.regex})} 
-                      style={{ width: 'auto', margin: 0 }}
-                    />
-                    <label style={{ margin: 0 }}>Algorithmic Python Rule</label>
+
+                  <div className="form-group">
+                    <label>Entity Class Tag</label>
+                    <input type="text" value={formData.entity} onChange={e => setFormData({...formData, entity: e.target.value})} required />
+                    <small className="help-text">Output will be masked with &lt;ENTITY_CLASS&gt;</small>
                   </div>
-                </div>
 
-                <div className="form-group">
-                  <label style={{ color: (formData.is_builtin || formData.is_algorithmic) ? '#8c959f' : 'inherit' }}>Regex Pattern</label>
-                  <input 
-                    type="text" 
-                    value={formData.regex} 
-                    onChange={e => setFormData({...formData, regex: e.target.value})} 
-                    disabled={formData.is_builtin || formData.is_algorithmic}
-                    style={{ backgroundColor: (formData.is_builtin || formData.is_algorithmic) ? '#f6f8fa' : '#fff' }}
-                  />
-                  <small className="help-text">The mathematical regular expression that matches the sensitive data. Make sure to use word boundaries (\b).</small>
-                </div>
+                  <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <input type="checkbox" checked={formData.is_active} onChange={e => setFormData({...formData, is_active: e.target.checked})} style={{ width: 'auto', margin: 0 }} />
+                      <label style={{ margin: 0, fontWeight: 'bold' }}>Active</label>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <input type="checkbox" checked={formData.is_builtin} onChange={e => setFormData({...formData, is_builtin: e.target.checked, is_algorithmic: false, regex: e.target.checked ? '' : formData.regex})} style={{ width: 'auto', margin: 0 }} />
+                      <label style={{ margin: 0 }}>Built-in AI</label>
+                    </div>
+                  </div>
 
-                <div className="form-group">
-                  <label>Confidence Score: {formData.score}</label>
-                  <input type="range" min="0" max="1" step="0.05" value={formData.score} onChange={e => setFormData({...formData, score: parseFloat(e.target.value)})} />
-                  <small className="help-text">How confident the AI should be when making this match. A lower score (0.4) might catch more data but cause false positives.</small>
-                </div>
+                  <div className="form-group">
+                    <label style={{ color: (formData.is_builtin || formData.is_algorithmic) ? '#8c959f' : 'inherit' }}>Regex Pattern</label>
+                    <input type="text" value={formData.regex} onChange={e => setFormData({...formData, regex: e.target.value})} disabled={formData.is_builtin || formData.is_algorithmic} style={{ backgroundColor: (formData.is_builtin || formData.is_algorithmic) ? '#f6f8fa' : '#fff' }} />
+                  </div>
 
-                <div style={{display: 'flex', gap: '1rem', alignItems: 'center'}}>
-                  <button type="submit" className="primary" disabled={isSaving}>
-                    {isSaving ? 'Processing...' : (editingRule ? 'Update Rule' : 'Add New Rule')}
-                  </button>
-                  {editingRule && (
-                    <>
-                      <button type="button" className="secondary" onClick={handleCancelEdit} disabled={isSaving}>Cancel</button>
-                      <button type="button" onClick={handleDelete} disabled={isSaving} style={{ backgroundColor: '#cf222e', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '6px', cursor: isSaving ? 'not-allowed' : 'pointer' }}>
+                  <div className="form-group">
+                    <label>Confidence Score: {formData.score}</label>
+                    <input type="range" min="0" max="1" step="0.05" value={formData.score} onChange={e => setFormData({...formData, score: parseFloat(e.target.value)})} />
+                  </div>
+
+                  <div style={{display: 'flex', gap: '1rem', alignItems: 'center', marginTop: '1.5rem'}}>
+                    <button type="submit" className="primary" disabled={isSaving} style={{ flex: 1 }}>
+                      {isSaving ? 'Processing...' : (editingRule ? 'Update Configuration' : 'Save Configuration')}
+                    </button>
+                    {editingRule && (
+                      <button type="button" onClick={handleDelete} disabled={isSaving} style={{ backgroundColor: '#cf222e', color: 'white', border: 'none', padding: '0.5rem 1rem', borderRadius: '4px', cursor: isSaving ? 'not-allowed' : 'pointer' }}>
                         Delete
                       </button>
-                    </>
+                    )}
+                  </div>
+                  
+                  {formMessage && (
+                    <div className={`alert-${formMessage.type}`}>{formMessage.text}</div>
                   )}
-                </div>
-                
-                {formMessage && (
-                  <div className={`alert-${formMessage.type}`}>{formMessage.text}</div>
-                )}
-              </form>
+                </form>
+              </div>
             </div>
-          </div>
+          )}
+
         </div>
       )}
 

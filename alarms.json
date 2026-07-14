@@ -1,23 +1,5 @@
 [
   {
-    "alarm_id": "ALM-20260713-37e0c866",
-    "severity": "HIGH",
-    "category": "FINANCIAL",
-    "timestamp": "2026-07-13T18:14:51.509828Z",
-    "missed_entity": {
-      "type": "Financial Data",
-      "value_preview": "GB29NWBK3012345...",
-      "reason": "This is a bank account number which can be used for financial fraud if exposed",
-      "detected_by": "phi-4-mini"
-    },
-    "context_snippet": "The transaction amount was 1100 dollars and the payment was processed to IBAN GB29NWBK30123456789012.",
-    "layer1_findings": [],
-    "layer2_findings": [
-      "Financial Data"
-    ],
-    "status": "PENDING_REVIEW"
-  },
-  {
     "alarm_id": "ALM-20260713-d6346d3e",
     "severity": "HIGH",
     "category": "FINANCIAL",

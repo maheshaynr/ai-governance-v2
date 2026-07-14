@@ -36,18 +36,26 @@ ACTIVE_ENTITIES = []
 analyzer = None
 anonymizer = AnonymizerEngine()
 
+global_nlp_engine = None
+
+def get_nlp_engine():
+    global global_nlp_engine
+    if global_nlp_engine is None:
+        print("Initializing Global NLP Engine (Heavy Operation)...")
+        configuration = {
+            "nlp_engine_name": "spacy",
+            "models": [
+                {"lang_code": "en", "model_name": "en_core_web_lg"},
+                {"lang_code": "en-US", "model_name": "en_ner_bc5cdr_md"}
+            ]
+        }
+        global_nlp_engine = NlpEngineProvider(nlp_configuration=configuration).create_engine()
+    return global_nlp_engine
+
 def reload_presidio_engine():
     global analyzer, ACTIVE_ENTITIES
-    print("Reloading Presidio NLP models...")
-    # Configure Multi-Model NLP Engine
-    configuration = {
-        "nlp_engine_name": "spacy",
-        "models": [
-            {"lang_code": "en", "model_name": "en_core_web_lg"},
-            {"lang_code": "en-US", "model_name": "en_ner_bc5cdr_md"}
-        ]
-    }
-    nlp_engine = NlpEngineProvider(nlp_configuration=configuration).create_engine()
+    print("Reloading Presidio Registry and Rules...")
+    nlp_engine = get_nlp_engine()
     
     new_analyzer = AnalyzerEngine(nlp_engine=nlp_engine, supported_languages=["en", "en-US"])
     
@@ -69,9 +77,36 @@ def reload_presidio_engine():
     # Load dynamic JSON rules
     try:
         with open("pii_rules.json", "r") as f:
-            rules = json.load(f)["rules"]
+            data = json.load(f)
+            settings = data.get("settings", {})
+            category_mappings = data.get("category_mappings", {})
+            rules = data.get("rules", [])
+            
             for rule in rules:
                 if not rule.get("is_active", True):
+                    continue
+                    
+                entity = rule.get("entity", "").upper()
+                
+                # Determine rule category
+                rule_category = "UNCATEGORIZED"
+                for cat_name, keywords in category_mappings.items():
+                    if any(k in entity for k in keywords):
+                        rule_category = cat_name
+                        break
+                        
+                # Check if category is enabled in settings
+                is_category_enabled = True
+                if rule_category == "GDPR" and not settings.get("enable_gdpr", True):
+                    is_category_enabled = False
+                elif rule_category == "HIPAA" and not settings.get("enable_hipaa", True):
+                    is_category_enabled = False
+                elif rule_category == "FINANCIAL" and not settings.get("enable_financial", True):
+                    is_category_enabled = False
+                elif rule_category == "AUTHENTICATION" and not settings.get("enable_authentication", True):
+                    is_category_enabled = False
+                    
+                if not is_category_enabled:
                     continue
                 
                 if not rule.get("is_builtin", False) and not rule.get("is_algorithmic", False):
@@ -116,6 +151,7 @@ class RuleRequest(BaseModel):
     is_builtin: bool = False
     is_algorithmic: bool = False
     is_active: bool = True
+    category: str = "UNCATEGORIZED"
 
 class UpdateRuleRequest(BaseModel):
     original_name: str
@@ -126,6 +162,7 @@ class UpdateRuleRequest(BaseModel):
     is_builtin: bool = False
     is_algorithmic: bool = False
     is_active: bool = True
+    category: str = "UNCATEGORIZED"
 
 class DeleteRuleRequest(BaseModel):
     name: str
@@ -539,8 +576,32 @@ class ToggleRequest(BaseModel):
 class ToggleToxicityRequest(BaseModel):
     enable_toxicity_guard: bool
 
+class ToggleCategoryRequest(BaseModel):
+    category: str
+    enabled: bool
+
 class UpdateToxicitySettingsRequest(BaseModel):
     thresholds: dict
+
+@app.post("/toggle_category")
+def toggle_category(request: ToggleCategoryRequest):
+    try:
+        with open("pii_rules.json", "r") as f:
+            data = json.load(f)
+        
+        setting_key = f"enable_{request.category.lower()}"
+        if "settings" not in data:
+            data["settings"] = {}
+            
+        data["settings"][setting_key] = request.enabled
+        
+        with open("pii_rules.json", "w") as f:
+            json.dump(data, f, indent=2)
+            
+        reload_presidio_engine()
+        return {"status": "success", "settings": data["settings"]}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
 
 @app.post("/toggle_watchdog")
 def toggle_watchdog(request: ToggleRequest):
@@ -714,6 +775,14 @@ def add_rule(request: RuleRequest):
             if "rules" not in data:
                 data["rules"] = []
             data["rules"].append(new_rule)
+            
+        if request.category and request.category != "UNCATEGORIZED":
+            if "category_mappings" not in data:
+                data["category_mappings"] = {}
+            if request.category not in data["category_mappings"]:
+                data["category_mappings"][request.category] = []
+            if request.entity not in data["category_mappings"][request.category]:
+                data["category_mappings"][request.category].append(request.entity)
         
         with open("pii_rules.json", "w") as f:
             json.dump(data, f, indent=2)
@@ -747,6 +816,14 @@ def update_rule(request: UpdateRuleRequest):
                 
         if not rule_found:
             return {"status": "error", "message": "Rule not found."}
+            
+        if request.category and request.category != "UNCATEGORIZED":
+            if "category_mappings" not in data:
+                data["category_mappings"] = {}
+            if request.category not in data["category_mappings"]:
+                data["category_mappings"][request.category] = []
+            if request.entity not in data["category_mappings"][request.category]:
+                data["category_mappings"][request.category].append(request.entity)
             
         with open("pii_rules.json", "w") as f:
             json.dump(data, f, indent=2)
