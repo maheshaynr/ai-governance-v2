@@ -1,84 +1,110 @@
-# Enterprise AI Governance Shield
-## Final Implementation Plan & Architectural Reference
+# Enterprise AI Governance System - Architectural Control Flow
 
-This document serves as the technical blueprint and final implementation plan for the AI Governance Shield. It details the dual-layer architecture, component responsibilities, and data flows designed to govern, mask, and audit AI ecosystem traffic.
+This document outlines the architectural flow of the AI Governance Sandbox, explicitly detailing the **Control Precedence** (which controller executes before which) across the system. 
 
----
+The architecture operates on a strict **fail-fast, defense-in-depth** hierarchy.
 
-## 1. Architectural Philosophy
+## Controller Hierarchy & Precedence Diagram
 
-The AI Governance Shield operates as a centralized **Enterprise AI Gateway**. All traffic flowing between users, databases, and large language models is routed through this proxy. The architecture relies on two distinct layers of protection to balance extreme low-latency performance with semantic deep-understanding.
+```mermaid
+flowchart TD
+    %% Define Styles
+    classDef client fill:#0969da,stroke:#0969da,color:white,font-weight:bold
+    classDef core fill:#8250df,stroke:#8250df,color:white,font-weight:bold
+    classDef toxic fill:#cf222e,stroke:#cf222e,color:white,font-weight:bold
+    classDef guardrail fill:#2da44e,stroke:#2da44e,color:white,font-weight:bold
+    classDef llm fill:#57606a,stroke:#57606a,color:white,font-weight:bold
+    classDef audit fill:#d4a72c,stroke:#d4a72c,color:black,font-weight:bold
+    classDef storage fill:#bf8700,stroke:#bf8700,color:white,font-weight:bold
 
-### Layer 1: The Deterministic Firewall (Frontline)
-*   **Technology**: Microsoft Presidio, SpaCy (`en_core_web_lg`), SciSpaCy (`en_ner_bc5cdr_md`).
-*   **Function**: Intercepts structured and recognizable sensitive data (PII, PHI, Financials) using lightning-fast regex, mathematical checksums (e.g., Verhoeff for Aadhaar, Luhn for Credit Cards), and standard Named Entity Recognition (NER).
-*   **Action**: Automatically applies a destructive `<MASK>` (e.g., `<PERSON>`, `<CREDIT_CARD>`) before the data reaches its destination.
+    subgraph CONFIG ["Configuration State"]
+        JSON["pii_rules.json (Source of Truth)"]:::storage
+    end
 
-### Layer 2: The Semantic Watchdog (Safety Net)
-*   **Technology**: Local LLM (`phi-4-mini` via Ollama).
-*   **Function**: Operates asynchronously in the background. It reads the *raw*, unmasked text and semantically analyzes the context to identify complex or malformed sensitive data that slipped past Layer 1 (e.g., an invalid credit card number being discussed as a payment method).
-*   **Action**: Does not block the real-time chat, but silently generates a **Threat Alarm** for administrative review.
+    User(["React UI - Modular Admin Dashboard"]):::client
+    User -. "Updates Categories (GDPR, HIPAA, etc)" .-> JSON
+    
+    API["api.py (Main Orchestrator / Global NLP Cache)"]:::core
+    JSON -. "Loads settings into" .-> API
 
----
+    User -- "1. Raw Prompt" --> API
 
-## 2. Core Components (Backend)
+    subgraph INGRESS ["Ingress Precedence (Inbound)"]
+        direction TB
+        ToxIn["Controller 1: Toxicity Guard (Hard Block)"]:::toxic
+        PIIIn["Controller 2: PII Scanner (Masking)"]:::guardrail
+        ToxIn -- "If Clean" --> PIIIn
+    end
 
-### `api.py` (The Central Gateway)
-*   **Framework**: FastAPI
-*   **Responsibilities**:
-    *   Initializes the multi-model NLP pipeline.
-    *   Hosts the `apply_egress_guardrail` function (the universal chokepoint for all data).
-    *   Spawns `BackgroundTasks` for the Layer 2 Watchdog.
-    *   Serves the Agentic Chatbot (`/chat`), routing `<FETCH_DB:ID>` tool calls to the database and feeding results back to the LLM.
-    *   Exposes endpoints for the Admin UI to dynamically update rules, alarms, and configurations.
+    API -- "2. Routes to Ingress" --> ToxIn
+    PIIIn -- "3. Sanitized Context" --> API
 
-### `pii_rules.json` (Dynamic Configuration)
-*   **Function**: A live JSON store containing custom Regex patterns and confidence scores. 
-*   **Advantage**: Rules can be toggled `is_active: true/false` directly from the UI, immediately updating the Presidio Analyzer registry in `api.py` without requiring a server reboot or code deployment.
+    subgraph GENERATION ["Execution Precedence"]
+        direction TB
+        Ollama["Local LLMs (phi4-mini, etc)"]:::llm
+        RAG[("RAG / SQL DB")]:::storage
+        Ollama <--> RAG
+    end
 
-### `audit_logger.py` & `governance_audit.json`
-*   **Function**: The ultimate source of truth for Shadow AI oversight.
-*   **Mechanics**: Cryptographically hashes (SHA-256) all incoming raw text to enforce data minimization. It logs the exact timestamp, hashed input, and the final masked rewrite, providing an immutable record of all ecosystem AI traffic.
+    API -- "4. Executes Prompt" --> Ollama
+    Ollama -- "5. Raw Output" --> API
 
-### `diff_engine.py` & `llm_watchdog.py`
-*   **Function**: The operational brain of Layer 2. 
-*   `llm_watchdog.py` prompts the local `phi-4-mini` model to extract a JSON list of leaked entities based on semantic context.
-*   `diff_engine.py` compares the entities found by Layer 2 against the entities caught by Layer 1. If Layer 2 found something new, it generates an entry in `alarms.json` with a contextual snippet and reason.
+    subgraph EGRESS ["Egress Precedence (Outbound)"]
+        direction TB
+        ToxOut["Controller 3: Toxicity Guard (Hard Block)"]:::toxic
+        PIIOut["Controller 4: PII Scanner (Masking)"]:::guardrail
+        ToxOut -- "If Clean" --> PIIOut
+    end
 
-### `custom_recognizers.py`
-*   **Function**: Houses advanced algorithmic logic.
-*   **Example**: The `AadhaarRecognizer` implements the Verhoeff algorithm to mathematically validate 12-digit Indian identities, drastically reducing false positives on random 12-digit order numbers.
+    API -- "6. Routes to Egress" --> ToxOut
+    PIIOut -- "7. Masked Output" --> API
 
----
+    API -- "8. Safe Payload" --> User
 
-## 3. Core Components (Frontend)
+    subgraph AUDIT ["Asynchronous Controllers"]
+        DiffEngine["Alarm Router (diff_engine.py)"]:::audit
+        L2["L2 Semantic Watchdog"]:::llm
+    end
 
-The frontend is a React.js application offering three distinct interfaces:
+    %% Async Links
+    ToxIn -. "Violation (Tox)" .-> DiffEngine
+    PIIIn -. "Violation (PII)" .-> DiffEngine
+    ToxOut -. "Violation (Tox)" .-> DiffEngine
+    PIIOut -. "Leak (PII)" .-> DiffEngine
+    PIIOut -. "Triggers" .-> L2
+    L2 -. "Semantic Alarm" .-> DiffEngine
+```
 
-### Analytics Dashboard (`AnalyticsDashboard.jsx`)
-*   Provides a high-level executive view of the Governance Shield's performance.
-*   Displays real-time KPIs (Total Tokens Guarded, Threats Caught, Active Rules, and Alarms).
-*   Features geographic origin maps and threat-category bar charts.
+## Control Precedence: Step-by-Step
 
-### The Sandbox & Testing Suite (`Dashboard.jsx` & `test_cases.json`)
-*   An interactive environment to simulate DB queries and Chatbot interactions.
-*   Displays a side-by-side comparison of **🔴 Raw LLM Output (Leaking PII)** vs. **🟢 Shielded Output (Safe)**.
-*   Executes predefined test cases covering HIPAA, GDPR, Financial, and Authentication leaks.
+### 1. The Global State Controller (`pii_rules.json`)
+Before any request is handled, the state of the system is defined by `pii_rules.json`. This acts as the absolute source of truth. 
+* The **Frontend Dashboard** interacts with the API to update this file, dictating which categories (GDPR, Financial, HIPAA) are active.
+* `api.py` caches the heavy NLP model globally to prevent latency during state changes.
 
-### Admin Command Center (`AdminConfig.jsx`)
-*   The control plane for DLP engineers.
-*   Allows creation, modification, and toggling of active PII rules.
-*   Provides an interface to review **Layer 2 Threat Alarms** and automatically invoke the LLM to generate precise Regex solutions to fix "False Dismissals".
+### 2. The Main Orchestrator (`api.py`)
+`api.py` (FastAPI) is the **Main Controller**. It receives the inbound HTTP requests and acts as a central switchboard, routing data through the guardrails in a strict, sequential order. 
 
----
+### 3. Ingress Precedence (Inbound Security)
+When the user sends a prompt, it must pass through the Ingress Pipeline before it ever reaches the AI.
 
-## 4. Future Expansion Mapping
+* **1st Precedence: Toxicity Guard (`toxicity_guard.py`)**
+  * **Why it's first:** Toxicity is a "fatal" error. If a prompt is severely abusive or a threat, there is no reason to spend CPU cycles running complex Regex matching or LLM inference. It is immediately hard-blocked and dropped.
+* **2nd Precedence: PII Guardrail (`presidio_engine.py`)**
+  * **Why it's second:** If the prompt is polite/clean, the system must ensure the user isn't accidentally uploading sensitive data (like a Credit Card or SSN) into the LLM's context window. The text is mutated/masked here.
 
-Based on the 6 Pillars of AI Governance, this architecture is primed for expansion:
+### 4. Execution Controller
+Once sanitized by both Ingress controllers, `api.py` hands the payload over to the LLM (Ollama) and the retrieval systems (SQL/RAG). The LLM processes the data and generates a raw response.
 
-1.  **Data Leakage**: Fully implemented via Egress Guardrail.
-2.  **Shadow AI**: Fully implemented via Central API Routing and Audit Logging.
-3.  **Prompt Injection**: *Planned.* Implement an Ingress Guardrail to scan incoming user prompts using the existing dual-layer philosophy.
-4.  **Hallucinations**: *Planned.* Expand the Watchdog to cross-reference AI output against retrieved DB context for factual fidelity.
-5.  **Bias & Fairness**: *Planned.* Prompt the Watchdog to score AI output for demographic neutrality.
-6.  **Model Drift**: *Planned.* Aggregate the Audit Logs into time-series graphs to monitor underlying model degradation.
+### 5. Egress Precedence (Outbound Security)
+The LLM's output cannot be trusted. Before sending it back to the user, `api.py` routes the raw output through the Egress Pipeline.
+
+* **3rd Precedence: Egress Toxicity Guard**
+  * **Why it's first:** Just like Ingress, if the AI hallucinates and generates obscene or hateful text, the text must be instantly destroyed. There is no need to mask PII in a hateful sentence that the user will never be allowed to see.
+* **4th Precedence: Egress PII Guardrail**
+  * **Why it's second:** If the AI's response is safe, the system must ensure the AI didn't accidentally leak sensitive Database information (e.g., retrieving an unmasked IBAN number from the SQL DB). The PII scanner masks the sensitive data, and the final safe string is returned to the user via `api.py`.
+
+### 6. Asynchronous Precedence (Auditing)
+Running parallel to (and entirely detached from) the critical path:
+* **The Alarm Router (`diff_engine.py`)**: Subscribes to failure events from the guardrails. If a guardrail mutates or blocks text, it asynchronously routes alarms to `alarms.json`.
+* **L2 Semantic Watchdog**: A background LLM that reads the final interaction log to hunt for semantic leaks (e.g., hiding a password inside a poem) that the rigid Regex scanners couldn't catch.

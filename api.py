@@ -1041,6 +1041,9 @@ If you are provided with data, summarize it naturally and helpfully."""
             
             # Feed back to LLM
             messages.append({"role": "assistant", "content": ai_message})
+            # To prevent the SLM from getting confused and re-outputting the FETCH_DB command due to the strict system prompt,
+            # we overwrite the system prompt for the second request.
+            messages[0]["content"] = "You are a helpful enterprise assistant. Convey the provided database result naturally to the user."
             
             if customer_id_str.lower() == "swiggy":
                 messages.append({

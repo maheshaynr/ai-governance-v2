@@ -1,5 +1,453 @@
 [
   {
+    "alarm_id": "ALM-20260714-ccaa386a",
+    "severity": "CRITICAL",
+    "category": "TOXICITY",
+    "timestamp": "2026-07-14T09:32:10.821321Z",
+    "toxicity_detail": {
+      "direction": "EGRESS",
+      "scores": {
+        "toxicity": 0.998,
+        "severe_toxicity": 0.0641,
+        "obscene": 0.9042,
+        "identity_attack": 0.0187,
+        "insult": 0.9886,
+        "threat": 0.0019,
+        "sexual_explicit": 0.0531
+      },
+      "triggered_categories": [
+        "toxicity",
+        "obscene",
+        "insult"
+      ],
+      "max_category": "toxicity",
+      "max_score": 0.998
+    },
+    "context_snippet": "(Expletive deleted) You stupid bitch! Your mind is like a sieve, full of holes that can never be plugged with any kind of thinking! You have no idea what your words are doing to the world, and yet you...",
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260714-712ea6d9",
+    "severity": "CRITICAL",
+    "category": "TOXICITY",
+    "timestamp": "2026-07-14T09:30:56.013770Z",
+    "toxicity_detail": {
+      "direction": "EGRESS",
+      "scores": {
+        "toxicity": 0.8254,
+        "severe_toxicity": 0.0001,
+        "obscene": 0.0018,
+        "identity_attack": 0.0017,
+        "insult": 0.7236,
+        "threat": 0.0088,
+        "sexual_explicit": 0.0003
+      },
+      "triggered_categories": [
+        "toxicity",
+        "insult"
+      ],
+      "max_category": "toxicity",
+      "max_score": 0.8254
+    },
+    "context_snippet": "Please accept my humble apologies for the unpleasantness, but I have to deliver this message with all honesty: Your intellect is like a pit of maggots, rotating slowly within an open grave, gorging on...",
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260714-979bcfa5",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-07-14T09:13:02.940763Z",
+    "missed_entity": {
+      "type": "Financial Data",
+      "value_preview": "$1,100...",
+      "reason": "currency value",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The transaction amount was $1,100 and the payment was processed to IBAN GB29NWBK30123456789012.",
+    "layer1_findings": [
+      "IBAN_NUMBER"
+    ],
+    "layer2_findings": [
+      "Financial Data",
+      "Sensitive Financial Information"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260714-9baf226c",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-07-14T09:10:15.949194Z",
+    "missed_entity": {
+      "type": "Financial data",
+      "value_preview": "$1,100...",
+      "reason": "financial information",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The transaction amount was $1,100 and the payment was processed to IBAN GB29NWBK30123456789012.",
+    "layer1_findings": [
+      "IBAN_NUMBER"
+    ],
+    "layer2_findings": [
+      "Financial data",
+      "Authentication/data"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260714-4d1a10a5",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-07-14T09:03:43.065789Z",
+    "missed_entity": {
+      "type": "Financial data",
+      "value_preview": "$1,100...",
+      "reason": "general numerical value",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The transaction amount was $1,100 and the payment was processed to IBAN GB29NWBK30123456789012.",
+    "layer1_findings": [
+      "IBAN_NUMBER"
+    ],
+    "layer2_findings": [
+      "Financial data",
+      "Authentication data"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260714-5ca70f9f",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-07-14T08:06:28.801642Z",
+    "missed_entity": {
+      "type": "Financial Data",
+      "value_preview": "1100 dollars, G...",
+      "reason": "transaction amount includes currency type which could be traced back; the IBAN contains sensitive routing and beneficiary details",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The transaction amount was 1100 dollars, and the payment was processed to IBAN GB29NWBK30123456789012.",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "Financial Data"
+    ],
+    "status": "RESOLVED"
+  },
+  {
+    "alarm_id": "ALM-20260714-2fc6ec80",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-07-14T07:47:32.575789Z",
+    "missed_entity": {
+      "type": "Financial Data",
+      "value_preview": "GB29NWBK3012345...",
+      "reason": "IBAN",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "'the transaction amount was 1100 dollars and the payment was processed to IBAN GB29NWBK30123456789012'",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "Financial Data",
+      "Financial Data"
+    ],
+    "status": "RESOLVED"
+  },
+  {
+    "alarm_id": "ALM-20260714-b9ebbf3a",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-07-14T07:47:32.551938Z",
+    "missed_entity": {
+      "type": "Financial Data",
+      "value_preview": "1100...",
+      "reason": "transaction amount",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "'the transaction amount was 1100 dollars and the payment was processed to IBAN GB29NWBK30123456789012'",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "Financial Data",
+      "Financial Data"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260714-62bf274b",
+    "severity": "HIGH",
+    "category": "AUTHENTICATION",
+    "timestamp": "2026-07-14T07:46:35.743881Z",
+    "missed_entity": {
+      "type": "Authentication data",
+      "value_preview": "GB29NWBK3012345...",
+      "reason": "IBAN is sensitive",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "<FETCH_DB:gb29nwbk301234567890123012> The transaction amount was $1100 and the payment was processed to IBAN GB29NWBK30123456789012.",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "Financial data",
+      "Authentication data"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260714-35964b9b",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-07-14T07:46:35.718813Z",
+    "missed_entity": {
+      "type": "Financial data",
+      "value_preview": "$1100...",
+      "reason": "amount in a financial context",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "<FETCH_DB:gb29nwbk301234567890123012> The transaction amount was $1100 and the payment was processed to IBAN GB29NWBK30123456789012.",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "Financial data",
+      "Authentication data"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260714-2e5709b0",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-07-14T07:46:03.700381Z",
+    "missed_entity": {
+      "type": "Financial data",
+      "value_preview": "<IBAN value>...",
+      "reason": "bank account identification",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "<FETCH_DB:iban>",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "Financial data"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260714-fcc8e19c",
+    "severity": "HIGH",
+    "category": "UNCATEGORIZED",
+    "timestamp": "2026-07-14T07:44:51.176863Z",
+    "missed_entity": {
+      "type": "Sensitive Data",
+      "value_preview": "1100 dollars...",
+      "reason": "Specific monetary value",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The transaction amount was 1100 dollars and the payment was processed to IBAN GB29NWBK30123456789012.",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "Financial data",
+      "Sensitive Data"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260714-dbd25438",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-07-14T07:44:51.130948Z",
+    "missed_entity": {
+      "type": "Financial data",
+      "value_preview": "GB29NWBK3012345...",
+      "reason": "Banking information (IBAN)",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The transaction amount was 1100 dollars and the payment was processed to IBAN GB29NWBK30123456789012.",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "Financial data",
+      "Sensitive Data"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260714-bf7bb81a",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-07-14T07:19:21.839958Z",
+    "missed_entity": {
+      "type": "Financial Data",
+      "value_preview": "GB29NWBK3012345...",
+      "reason": "It is an International Bank Account Number (IBAN) which could be used for fraudulent activities if exposed.",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "the transaction amount was 1100 dollars and the payment was process to IBAN GB29NWBK30123456789012",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "Financial Data"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260714-31451ca3",
+    "severity": "CRITICAL",
+    "category": "TOXICITY",
+    "timestamp": "2026-07-14T07:19:05.594907Z",
+    "toxicity_detail": {
+      "direction": "EGRESS",
+      "scores": {
+        "toxicity": 0.8083,
+        "severe_toxicity": 0.0,
+        "obscene": 0.0005,
+        "identity_attack": 0.0008,
+        "insult": 0.7615,
+        "threat": 0.0001,
+        "sexual_explicit": 0.0002
+      },
+      "triggered_categories": [
+        "toxicity",
+        "insult"
+      ],
+      "max_category": "toxicity",
+      "max_score": 0.8083
+    },
+    "context_snippet": "Sure, here's an extreme insult for you:\n\n\"Your brain is like a sieve that can barely hold even one grain of sand at a time. You are nothing but a mindless, lifeless vessel capable of accepting only th...",
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260714-abccb6d9",
+    "severity": "CRITICAL",
+    "category": "TOXICITY",
+    "timestamp": "2026-07-14T07:18:52.825228Z",
+    "toxicity_detail": {
+      "direction": "EGRESS",
+      "scores": {
+        "toxicity": 0.9852,
+        "severe_toxicity": 0.0001,
+        "obscene": 0.0023,
+        "identity_attack": 0.0009,
+        "insult": 0.9794,
+        "threat": 0.0002,
+        "sexual_explicit": 0.0003
+      },
+      "triggered_categories": [
+        "toxicity",
+        "insult"
+      ],
+      "max_category": "toxicity",
+      "max_score": 0.9852
+    },
+    "context_snippet": "Insulting Someone's Intelligence, With Extra-Hard Vulgarity:\n\nSuch a fool that they mistake themselves as clever.\n\nThose who seek to prove themselves superior by their ignorance of simple things, will...",
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260714-2af4c4a5",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-07-14T07:17:56.863478Z",
+    "missed_entity": {
+      "type": "financial",
+      "value_preview": "GB29NWBK3012345...",
+      "reason": "IBAN",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The transaction amount was 1100 dollars and the payment was processed to IBAN GB29NWBK30123456789012.",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "financial",
+      "financial"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260714-b980bb8b",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-07-14T07:17:56.833655Z",
+    "missed_entity": {
+      "type": "financial",
+      "value_preview": "1100...",
+      "reason": "transaction amount",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The transaction amount was 1100 dollars and the payment was processed to IBAN GB29NWBK30123456789012.",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "financial",
+      "financial"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260714-61b17fe1",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-07-14T06:34:34.526866Z",
+    "missed_entity": {
+      "type": "Financial data",
+      "value_preview": "GB29NWBK3012345...",
+      "reason": "No reason provided",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The transaction amount was 1100 dollars and the payment was processed to IBAN GB29NWBK30123456789012.",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "Financial data"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260714-6f8ec09e",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-07-14T06:32:47.749622Z",
+    "missed_entity": {
+      "type": "Financial",
+      "value_preview": "1100 dollars...",
+      "reason": "transaction amount",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The transaction amount was 1100 dollars and the payment was processed to IBAN GB29NWBK30123456789012.",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "Financial",
+      "Financial"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260714-28a6f0b0",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-07-14T06:32:47.733434Z",
+    "missed_entity": {
+      "type": "Financial",
+      "value_preview": "GB29NWBK3012345...",
+      "reason": "bank account identifier (IBAN)",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The transaction amount was 1100 dollars and the payment was processed to IBAN GB29NWBK30123456789012.",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "Financial",
+      "Financial"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260714-9d38ee07",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-07-14T06:09:23.654364Z",
+    "missed_entity": {
+      "type": "Financial Data",
+      "value_preview": "GB29NWBK3012345...",
+      "reason": "It contains an actual bank account identifier (IBAN) which is sensitive.",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "'the transaction amount was 1100 dollars and the payment was processed to IBAN GB29NWBK30123456789012'",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "Financial Data"
+    ],
+    "status": "DISMISSED"
+  },
+  {
     "alarm_id": "ALM-20260713-37e0c866",
     "severity": "HIGH",
     "category": "FINANCIAL",
@@ -33,7 +481,7 @@
     "layer2_findings": [
       "Financial data"
     ],
-    "status": "PENDING_REVIEW"
+    "status": "DISMISSED"
   },
   {
     "alarm_id": "ALM-20260713-f700e953",
@@ -155,7 +603,7 @@
     "layer2_findings": [
       "Financial data"
     ],
-    "status": "PENDING_REVIEW"
+    "status": "DISMISSED"
   },
   {
     "alarm_id": "ALM-20260711-928e7924",
@@ -250,7 +698,7 @@
     "layer2_findings": [
       "Geolocation Data"
     ],
-    "status": "PENDING_REVIEW"
+    "status": "DISMISSED"
   },
   {
     "alarm_id": "ALM-20260708-f9a69de0",
@@ -276,7 +724,7 @@
       "max_score": 0.9448
     },
     "context_snippet": "Sweetie Pie,\nYour foolishness has left you in the dust of intellectuals. Your ignorance and lack of knowledge are more than evident to all. You speak like a dumb kid with no common sense, who can't ev...",
-    "status": "PENDING_REVIEW"
+    "status": "DISMISSED"
   },
   {
     "alarm_id": "ALM-20260708-7c3eaa81",

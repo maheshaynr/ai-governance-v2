@@ -1,11 +1,18 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { demoChat } from './api';
 
 export default function ChatBot() {
-  const [messages, setMessages] = useState([]);
+  const [messages, setMessages] = useState(() => {
+    const saved = localStorage.getItem('chatHistory');
+    return saved ? JSON.parse(saved) : [];
+  });
   const [payload, setPayload] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [mode, setMode] = useState('others'); // 'toxic' or 'others'
+
+  useEffect(() => {
+    localStorage.setItem('chatHistory', JSON.stringify(messages));
+  }, [messages]);
 
   const handleRunGuardrail = async (overridePayload = null) => {
     const textToSend = overridePayload || payload;
@@ -37,9 +44,10 @@ export default function ChatBot() {
     }
   };
 
-  const handleNewChat = () => {
+  const handleClearHistory = () => {
     setMessages([]);
     setPayload('');
+    localStorage.removeItem('chatHistory');
   };
 
   const handlePinnedClick = (prompt, toggleMode) => {
@@ -53,7 +61,7 @@ export default function ChatBot() {
         
         {/* Left Pane: Sidebar */}
         <div className="rules-list card" style={{ marginTop: '0', alignSelf: 'flex-start', maxHeight: 'calc(100vh - 120px)', overflowY: 'auto', width: '230px', minWidth: '230px', maxWidth: '230px' }}>
-          <button className="primary" style={{ width: '100%', marginBottom: '1.5rem', display: 'flex', justifyContent: 'center', gap: '0.5rem' }} onClick={handleNewChat}>
+          <button className="primary" style={{ width: '100%', marginBottom: '1.5rem', display: 'flex', justifyContent: 'center', gap: '0.5rem' }} onClick={handleClearHistory}>
             <span>➕</span> New Chat
           </button>
           
@@ -112,8 +120,8 @@ export default function ChatBot() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid #d0d7de', paddingBottom: '1rem' }}>
             <h2 style={{ margin: 0 }}>⚛️ Enterprise Chat Agent</h2>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', backgroundColor: '#f6f8fa', padding: '0.25rem', borderRadius: '8px', border: '1px solid #d0d7de' }}>
-              <button 
-                onClick={() => setMode('toxic')}
+                <button 
+                  onClick={() => setMode('toxic')}
                 style={{
                   padding: '0.4rem 0.8rem', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 'bold',
                   backgroundColor: mode === 'toxic' ? '#cf222e' : 'transparent',
@@ -149,14 +157,14 @@ export default function ChatBot() {
                   <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                     {/* Raw Output Bubble (Leaky/Toxic) */}
                     <div style={{ alignSelf: 'flex-start', backgroundColor: '#ffebe9', border: '1px solid #ff8182', color: '#cf222e', padding: '1rem', borderRadius: '18px 18px 18px 0', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', maxWidth: '85%' }}>
-                      <strong style={{ fontSize: '0.85rem' }}>🔴 Raw LLM Output (Hidden):</strong>
+                      <strong style={{ fontSize: '0.85rem' }}>🔴 Raw LLM Output:</strong>
                       <pre style={{ margin: '0.5rem 0 0 0', whiteSpace: 'pre-wrap', fontFamily: 'monospace', fontSize: '0.8rem', overflowX: 'auto' }}>{msg.raw_content}</pre>
                     </div>
 
                     {/* Shielded Output Bubble (Only if changed by Guardrail) */}
                     {msg.raw_content !== msg.masked_content && (
                       <div style={{ alignSelf: 'flex-start', backgroundColor: '#dafbe1', border: '1px solid #4ac26b', color: '#1a7f37', padding: '1rem', borderRadius: '18px 18px 18px 0', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', maxWidth: '85%' }}>
-                        <strong style={{ fontSize: '0.85rem' }}>🟢 Guardrail Output (Visible to User):</strong>
+                        <strong style={{ fontSize: '0.85rem' }}>🟢 Guardrail Output (Content Safety On):</strong>
                         <pre style={{ margin: '0.5rem 0 0 0', whiteSpace: 'pre-wrap', fontFamily: 'monospace', fontSize: '0.85rem', overflowX: 'auto' }}>{msg.masked_content}</pre>
                       </div>
                     )}

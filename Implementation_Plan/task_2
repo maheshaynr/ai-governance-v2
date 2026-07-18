@@ -1,9 +1,0 @@
-# AI Governance PoC: Phase 1 (Dynamic Database Shield)
-
-- [x] **Phase 1: Dynamic Config & Database Integration**
-  - `[x]` Create `pii_rules.json` with regex definitions for SSN, Aadhaar, Passport, etc.
-  - `[x]` Update `api.py` to dynamically parse `pii_rules.json` and register `PatternRecognizer`s on startup.
-  - `[x]` Create `database.py` to initialize an in-memory SQLite DB and insert dummy KYC/Purchase cohort data.
-  - `[x]` Update `api.py` endpoint to query the database based on user input, and route the DB output through Presidio.
-  - `[x]` Update `app.py` (UI) to act as a "Customer Data Lookup" portal.
-  - `[x]` Verify the Audit Logger correctly logs the Raw DB Output vs the Masked Output.

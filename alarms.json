@@ -1,82 +1,29 @@
 [
   {
-    "alarm_id": "ALM-20260713-d6346d3e",
-    "severity": "HIGH",
-    "category": "FINANCIAL",
-    "timestamp": "2026-07-13T18:14:31.613369Z",
-    "missed_entity": {
-      "type": "Financial data",
-      "value_preview": "GB29NWBK3012345...",
-      "reason": "This is a bank account identifier (IBAN) which could be used for fraudulent activities if exposed.",
-      "detected_by": "phi-4-mini"
-    },
-    "context_snippet": "The transaction amount was 1100 dollars and the payment was processed to IBAN GB29NWBK30123456789012.",
-    "layer1_findings": [],
-    "layer2_findings": [
-      "Financial data"
-    ],
-    "status": "PENDING_REVIEW"
-  },
-  {
-    "alarm_id": "ALM-20260711-26560e31",
-    "severity": "HIGH",
-    "category": "FINANCIAL",
-    "timestamp": "2026-07-11T08:00:40.470064Z",
-    "missed_entity": {
-      "type": "Financial data",
-      "value_preview": "GB29NWBK3012345...",
-      "reason": "Contains bank account information that is sensitive.",
-      "detected_by": "phi-4-mini"
-    },
-    "context_snippet": "The transaction amount was 1100 dollars and the payment was processed to IBAN GB29NWBK30123456789012.",
-    "layer1_findings": [],
-    "layer2_findings": [
-      "Financial data"
-    ],
-    "status": "PENDING_REVIEW"
-  },
-  {
-    "alarm_id": "ALM-20260708-8d2fa8e9",
-    "severity": "HIGH",
-    "category": "UNCATEGORIZED",
-    "timestamp": "2026-07-08T12:18:48.834942Z",
-    "missed_entity": {
-      "type": "Geolocation Data",
-      "value_preview": "48.8584 N, 2.29...",
-      "reason": "No reason provided",
-      "detected_by": "phi-4-mini"
-    },
-    "context_snippet": "'The GPS coordinates for the delivery driver are 48.8584 N, 2.2945 E.'",
-    "layer1_findings": [],
-    "layer2_findings": [
-      "Geolocation Data"
-    ],
-    "status": "PENDING_REVIEW"
-  },
-  {
-    "alarm_id": "ALM-20260708-f9a69de0",
+    "alarm_id": "ALM-20260714-ccaa386a",
     "severity": "CRITICAL",
     "category": "TOXICITY",
-    "timestamp": "2026-07-08T12:17:43.953659Z",
+    "timestamp": "2026-07-14T09:32:10.821321Z",
     "toxicity_detail": {
       "direction": "EGRESS",
       "scores": {
-        "toxicity": 0.9448,
-        "severe_toxicity": 0.0001,
-        "obscene": 0.003,
-        "identity_attack": 0.001,
-        "insult": 0.9135,
-        "threat": 0.0002,
-        "sexual_explicit": 0.0004
+        "toxicity": 0.998,
+        "severe_toxicity": 0.0641,
+        "obscene": 0.9042,
+        "identity_attack": 0.0187,
+        "insult": 0.9886,
+        "threat": 0.0019,
+        "sexual_explicit": 0.0531
       },
       "triggered_categories": [
         "toxicity",
+        "obscene",
         "insult"
       ],
       "max_category": "toxicity",
-      "max_score": 0.9448
+      "max_score": 0.998
     },
-    "context_snippet": "Sweetie Pie,\nYour foolishness has left you in the dust of intellectuals. Your ignorance and lack of knowledge are more than evident to all. You speak like a dumb kid with no common sense, who can't ev...",
+    "context_snippet": "(Expletive deleted) You stupid bitch! Your mind is like a sieve, full of holes that can never be plugged with any kind of thinking! You have no idea what your words are doing to the world, and yet you...",
     "status": "PENDING_REVIEW"
   }
 ]
