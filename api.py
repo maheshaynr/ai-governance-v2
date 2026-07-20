@@ -10,6 +10,7 @@ from presidio_analyzer import AnalyzerEngine, PatternRecognizer, Pattern
 from presidio_analyzer.nlp_engine import NlpEngineProvider
 from presidio_analyzer.predefined_recognizers import SpacyRecognizer
 from presidio_anonymizer import AnonymizerEngine
+from presidio_anonymizer.entities import OperatorConfig
 import hashlib
 from audit_logger import AuditLogger
 from custom_recognizers import AadhaarRecognizer
@@ -97,9 +98,9 @@ def reload_presidio_engine():
                         
                 # Check if category is enabled in settings
                 is_category_enabled = True
-                if rule_category == "GDPR" and not settings.get("enable_gdpr", True):
+                if rule_category == "PII" and not settings.get("enable_pii", True):
                     is_category_enabled = False
-                elif rule_category == "HIPAA" and not settings.get("enable_hipaa", True):
+                elif rule_category == "HEALTH" and not settings.get("enable_health", True):
                     is_category_enabled = False
                 elif rule_category == "FINANCIAL" and not settings.get("enable_financial", True):
                     is_category_enabled = False
@@ -244,6 +245,16 @@ def apply_toxicity_check(text: str, direction: str = "EGRESS"):
     
     return result["is_toxic"], result
 
+def mask_person_name(name: str) -> str:
+    parts = name.split()
+    if not parts: return name
+    parts[0] = parts[0][:3] + "*" * max(0, len(parts[0]) - 3)
+    if len(parts) > 1:
+        parts[-1] = parts[-1][:1] + "*" * max(0, len(parts[-1]) - 1)
+        for i in range(1, len(parts) - 1):
+            parts[i] = "*" * len(parts[i])
+    return " ".join(parts)
+
 def apply_egress_guardrail(raw_text: str):
     # We explicitly define the entities we want to track using the global ACTIVE_ENTITIES.
     # This includes both our hardcoded defaults and dynamic JSON rules.
@@ -255,7 +266,14 @@ def apply_egress_guardrail(raw_text: str):
     # Combine results from both pipelines
     results = results_en + results_med
     
-    anonymized_result = anonymizer.anonymize(text=raw_text, analyzer_results=results)
+    operators = {
+        "PERSON": OperatorConfig("custom", {"lambda": mask_person_name}),
+        "CREDIT_CARD": OperatorConfig("custom", {"lambda": lambda x: "**** **** **** " + x[-4:] if len(x) >= 4 else x}),
+        "EMAIL_ADDRESS": OperatorConfig("custom", {"lambda": lambda x: x[0] + "***" + x[-1] if len(x) >= 2 else x}),
+        "IN_AADHAAR": OperatorConfig("custom", {"lambda": lambda x: "".join("*" if c.isalnum() else c for c in x[:-4]) + x[-4:] if len(x) >= 4 else x})
+    }
+    
+    anonymized_result = anonymizer.anonymize(text=raw_text, analyzer_results=results, operators=operators)
     return anonymized_result.text, results
 
 def run_watchdog_task(raw_text: str, layer1_results):
@@ -537,6 +555,10 @@ def get_rules():
             return json.load(f)
     except Exception as e:
         return {"rules": [], "settings": {}}
+
+@app.get("/system_status")
+def system_status():
+    return {"status": "ready"}
 
 @app.get("/alarms")
 def get_alarms():
@@ -1024,6 +1046,29 @@ If you are provided with data, summarize it naturally and helpfully."""
         msg_lower = request.message.lower()
         if "swiggy" in msg_lower:
             ai_message = "<FETCH_DB:swiggy>"
+        elif "all customer details" in msg_lower:
+            cust_rows, spend_rows = database.get_all_customers_and_spenders()
+            lines = ["Here are all the customer details:\n"]
+            count = 1
+            for r in cust_rows:
+                lines.append(f"{count}. {r[1]} (Customer).\n   - ID: {r[0]}.\n   - Phone: {r[2]}.\n   - Card: {r[3]}.\n   - Aadhaar: {r[4]}.\n   - PAN: {r[5]}.\n")
+                count += 1
+            for r in spend_rows:
+                lines.append(f"{count}. {r[1]} (Spender).\n   - ID: {r[0]}.\n   - Email: {r[2]}.\n   - Card: {r[5]}.\n   - Aadhaar: {r[7]}.\n")
+                count += 1
+            ai_message = "\n".join(lines).strip()
+        elif "top 3 spenders" in msg_lower:
+            top_3 = database.get_top_spenders()
+            if "aadhar" in msg_lower or "aadhaar" in msg_lower:
+                lines = ["The Aadhaar numbers for the top 3 spenders are:\n"]
+                for idx, r in enumerate(top_3, 1):
+                    lines.append(f"{idx}. Name: {r[1]}.\n   - Aadhaar: {r[7]}.")
+                ai_message = "\n".join(lines)
+            else:
+                lines = ["The top 3 spenders of today are:\n"]
+                for idx, r in enumerate(top_3, 1):
+                    lines.append(f"{idx}. Name: {r[1]}.\n   - Email: {r[2]}.\n   - Orders: {r[4]}.\n   - Spend: {r[3]}.\n   - Card: {r[5]}.\n")
+                ai_message = "\n".join(lines).strip()
         elif "iban" in msg_lower or "transaction" in msg_lower:
             ai_message = "<FETCH_DB:iban>"
         else:

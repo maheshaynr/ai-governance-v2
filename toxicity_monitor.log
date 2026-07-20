@@ -194,3 +194,5 @@
 [2026-07-14T15:01:08.113861] [EGRESS] Toxic: False | Scores: {"toxicity": 0.0004, "severe_toxicity": 0.0, "obscene": 0.0, "identity_attack": 0.0001, "insult": 0.0001, "threat": 0.0, "sexual_explicit": 0.0}
 [2026-07-14T15:02:04.152181] [INGRESS] Toxic: False | Scores: {"toxicity": 0.0104, "severe_toxicity": 0.0, "obscene": 0.0003, "identity_attack": 0.0003, "insult": 0.0025, "threat": 0.0001, "sexual_explicit": 0.0001}
 [2026-07-14T15:02:10.897244] [EGRESS] Toxic: True | Scores: {"toxicity": 0.998, "severe_toxicity": 0.0641, "obscene": 0.9042, "identity_attack": 0.0187, "insult": 0.9886, "threat": 0.0019, "sexual_explicit": 0.0531}
+[2026-07-20T16:45:21.693998] [INGRESS] Toxic: False | Scores: {"toxicity": 0.0104, "severe_toxicity": 0.0, "obscene": 0.0003, "identity_attack": 0.0003, "insult": 0.0025, "threat": 0.0001, "sexual_explicit": 0.0001}
+[2026-07-20T16:45:38.506967] [EGRESS] Toxic: True | Scores: {"toxicity": 0.9596, "severe_toxicity": 0.0047, "obscene": 0.6555, "identity_attack": 0.0106, "insult": 0.8713, "threat": 0.0006, "sexual_explicit": 0.0063}

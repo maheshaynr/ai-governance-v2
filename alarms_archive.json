@@ -1,5 +1,2789 @@
 [
   {
+    "alarm_id": "ALM-20260720-4f701dc4",
+    "severity": "HIGH",
+    "category": "PII",
+    "timestamp": "2026-07-20T13:31:03.023904Z",
+    "missed_entity": {
+      "type": "Personal Identifier",
+      "value_preview": "9876543210...",
+      "reason": "Phone number",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "{\"customer_id\": 101, \"customer_name\": \"Mahesh\", \"sensitive_data\": { \"phone\": \"9876543210\", \"payment_card\": \"4111-2222-3333-4444\", \"aadhaar\": \"9999 4105 7058\", \"pan\": \"ABCPD1234F..\" }}",
+    "layer1_findings": [
+      "IN_AADHAAR",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON"
+    ],
+    "layer2_findings": [
+      "Personal Identifier",
+      "Financial Data",
+      "Sensitive Data",
+      "Personal Identifier"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260720-195b2364",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-07-20T13:30:44.542194Z",
+    "missed_entity": {
+      "type": "Financial data",
+      "value_preview": "1100$...",
+      "reason": "currency value",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The transaction amount was 1100$ and the payment was processed to IBAN GB29NWBK30123456789012.",
+    "layer1_findings": [
+      "IBAN_NUMBER"
+    ],
+    "layer2_findings": [
+      "Financial data",
+      "Authentication data (internal identifier)"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260720-181f0372",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-07-20T13:30:24.824997Z",
+    "missed_entity": {
+      "type": "Financial Data",
+      "value_preview": "ABCPD1234F,WXYZ...",
+      "reason": "PAN numbers",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "Here are all the customer details:\n\n1. Mahesh (Customer).\n   - ID: 101.\n   - Phone: 9876543210.\n   - Card: 4111-2222-3333-4444.\n   - Aadhaar: 9999 4105 7058.\n   - PAN: ABCPD1234F.\n\n2. Alice (Customer)...",
+    "layer1_findings": [
+      "IN_AADHAAR",
+      "IN_AADHAAR",
+      "EMAIL_ADDRESS",
+      "IN_AADHAAR",
+      "EMAIL_ADDRESS",
+      "IN_AADHAAR",
+      "EMAIL_ADDRESS",
+      "IN_AADHAAR",
+      "EMAIL_ADDRESS",
+      "IN_AADHAAR",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON",
+      "CREDIT_CARD",
+      "CREDIT_CARD",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON",
+      "CREDIT_CARD",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS"
+    ],
+    "layer2_findings": [
+      "Personal Identifier",
+      "Contact Information",
+      "Financial Data",
+      "Personal Identifier",
+      "Financial Data"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260720-2d849f32",
+    "severity": "HIGH",
+    "category": "PII",
+    "timestamp": "2026-07-20T13:30:24.803001Z",
+    "missed_entity": {
+      "type": "Personal Identifier",
+      "value_preview": "101, 102, 10011...",
+      "reason": "ID numbers",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "Here are all the customer details:\n\n1. Mahesh (Customer).\n   - ID: 101.\n   - Phone: 9876543210.\n   - Card: 4111-2222-3333-4444.\n   - Aadhaar: 9999 4105 7058.\n   - PAN: ABCPD1234F.\n\n2. Alice (Customer)...",
+    "layer1_findings": [
+      "IN_AADHAAR",
+      "IN_AADHAAR",
+      "EMAIL_ADDRESS",
+      "IN_AADHAAR",
+      "EMAIL_ADDRESS",
+      "IN_AADHAAR",
+      "EMAIL_ADDRESS",
+      "IN_AADHAAR",
+      "EMAIL_ADDRESS",
+      "IN_AADHAAR",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON",
+      "CREDIT_CARD",
+      "CREDIT_CARD",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON",
+      "CREDIT_CARD",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS"
+    ],
+    "layer2_findings": [
+      "Personal Identifier",
+      "Contact Information",
+      "Financial Data",
+      "Personal Identifier",
+      "Financial Data"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260720-b61d80b1",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-07-20T13:27:41.802473Z",
+    "missed_entity": {
+      "type": "Financial Data",
+      "value_preview": "411122222333444...",
+      "reason": "Credit card numbers are sensitive financial information.",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "Here are all the customer details:\n\n1. Mahesh (Customer).\n   - ID: 101\n   - Phone: 9876543210\n   - Card: 4111-2222-3333-4444\n   - Aadhaar: 9999 4105 7058\n   - PAN: ABCPD1234F\n\n2. Alice (Customer).\n   ...",
+    "layer1_findings": [
+      "IN_AADHAAR",
+      "IN_AADHAAR",
+      "EMAIL_ADDRESS",
+      "IN_AADHAAR",
+      "EMAIL_ADDRESS",
+      "IN_AADHAAR",
+      "EMAIL_ADDRESS",
+      "IN_AADHAAR",
+      "EMAIL_ADDRESS",
+      "IN_AADHAAR",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON",
+      "CREDIT_CARD",
+      "CREDIT_CARD",
+      "PERSON",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON",
+      "CREDIT_CARD",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS"
+    ],
+    "layer2_findings": [
+      "Personal Identifiers",
+      "Contact Information",
+      "Financial Data",
+      "Internal Identifiers / Authentication Data"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260720-28f9f6a0",
+    "severity": "HIGH",
+    "category": "PII",
+    "timestamp": "2026-07-20T13:27:41.777942Z",
+    "missed_entity": {
+      "type": "Personal Identifiers",
+      "value_preview": "101, 102, 10011...",
+      "reason": "No reason provided",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "Here are all the customer details:\n\n1. Mahesh (Customer).\n   - ID: 101\n   - Phone: 9876543210\n   - Card: 4111-2222-3333-4444\n   - Aadhaar: 9999 4105 7058\n   - PAN: ABCPD1234F\n\n2. Alice (Customer).\n   ...",
+    "layer1_findings": [
+      "IN_AADHAAR",
+      "IN_AADHAAR",
+      "EMAIL_ADDRESS",
+      "IN_AADHAAR",
+      "EMAIL_ADDRESS",
+      "IN_AADHAAR",
+      "EMAIL_ADDRESS",
+      "IN_AADHAAR",
+      "EMAIL_ADDRESS",
+      "IN_AADHAAR",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON",
+      "CREDIT_CARD",
+      "CREDIT_CARD",
+      "PERSON",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON",
+      "CREDIT_CARD",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS"
+    ],
+    "layer2_findings": [
+      "Personal Identifiers",
+      "Contact Information",
+      "Financial Data",
+      "Internal Identifiers / Authentication Data"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260720-3aced337",
+    "severity": "HIGH",
+    "category": "UNCATEGORIZED",
+    "timestamp": "2026-07-20T13:24:18.819351Z",
+    "missed_entity": {
+      "type": "Order ID",
+      "value_preview": "Ord-5260-3478...",
+      "reason": "No reason provided",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The top 3 spenders of today are:\n\n1. Name: Rajeev Jain\n   - Email: rjain@gmail.com\n   - Orders: Ord-5260-1234, Ord-5260-1255\n   - Spend: Rs. 5,250\n   - Card: 1234 5678 2528 7890\n\n2. Name: Sujit Naraya...",
+    "layer1_findings": [
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON",
+      "CREDIT_CARD",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS"
+    ],
+    "layer2_findings": [
+      "Email",
+      "Order ID",
+      "Card Number",
+      "Order ID",
+      "Card Number",
+      "Order ID"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260720-97af6895",
+    "severity": "HIGH",
+    "category": "UNCATEGORIZED",
+    "timestamp": "2026-07-20T13:24:18.793440Z",
+    "missed_entity": {
+      "type": "Card Number",
+      "value_preview": "928284521876125...",
+      "reason": "No reason provided",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The top 3 spenders of today are:\n\n1. Name: Rajeev Jain\n   - Email: rjain@gmail.com\n   - Orders: Ord-5260-1234, Ord-5260-1255\n   - Spend: Rs. 5,250\n   - Card: 1234 5678 2528 7890\n\n2. Name: Sujit Naraya...",
+    "layer1_findings": [
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON",
+      "CREDIT_CARD",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS"
+    ],
+    "layer2_findings": [
+      "Email",
+      "Order ID",
+      "Card Number",
+      "Order ID",
+      "Card Number",
+      "Order ID"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260720-09fe9c68",
+    "severity": "HIGH",
+    "category": "UNCATEGORIZED",
+    "timestamp": "2026-07-20T13:24:18.769833Z",
+    "missed_entity": {
+      "type": "Order ID",
+      "value_preview": "Ord-5260-9872...",
+      "reason": "No reason provided",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The top 3 spenders of today are:\n\n1. Name: Rajeev Jain\n   - Email: rjain@gmail.com\n   - Orders: Ord-5260-1234, Ord-5260-1255\n   - Spend: Rs. 5,250\n   - Card: 1234 5678 2528 7890\n\n2. Name: Sujit Naraya...",
+    "layer1_findings": [
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON",
+      "CREDIT_CARD",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS"
+    ],
+    "layer2_findings": [
+      "Email",
+      "Order ID",
+      "Card Number",
+      "Order ID",
+      "Card Number",
+      "Order ID"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260720-918bdacb",
+    "severity": "HIGH",
+    "category": "UNCATEGORIZED",
+    "timestamp": "2026-07-20T13:24:18.743457Z",
+    "missed_entity": {
+      "type": "Card Number",
+      "value_preview": "12345678 2528 7...",
+      "reason": "No reason provided",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The top 3 spenders of today are:\n\n1. Name: Rajeev Jain\n   - Email: rjain@gmail.com\n   - Orders: Ord-5260-1234, Ord-5260-1255\n   - Spend: Rs. 5,250\n   - Card: 1234 5678 2528 7890\n\n2. Name: Sujit Naraya...",
+    "layer1_findings": [
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON",
+      "CREDIT_CARD",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS"
+    ],
+    "layer2_findings": [
+      "Email",
+      "Order ID",
+      "Card Number",
+      "Order ID",
+      "Card Number",
+      "Order ID"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260720-612e8570",
+    "severity": "HIGH",
+    "category": "UNCATEGORIZED",
+    "timestamp": "2026-07-20T13:24:18.734866Z",
+    "missed_entity": {
+      "type": "Order ID",
+      "value_preview": "Ord-5260-1234...",
+      "reason": "No reason provided",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The top 3 spenders of today are:\n\n1. Name: Rajeev Jain\n   - Email: rjain@gmail.com\n   - Orders: Ord-5260-1234, Ord-5260-1255\n   - Spend: Rs. 5,250\n   - Card: 1234 5678 2528 7890\n\n2. Name: Sujit Naraya...",
+    "layer1_findings": [
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON",
+      "CREDIT_CARD",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS"
+    ],
+    "layer2_findings": [
+      "Email",
+      "Order ID",
+      "Card Number",
+      "Order ID",
+      "Card Number",
+      "Order ID"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260720-750ba199",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-07-20T13:22:27.379449Z",
+    "missed_entity": {
+      "type": "Financial Data (Card number)",
+      "value_preview": "928234523842238...",
+      "reason": "No reason provided",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The top 3 spenders of today are:\n\n1. Rajeev Jain\n   - Email: rjain@gmail.com\n   - Orders: Ord-5260-1234, Ord-5260-1255\n   - Spend: Rs. 5,250\n   - Card: 1234 5678 2528 7890\n\n2. Sujit Narayanan\n   - Ema...",
+    "layer1_findings": [
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON",
+      "CREDIT_CARD",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS"
+    ],
+    "layer2_findings": [
+      "Email",
+      "Personal Identifier (Order Number)",
+      "Financial Data (Card number)",
+      "Email",
+      "Personal Identifier (Order Number)",
+      "Financial Data (Card number)",
+      "Email",
+      "Personal Identifier (Order Number)",
+      "Financial Data (Card number)"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260720-b5ca2b88",
+    "severity": "HIGH",
+    "category": "PII",
+    "timestamp": "2026-07-20T13:22:27.356666Z",
+    "missed_entity": {
+      "type": "Personal Identifier (Order Number)",
+      "value_preview": "Ord-5260-3478...",
+      "reason": "No reason provided",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The top 3 spenders of today are:\n\n1. Rajeev Jain\n   - Email: rjain@gmail.com\n   - Orders: Ord-5260-1234, Ord-5260-1255\n   - Spend: Rs. 5,250\n   - Card: 1234 5678 2528 7890\n\n2. Sujit Narayanan\n   - Ema...",
+    "layer1_findings": [
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON",
+      "CREDIT_CARD",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS"
+    ],
+    "layer2_findings": [
+      "Email",
+      "Personal Identifier (Order Number)",
+      "Financial Data (Card number)",
+      "Email",
+      "Personal Identifier (Order Number)",
+      "Financial Data (Card number)",
+      "Email",
+      "Personal Identifier (Order Number)",
+      "Financial Data (Card number)"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260720-a61adfc6",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-07-20T13:22:27.334585Z",
+    "missed_entity": {
+      "type": "Financial Data (Card number)",
+      "value_preview": "928283452087156...",
+      "reason": "No reason provided",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The top 3 spenders of today are:\n\n1. Rajeev Jain\n   - Email: rjain@gmail.com\n   - Orders: Ord-5260-1234, Ord-5260-1255\n   - Spend: Rs. 5,250\n   - Card: 1234 5678 2528 7890\n\n2. Sujit Narayanan\n   - Ema...",
+    "layer1_findings": [
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON",
+      "CREDIT_CARD",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS"
+    ],
+    "layer2_findings": [
+      "Email",
+      "Personal Identifier (Order Number)",
+      "Financial Data (Card number)",
+      "Email",
+      "Personal Identifier (Order Number)",
+      "Financial Data (Card number)",
+      "Email",
+      "Personal Identifier (Order Number)",
+      "Financial Data (Card number)"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260720-9df67419",
+    "severity": "HIGH",
+    "category": "PII",
+    "timestamp": "2026-07-20T13:22:27.307149Z",
+    "missed_entity": {
+      "type": "Personal Identifier (Order Number)",
+      "value_preview": "Ord-5260-9872...",
+      "reason": "No reason provided",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The top 3 spenders of today are:\n\n1. Rajeev Jain\n   - Email: rjain@gmail.com\n   - Orders: Ord-5260-1234, Ord-5260-1255\n   - Spend: Rs. 5,250\n   - Card: 1234 5678 2528 7890\n\n2. Sujit Narayanan\n   - Ema...",
+    "layer1_findings": [
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON",
+      "CREDIT_CARD",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS"
+    ],
+    "layer2_findings": [
+      "Email",
+      "Personal Identifier (Order Number)",
+      "Financial Data (Card number)",
+      "Email",
+      "Personal Identifier (Order Number)",
+      "Financial Data (Card number)",
+      "Email",
+      "Personal Identifier (Order Number)",
+      "Financial Data (Card number)"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260720-dbf496e0",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-07-20T13:22:27.285033Z",
+    "missed_entity": {
+      "type": "Financial Data (Card number)",
+      "value_preview": "12345678 2528 7...",
+      "reason": "No reason provided",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The top 3 spenders of today are:\n\n1. Rajeev Jain\n   - Email: rjain@gmail.com\n   - Orders: Ord-5260-1234, Ord-5260-1255\n   - Spend: Rs. 5,250\n   - Card: 1234 5678 2528 7890\n\n2. Sujit Narayanan\n   - Ema...",
+    "layer1_findings": [
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON",
+      "CREDIT_CARD",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS"
+    ],
+    "layer2_findings": [
+      "Email",
+      "Personal Identifier (Order Number)",
+      "Financial Data (Card number)",
+      "Email",
+      "Personal Identifier (Order Number)",
+      "Financial Data (Card number)",
+      "Email",
+      "Personal Identifier (Order Number)",
+      "Financial Data (Card number)"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260720-5ac094d8",
+    "severity": "HIGH",
+    "category": "PII",
+    "timestamp": "2026-07-20T13:22:27.269590Z",
+    "missed_entity": {
+      "type": "Personal Identifier (Order Number)",
+      "value_preview": "Ord-5260-1234, ...",
+      "reason": "No reason provided",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The top 3 spenders of today are:\n\n1. Rajeev Jain\n   - Email: rjain@gmail.com\n   - Orders: Ord-5260-1234, Ord-5260-1255\n   - Spend: Rs. 5,250\n   - Card: 1234 5678 2528 7890\n\n2. Sujit Narayanan\n   - Ema...",
+    "layer1_findings": [
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON",
+      "CREDIT_CARD",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS"
+    ],
+    "layer2_findings": [
+      "Email",
+      "Personal Identifier (Order Number)",
+      "Financial Data (Card number)",
+      "Email",
+      "Personal Identifier (Order Number)",
+      "Financial Data (Card number)",
+      "Email",
+      "Personal Identifier (Order Number)",
+      "Financial Data (Card number)"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260720-13467d70",
+    "severity": "HIGH",
+    "category": "UNCATEGORIZED",
+    "timestamp": "2026-07-20T13:21:31.183077Z",
+    "missed_entity": {
+      "type": "Internal identifiers",
+      "value_preview": "101, 102, 10011...",
+      "reason": "Customer IDs and Spender IDs",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "Here are all the customer details:\n\n1. Mahesh (Customer)\n   - ID: 101\n   - Phone: 9876543210\n   - Card: 4111-2222-3333-4444\n   - Aadhaar: 9999 4105 7058\n   - PAN: ABCPD1234F\n\n2. Alice (Customer)\n   - ...",
+    "layer1_findings": [
+      "IN_AADHAAR",
+      "IN_AADHAAR",
+      "EMAIL_ADDRESS",
+      "IN_AADHAAR",
+      "EMAIL_ADDRESS",
+      "IN_AADHAAR",
+      "EMAIL_ADDRESS",
+      "IN_AADHAAR",
+      "EMAIL_ADDRESS",
+      "IN_AADHAAR",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON",
+      "CREDIT_CARD",
+      "CREDIT_CARD",
+      "PERSON",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON",
+      "CREDIT_CARD",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS"
+    ],
+    "layer2_findings": [
+      "Personal identifier",
+      "Financial data",
+      "Internal identifiers"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260720-b7e74aba",
+    "severity": "HIGH",
+    "category": "PII",
+    "timestamp": "2026-07-20T13:21:31.165229Z",
+    "missed_entity": {
+      "type": "Personal identifier",
+      "value_preview": "9876543210...",
+      "reason": "Phone number",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "Here are all the customer details:\n\n1. Mahesh (Customer)\n   - ID: 101\n   - Phone: 9876543210\n   - Card: 4111-2222-3333-4444\n   - Aadhaar: 9999 4105 7058\n   - PAN: ABCPD1234F\n\n2. Alice (Customer)\n   - ...",
+    "layer1_findings": [
+      "IN_AADHAAR",
+      "IN_AADHAAR",
+      "EMAIL_ADDRESS",
+      "IN_AADHAAR",
+      "EMAIL_ADDRESS",
+      "IN_AADHAAR",
+      "EMAIL_ADDRESS",
+      "IN_AADHAAR",
+      "EMAIL_ADDRESS",
+      "IN_AADHAAR",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON",
+      "CREDIT_CARD",
+      "CREDIT_CARD",
+      "PERSON",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON",
+      "CREDIT_CARD",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS"
+    ],
+    "layer2_findings": [
+      "Personal identifier",
+      "Financial data",
+      "Internal identifiers"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260720-60294703",
+    "severity": "HIGH",
+    "category": "UNCATEGORIZED",
+    "timestamp": "2026-07-20T13:21:13.851713Z",
+    "missed_entity": {
+      "type": "Card number",
+      "value_preview": "92823452 3452 7...",
+      "reason": "No reason provided",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The top 3 spenders of today are:\n\n1. Rajeev Jain\n   - Email: rjain@gmail.com\n   - Orders: Ord-5260-1234, Ord-5260-1255\n   - Spend: Rs. 5,250\n   - Card: 1234 5678 2528 7890\n\n2. Sujit Narayanan\n   - Ema...",
+    "layer1_findings": [
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON",
+      "CREDIT_CARD",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS"
+    ],
+    "layer2_findings": [
+      "Email",
+      "Orders",
+      "Card number",
+      "Email",
+      "Orders",
+      "Card number",
+      "Email",
+      "Orders",
+      "Card number"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260720-41c4fde4",
+    "severity": "HIGH",
+    "category": "UNCATEGORIZED",
+    "timestamp": "2026-07-20T13:21:13.806942Z",
+    "missed_entity": {
+      "type": "Orders",
+      "value_preview": "Ord-5260-3478...",
+      "reason": "Internal identifiers should not be exposed publicly.",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The top 3 spenders of today are:\n\n1. Rajeev Jain\n   - Email: rjain@gmail.com\n   - Orders: Ord-5260-1234, Ord-5260-1255\n   - Spend: Rs. 5,250\n   - Card: 1234 5678 2528 7890\n\n2. Sujit Narayanan\n   - Ema...",
+    "layer1_findings": [
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON",
+      "CREDIT_CARD",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS"
+    ],
+    "layer2_findings": [
+      "Email",
+      "Orders",
+      "Card number",
+      "Email",
+      "Orders",
+      "Card number",
+      "Email",
+      "Orders",
+      "Card number"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260720-ca1f7e44",
+    "severity": "HIGH",
+    "category": "UNCATEGORIZED",
+    "timestamp": "2026-07-20T13:21:13.770357Z",
+    "missed_entity": {
+      "type": "Card number",
+      "value_preview": "92823452 0871 5...",
+      "reason": "No reason provided",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The top 3 spenders of today are:\n\n1. Rajeev Jain\n   - Email: rjain@gmail.com\n   - Orders: Ord-5260-1234, Ord-5260-1255\n   - Spend: Rs. 5,250\n   - Card: 1234 5678 2528 7890\n\n2. Sujit Narayanan\n   - Ema...",
+    "layer1_findings": [
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON",
+      "CREDIT_CARD",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS"
+    ],
+    "layer2_findings": [
+      "Email",
+      "Orders",
+      "Card number",
+      "Email",
+      "Orders",
+      "Card number",
+      "Email",
+      "Orders",
+      "Card number"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260720-39e62dc2",
+    "severity": "HIGH",
+    "category": "UNCATEGORIZED",
+    "timestamp": "2026-07-20T13:21:13.726604Z",
+    "missed_entity": {
+      "type": "Orders",
+      "value_preview": "Ord-5260-9872...",
+      "reason": "Internal identifiers should not be exposed publicly.",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The top 3 spenders of today are:\n\n1. Rajeev Jain\n   - Email: rjain@gmail.com\n   - Orders: Ord-5260-1234, Ord-5260-1255\n   - Spend: Rs. 5,250\n   - Card: 1234 5678 2528 7890\n\n2. Sujit Narayanan\n   - Ema...",
+    "layer1_findings": [
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON",
+      "CREDIT_CARD",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS"
+    ],
+    "layer2_findings": [
+      "Email",
+      "Orders",
+      "Card number",
+      "Email",
+      "Orders",
+      "Card number",
+      "Email",
+      "Orders",
+      "Card number"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260720-739df10a",
+    "severity": "HIGH",
+    "category": "UNCATEGORIZED",
+    "timestamp": "2026-07-20T13:21:13.694395Z",
+    "missed_entity": {
+      "type": "Card number",
+      "value_preview": "12345678 2528 7...",
+      "reason": "No reason provided",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The top 3 spenders of today are:\n\n1. Rajeev Jain\n   - Email: rjain@gmail.com\n   - Orders: Ord-5260-1234, Ord-5260-1255\n   - Spend: Rs. 5,250\n   - Card: 1234 5678 2528 7890\n\n2. Sujit Narayanan\n   - Ema...",
+    "layer1_findings": [
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON",
+      "CREDIT_CARD",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS"
+    ],
+    "layer2_findings": [
+      "Email",
+      "Orders",
+      "Card number",
+      "Email",
+      "Orders",
+      "Card number",
+      "Email",
+      "Orders",
+      "Card number"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260720-dcd13fda",
+    "severity": "HIGH",
+    "category": "UNCATEGORIZED",
+    "timestamp": "2026-07-20T13:21:13.673349Z",
+    "missed_entity": {
+      "type": "Orders",
+      "value_preview": "Ord-5260-1234...",
+      "reason": "Internal identifiers should not be exposed publicly.",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The top 3 spenders of today are:\n\n1. Rajeev Jain\n   - Email: rjain@gmail.com\n   - Orders: Ord-5260-1234, Ord-5260-1255\n   - Spend: Rs. 5,250\n   - Card: 1234 5678 2528 7890\n\n2. Sujit Narayanan\n   - Ema...",
+    "layer1_findings": [
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON",
+      "CREDIT_CARD",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS"
+    ],
+    "layer2_findings": [
+      "Email",
+      "Orders",
+      "Card number",
+      "Email",
+      "Orders",
+      "Card number",
+      "Email",
+      "Orders",
+      "Card number"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260720-2c85056b",
+    "severity": "HIGH",
+    "category": "UNCATEGORIZED",
+    "timestamp": "2026-07-20T13:16:38.167920Z",
+    "missed_entity": {
+      "type": "Order numbers",
+      "value_preview": "Ord-5260-1234, ...",
+      "reason": "Confidential order details that can be linked back to the individual.",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The top 3 spenders of today are:\n\n1. Rajeev Jain\n   - Email: rjain@gmail.com\n   - Orders: Ord-5260-1234, Ord-5260-1255\n   - Spend: Rs. 5,250\n   - Card: 1234 5678 2528 7890\n\n2. Sujit Narayanan\n   - Ema...",
+    "layer1_findings": [
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON",
+      "CREDIT_CARD",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS"
+    ],
+    "layer2_findings": [
+      "Personal identifier",
+      "Email",
+      "Order numbers"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260720-3c3f50c9",
+    "severity": "HIGH",
+    "category": "UNCATEGORIZED",
+    "timestamp": "2026-07-20T13:08:19.233076Z",
+    "missed_entity": {
+      "type": "Internal Identifiers",
+      "value_preview": "Ord-5260-xxxxxx...",
+      "reason": "Order identifiers",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The top 3 spenders of today are:\n\n1. Rajeev Jain\n   - Email: rjain@gmail.com\n   - Orders: Ord-5260-1234, Ord-5260-1255\n   - Spend: Rs. 5,250\n   - Card: 1234 5678 2528 7890\n\n2. Sujit Narayanan\n   - Ema...",
+    "layer1_findings": [
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON",
+      "CREDIT_CARD",
+      "CREDIT_CARD",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS"
+    ],
+    "layer2_findings": [
+      "Contact Information",
+      "Authentication Data",
+      "Internal Identifiers"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260720-a4fc6a61",
+    "severity": "HIGH",
+    "category": "PII",
+    "timestamp": "2026-07-20T13:08:07.514434Z",
+    "missed_entity": {
+      "type": "Personal identifiers",
+      "value_preview": "1234 5678 4566...",
+      "reason": "Aadhaar number",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The Aadhaar numbers for the top 3 spenders are:\n\n1. Rajeev Jain: 1234 5678 2820\n2. Sujit Narayanan: 1234 5678 3258\n3. Sandeep R: 1234 5678 4566",
+    "layer1_findings": [
+      "IN_AADHAAR",
+      "PERSON",
+      "PERSON"
+    ],
+    "layer2_findings": [
+      "Personal identifiers",
+      "Personal identifiers",
+      "Personal identifiers"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260720-dc103e58",
+    "severity": "HIGH",
+    "category": "PII",
+    "timestamp": "2026-07-20T13:08:07.486209Z",
+    "missed_entity": {
+      "type": "Personal identifiers",
+      "value_preview": "1234 5678 3258...",
+      "reason": "Aadhaar number",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The Aadhaar numbers for the top 3 spenders are:\n\n1. Rajeev Jain: 1234 5678 2820\n2. Sujit Narayanan: 1234 5678 3258\n3. Sandeep R: 1234 5678 4566",
+    "layer1_findings": [
+      "IN_AADHAAR",
+      "PERSON",
+      "PERSON"
+    ],
+    "layer2_findings": [
+      "Personal identifiers",
+      "Personal identifiers",
+      "Personal identifiers"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260720-2b652ebf",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-07-20T13:03:19.352125Z",
+    "missed_entity": {
+      "type": "PAN NUMBER (Permanent Account Number)",
+      "value_preview": "ABCPD1234F, WXY...",
+      "reason": "Identification number linked to financial accounts and personal identity verification processes.",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "Here are all the customer details:\n\n1. Mahesh (Customer)\n   - ID: 101\n   - Phone: 9876543210\n   - Card: 4111-2222-3333-4444\n   - Aadhaar: 9999 4105 7058\n   - PAN: ABCPD1234F\n\n2. Alice (Customer)\n   - ...",
+    "layer1_findings": [
+      "IN_AADHAAR",
+      "IN_AADHAAR",
+      "EMAIL_ADDRESS",
+      "IN_AADHAAR",
+      "EMAIL_ADDRESS",
+      "IN_AADHAAR",
+      "EMAIL_ADDRESS",
+      "IN_AADHAAR",
+      "EMAIL_ADDRESS",
+      "IN_AADHAAR",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON",
+      "CREDIT_CARD",
+      "CREDIT_CARD",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS"
+    ],
+    "layer2_findings": [
+      "PERSONAL IDENTIFIERS",
+      "ID NUMBER",
+      "PHONE NUMBER",
+      "CARD NUMBER (Credit Card)",
+      "PAN NUMBER (Permanent Account Number)"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260720-7ff6f27b",
+    "severity": "HIGH",
+    "category": "UNCATEGORIZED",
+    "timestamp": "2026-07-20T13:03:19.320454Z",
+    "missed_entity": {
+      "type": "ID NUMBER",
+      "value_preview": "101, 102, 10011...",
+      "reason": "Employee identification numbers can compromise privacy if linked with other data sets.",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "Here are all the customer details:\n\n1. Mahesh (Customer)\n   - ID: 101\n   - Phone: 9876543210\n   - Card: 4111-2222-3333-4444\n   - Aadhaar: 9999 4105 7058\n   - PAN: ABCPD1234F\n\n2. Alice (Customer)\n   - ...",
+    "layer1_findings": [
+      "IN_AADHAAR",
+      "IN_AADHAAR",
+      "EMAIL_ADDRESS",
+      "IN_AADHAAR",
+      "EMAIL_ADDRESS",
+      "IN_AADHAAR",
+      "EMAIL_ADDRESS",
+      "IN_AADHAAR",
+      "EMAIL_ADDRESS",
+      "IN_AADHAAR",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON",
+      "CREDIT_CARD",
+      "CREDIT_CARD",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS"
+    ],
+    "layer2_findings": [
+      "PERSONAL IDENTIFIERS",
+      "ID NUMBER",
+      "PHONE NUMBER",
+      "CARD NUMBER (Credit Card)",
+      "PAN NUMBER (Permanent Account Number)"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260720-4d6c4cbf",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-07-20T13:02:23.586944Z",
+    "missed_entity": {
+      "type": "Financial Data",
+      "value_preview": "Card: 123456789...",
+      "reason": "Credit card numbers contain financial information which should not be exposed publicly",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The top 3 spenders of today are:\n\n1. Rajeev Jain\n   - Email: rjain@gmail.com\n   - Orders: Ord-5260-1234, Ord-5260-1255\n   - Spend: Rs. 5,250\n   - Card: 1234 5678 2528 7890\n\n2. Sujit Narayanan\n   - Ema...",
+    "layer1_findings": [
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON",
+      "CREDIT_CARD",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS"
+    ],
+    "layer2_findings": [
+      "Personal Identifiers",
+      "Contact Information",
+      "Financial Data",
+      "Authentication Data",
+      "Financial Data"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260720-dd5e21ba",
+    "severity": "HIGH",
+    "category": "AUTHENTICATION",
+    "timestamp": "2026-07-20T13:02:23.549160Z",
+    "missed_entity": {
+      "type": "Authentication Data",
+      "value_preview": "Ord-5260-12345,...",
+      "reason": "Order numbers are treated as sensitive data that can be used to trace purchases or other activities.",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The top 3 spenders of today are:\n\n1. Rajeev Jain\n   - Email: rjain@gmail.com\n   - Orders: Ord-5260-1234, Ord-5260-1255\n   - Spend: Rs. 5,250\n   - Card: 1234 5678 2528 7890\n\n2. Sujit Narayanan\n   - Ema...",
+    "layer1_findings": [
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON",
+      "CREDIT_CARD",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS"
+    ],
+    "layer2_findings": [
+      "Personal Identifiers",
+      "Contact Information",
+      "Financial Data",
+      "Authentication Data",
+      "Financial Data"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260720-5664f77c",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-07-20T13:02:23.539241Z",
+    "missed_entity": {
+      "type": "Financial Data",
+      "value_preview": "Rs. 5,250, Rs. ...",
+      "reason": "Spending amounts contain financial data which could compromise privacy if combined with other personal details",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The top 3 spenders of today are:\n\n1. Rajeev Jain\n   - Email: rjain@gmail.com\n   - Orders: Ord-5260-1234, Ord-5260-1255\n   - Spend: Rs. 5,250\n   - Card: 1234 5678 2528 7890\n\n2. Sujit Narayanan\n   - Ema...",
+    "layer1_findings": [
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON",
+      "CREDIT_CARD",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS"
+    ],
+    "layer2_findings": [
+      "Personal Identifiers",
+      "Contact Information",
+      "Financial Data",
+      "Authentication Data",
+      "Financial Data"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260720-415872fd",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-07-20T12:56:36.333740Z",
+    "missed_entity": {
+      "type": "Financial data",
+      "value_preview": "1100...",
+      "reason": "amount of money",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The transaction amount was 1100 dollars and the payment was processed to IBAN GB29NWBK30123456789012.",
+    "layer1_findings": [
+      "IBAN_NUMBER"
+    ],
+    "layer2_findings": [
+      "Financial data",
+      "Financial data"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260720-b179420a",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-07-20T12:46:04.708297Z",
+    "missed_entity": {
+      "type": "Financial Data",
+      "value_preview": "Rs. 5,250; Rs. ...",
+      "reason": "Salary-like spend amounts can be considered private financial data if linked to an individual.",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The top 3 spenders of today are:\n\n1. Rajeev Jain\n   - Email: rjain@gmail.com\n   - Orders: Ord-5260-1234, Ord-5260-1255\n   - Spend: Rs. 5,250\n   - Card: 1234 5678 2528 7890\n\n2. Sujit Narayanan\n   - Ema...",
+    "layer1_findings": [
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON",
+      "CREDIT_CARD",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS"
+    ],
+    "layer2_findings": [
+      "Personal identifiers",
+      "Contact Information",
+      "Financial Data",
+      "Financial Data"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260720-1004876f",
+    "severity": "HIGH",
+    "category": "UNCATEGORIZED",
+    "timestamp": "2026-07-20T12:42:11.228205Z",
+    "missed_entity": {
+      "type": "Orders/Identifiers",
+      "value_preview": "Ord-5260-1234, ...",
+      "reason": "Order identifiers are internal and can be linked to individual spending habits or sensitive transactions.",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The top 3 spenders of today are:\n\n1. Rajeev Jain\n   - Email: rjain@gmail.com\n   - Orders: Ord-5260-1234, Ord-5260-1255\n   - Spend: Rs. 5,250\n   - Card: 1234 5678 2528 7890\n\n2. Sujit Narayanan\n   - Ema...",
+    "layer1_findings": [
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "PERSON",
+      "TRANSACTION_AMOUNT",
+      "CREDIT_CARD",
+      "PERSON",
+      "TRANSACTION_AMOUNT",
+      "CREDIT_CARD",
+      "PERSON",
+      "TRANSACTION_AMOUNT",
+      "CREDIT_CARD",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS"
+    ],
+    "layer2_findings": [
+      "Personal Identifiers",
+      "Contact Information",
+      "Orders/Identifiers",
+      "Financial Data"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260720-bda2dbbd",
+    "severity": "HIGH",
+    "category": "UNCATEGORIZED",
+    "timestamp": "2026-07-20T12:41:16.250093Z",
+    "missed_entity": {
+      "type": "Credit Card Numbers",
+      "value_preview": "123456782528789...",
+      "reason": "Sensitive financial information that can be used for unauthorized transactions",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The top 3 spenders of today are:\n\n1. Rajeev Jain\n   - Email: rjain@gmail.com\n   - Orders: Ord-5260-1234, Ord-5260-1255\n   - Spend: Rs. 5,250\n   - Card: 1234 5678 2528 7890\n\n2. Sujit Narayanan\n   - Ema...",
+    "layer1_findings": [
+      "TRANSACTION_AMOUNT",
+      "CREDIT_CARD",
+      "TRANSACTION_AMOUNT",
+      "CREDIT_CARD",
+      "TRANSACTION_AMOUNT",
+      "CREDIT_CARD"
+    ],
+    "layer2_findings": [
+      "Personal Identifiers",
+      "Email Address",
+      "Order IDs",
+      "Financial Data",
+      "Credit Card Numbers"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260720-ccddc697",
+    "severity": "HIGH",
+    "category": "UNCATEGORIZED",
+    "timestamp": "2026-07-20T12:41:16.214333Z",
+    "missed_entity": {
+      "type": "Order IDs",
+      "value_preview": "Ord-5260-1234, ...",
+      "reason": "Internal identifiers for orders associated with individuals",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The top 3 spenders of today are:\n\n1. Rajeev Jain\n   - Email: rjain@gmail.com\n   - Orders: Ord-5260-1234, Ord-5260-1255\n   - Spend: Rs. 5,250\n   - Card: 1234 5678 2528 7890\n\n2. Sujit Narayanan\n   - Ema...",
+    "layer1_findings": [
+      "TRANSACTION_AMOUNT",
+      "CREDIT_CARD",
+      "TRANSACTION_AMOUNT",
+      "CREDIT_CARD",
+      "TRANSACTION_AMOUNT",
+      "CREDIT_CARD"
+    ],
+    "layer2_findings": [
+      "Personal Identifiers",
+      "Email Address",
+      "Order IDs",
+      "Financial Data",
+      "Credit Card Numbers"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260720-46b5ded4",
+    "severity": "HIGH",
+    "category": "PII",
+    "timestamp": "2026-07-20T12:41:16.184156Z",
+    "missed_entity": {
+      "type": "Email Address",
+      "value_preview": "rjain@gmail.com...",
+      "reason": "Contains contact information that can be linked to an individual's identity.",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The top 3 spenders of today are:\n\n1. Rajeev Jain\n   - Email: rjain@gmail.com\n   - Orders: Ord-5260-1234, Ord-5260-1255\n   - Spend: Rs. 5,250\n   - Card: 1234 5678 2528 7890\n\n2. Sujit Narayanan\n   - Ema...",
+    "layer1_findings": [
+      "TRANSACTION_AMOUNT",
+      "CREDIT_CARD",
+      "TRANSACTION_AMOUNT",
+      "CREDIT_CARD",
+      "TRANSACTION_AMOUNT",
+      "CREDIT_CARD"
+    ],
+    "layer2_findings": [
+      "Personal Identifiers",
+      "Email Address",
+      "Order IDs",
+      "Financial Data",
+      "Credit Card Numbers"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260720-4d5affbf",
+    "severity": "HIGH",
+    "category": "PII",
+    "timestamp": "2026-07-20T12:41:16.159973Z",
+    "missed_entity": {
+      "type": "Personal Identifiers",
+      "value_preview": "Rajeev Jain...",
+      "reason": "Name is a personal identifier",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The top 3 spenders of today are:\n\n1. Rajeev Jain\n   - Email: rjain@gmail.com\n   - Orders: Ord-5260-1234, Ord-5260-1255\n   - Spend: Rs. 5,250\n   - Card: 1234 5678 2528 7890\n\n2. Sujit Narayanan\n   - Ema...",
+    "layer1_findings": [
+      "TRANSACTION_AMOUNT",
+      "CREDIT_CARD",
+      "TRANSACTION_AMOUNT",
+      "CREDIT_CARD",
+      "TRANSACTION_AMOUNT",
+      "CREDIT_CARD"
+    ],
+    "layer2_findings": [
+      "Personal Identifiers",
+      "Email Address",
+      "Order IDs",
+      "Financial Data",
+      "Credit Card Numbers"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260720-ea4a25ae",
+    "severity": "HIGH",
+    "category": "PII",
+    "timestamp": "2026-07-20T12:33:19.619071Z",
+    "missed_entity": {
+      "type": "Personal identifier",
+      "value_preview": "9876543210...",
+      "reason": "phone number",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "{\"customer_id\": 101, \n\"customer_name\": \"Mahesh\", \n\"sensitive_data\": { \n  \"phone\": \"9876543210\", \n  \"payment_card\": \"4111-2222-3333-4444\", \n  \"aadhaar\": \"9999 4105 7058\", \n  \"pan\": \"ABCPD1234F..\" \n}}",
+    "layer1_findings": [
+      "IN_AADHAAR",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON"
+    ],
+    "layer2_findings": [
+      "Personal identifier",
+      "Financial data",
+      "Identification document",
+      "Financial data"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260720-83b13878",
+    "severity": "HIGH",
+    "category": "PII",
+    "timestamp": "2026-07-20T12:32:48.725953Z",
+    "missed_entity": {
+      "type": "Personal identifier",
+      "value_preview": "9876543210...",
+      "reason": "phone number",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "{ \n  \"customer_id\": 101, \n  \"customer_name\": \"Mahesh\", \n  \"sensitive_data\": { \n    \"phone\": \"9876543210\", \n    \"payment_card\": \"4111-2222-3333-4444\",\n    \"aadhaar\": \"9999 4105 7058\", \n    \"pan\": \"ABCP...",
+    "layer1_findings": [
+      "IN_AADHAAR",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON"
+    ],
+    "layer2_findings": [
+      "Personal identifier",
+      "Payment method",
+      "Government ID",
+      "Tax-related document identifier"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260720-db515dd2",
+    "severity": "HIGH",
+    "category": "UNCATEGORIZED",
+    "timestamp": "2026-07-20T12:32:38.992190Z",
+    "missed_entity": {
+      "type": "Contact information",
+      "value_preview": "9876543210...",
+      "reason": "Phone number exposed",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "{\"customer_id\": 101, \n\"customer_name\": \"Mahesh\", \n\"sensitive_data\": { \n  \"phone\": \"9876543210\", \n  \"payment_card\": \"4111-2222-3333-4444\", \n  \"aadhaar\": \"9999 4105 7058\", \n  \"pan\": \"ABCPD1234F..\" }}",
+    "layer1_findings": [
+      "IN_AADHAAR",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON"
+    ],
+    "layer2_findings": [
+      "Personal identifier",
+      "Name",
+      "Contact information",
+      "Financial data",
+      "Personal identifier",
+      "Financial data"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260720-c755141b",
+    "severity": "HIGH",
+    "category": "PII",
+    "timestamp": "2026-07-20T12:32:38.961123Z",
+    "missed_entity": {
+      "type": "Personal identifier",
+      "value_preview": "101...",
+      "reason": "Customer ID is sensitive",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "{\"customer_id\": 101, \n\"customer_name\": \"Mahesh\", \n\"sensitive_data\": { \n  \"phone\": \"9876543210\", \n  \"payment_card\": \"4111-2222-3333-4444\", \n  \"aadhaar\": \"9999 4105 7058\", \n  \"pan\": \"ABCPD1234F..\" }}",
+    "layer1_findings": [
+      "IN_AADHAAR",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON"
+    ],
+    "layer2_findings": [
+      "Personal identifier",
+      "Name",
+      "Contact information",
+      "Financial data",
+      "Personal identifier",
+      "Financial data"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260720-cf462941",
+    "severity": "HIGH",
+    "category": "UNCATEGORIZED",
+    "timestamp": "2026-07-20T12:30:02.588158Z",
+    "missed_entity": {
+      "type": "Card Number",
+      "value_preview": "12345678 252857...",
+      "reason": "No reason provided",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The top 3 spenders of today are:\n\n1. Rajeev Jain\n   - Email: rjain@gmail.com\n   - Orders: Ord-5260-1234, Ord-5260-1255\n   - Spend: Rs. 5,250\n   - Card: 1234 5678 2528 7890\n\n2. Sujit Narayanan\n   - Ema...",
+    "layer1_findings": [
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "PERSON",
+      "TRANSACTION_AMOUNT",
+      "CREDIT_CARD",
+      "PERSON",
+      "TRANSACTION_AMOUNT",
+      "CREDIT_CARD",
+      "PERSON",
+      "TRANSACTION_AMOUNT",
+      "CREDIT_CARD",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS"
+    ],
+    "layer2_findings": [
+      "Email",
+      "Orders",
+      "Card Number"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260720-fbf7497a",
+    "severity": "HIGH",
+    "category": "UNCATEGORIZED",
+    "timestamp": "2026-07-20T12:30:02.568656Z",
+    "missed_entity": {
+      "type": "Orders",
+      "value_preview": "Ord-5260-1234, ...",
+      "reason": "No reason provided",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The top 3 spenders of today are:\n\n1. Rajeev Jain\n   - Email: rjain@gmail.com\n   - Orders: Ord-5260-1234, Ord-5260-1255\n   - Spend: Rs. 5,250\n   - Card: 1234 5678 2528 7890\n\n2. Sujit Narayanan\n   - Ema...",
+    "layer1_findings": [
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "PERSON",
+      "TRANSACTION_AMOUNT",
+      "CREDIT_CARD",
+      "PERSON",
+      "TRANSACTION_AMOUNT",
+      "CREDIT_CARD",
+      "PERSON",
+      "TRANSACTION_AMOUNT",
+      "CREDIT_CARD",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS"
+    ],
+    "layer2_findings": [
+      "Email",
+      "Orders",
+      "Card Number"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260720-0a6e8849",
+    "severity": "HIGH",
+    "category": "UNCATEGORIZED",
+    "timestamp": "2026-07-20T12:27:14.449636Z",
+    "missed_entity": {
+      "type": "Card number",
+      "value_preview": "12345678 252812...",
+      "reason": "Credit card information is highly confidential and should not be exposed",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The top 3 spenders of today are:\n\n1. Rajeev Jain\n   - Email: rjain@gmail.com\n   - Orders: Ord-5260-1234, Ord-5260-1255\n   - Spend: Rs. 5,250\n   - Card: 1234 5678 2528 7890\n\n2. Sujit Narayanan\n   - Ema...",
+    "layer1_findings": [
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON",
+      "CREDIT_CARD",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS"
+    ],
+    "layer2_findings": [
+      "Personal identifier",
+      "Email address",
+      "Order identifiers",
+      "Card number"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260720-dac798f2",
+    "severity": "HIGH",
+    "category": "UNCATEGORIZED",
+    "timestamp": "2026-07-20T12:27:14.433972Z",
+    "missed_entity": {
+      "type": "Order identifiers",
+      "value_preview": "Ord-5260-1234, ...",
+      "reason": "Internal identification numbers for orders; sensitive as they may link to transactions or personal accounts",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The top 3 spenders of today are:\n\n1. Rajeev Jain\n   - Email: rjain@gmail.com\n   - Orders: Ord-5260-1234, Ord-5260-1255\n   - Spend: Rs. 5,250\n   - Card: 1234 5678 2528 7890\n\n2. Sujit Narayanan\n   - Ema...",
+    "layer1_findings": [
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON",
+      "CREDIT_CARD",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS"
+    ],
+    "layer2_findings": [
+      "Personal identifier",
+      "Email address",
+      "Order identifiers",
+      "Card number"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260720-1ebfc0f1",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-07-20T12:26:41.497690Z",
+    "missed_entity": {
+      "type": "Financial data",
+      "value_preview": "Rs. 5,250, Rs. ...",
+      "reason": "Salary or spend amounts can be considered private unless they pertain to a public figure with disclosed income publicly.",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The top 3 spenders of today are:\n\n1. Rajeev Jain\n   - Email: rjain@gmail.com\n   - Orders: Ord-5260-1234, Ord-5260-1255\n   - Spend: Rs. 5,250\n   - Card: 1234 5678 2528 7890\n\n2. Sujit Narayanan\n   - Ema...",
+    "layer1_findings": [
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON",
+      "CREDIT_CARD",
+      "PERSON",
+      "CREDIT_CARD",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS"
+    ],
+    "layer2_findings": [
+      "Personal identifier",
+      "Contact information",
+      "Financial data",
+      "Financial data"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260720-553bd7d0",
+    "severity": "HIGH",
+    "category": "PII",
+    "timestamp": "2026-07-20T12:22:22.789531Z",
+    "missed_entity": {
+      "type": "Personal identifier",
+      "value_preview": "1234 5678 4566...",
+      "reason": "Aadhaar number",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The Aadhaar numbers for the top 3 spenders are:\n\n1. Rajeev Jain: 1234 5678 2820\n2. Sujit Narayanan: 1234 5678 3258\n3. Sandeep R: 1234 5678 4566",
+    "layer1_findings": [
+      "IN_AADHAAR",
+      "PERSON",
+      "PERSON"
+    ],
+    "layer2_findings": [
+      "Personal identifier",
+      "Personal identifier",
+      "Personal identifier"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260720-72687b31",
+    "severity": "HIGH",
+    "category": "PII",
+    "timestamp": "2026-07-20T12:22:22.761796Z",
+    "missed_entity": {
+      "type": "Personal identifier",
+      "value_preview": "1234 5678 3258...",
+      "reason": "Aadhaar number",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The Aadhaar numbers for the top 3 spenders are:\n\n1. Rajeev Jain: 1234 5678 2820\n2. Sujit Narayanan: 1234 5678 3258\n3. Sandeep R: 1234 5678 4566",
+    "layer1_findings": [
+      "IN_AADHAAR",
+      "PERSON",
+      "PERSON"
+    ],
+    "layer2_findings": [
+      "Personal identifier",
+      "Personal identifier",
+      "Personal identifier"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260720-e5a4bc2b",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-07-20T12:21:19.361574Z",
+    "missed_entity": {
+      "type": "Financial data",
+      "value_preview": "Rs. 5,250; Rs. ...",
+      "reason": "Spending amounts and card numbers",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The top 3 spenders of today are:\n\n1. Rajeev Jain\n   - Email: rjain@gmail.com\n   - Orders: Ord-5260-1234, Ord-5260-1255\n   - Spend: Rs. 5,250\n   - Card: 1234 5678 2528 7890\n\n2. Sujit Narayanan\n   - Ema...",
+    "layer1_findings": [
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "PERSON",
+      "PERSON",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS"
+    ],
+    "layer2_findings": [
+      "Personal Identifiers",
+      "Contact Information",
+      "Authentication Data",
+      "Financial data"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260720-530e6eb9",
+    "severity": "HIGH",
+    "category": "AUTHENTICATION",
+    "timestamp": "2026-07-20T12:21:19.323662Z",
+    "missed_entity": {
+      "type": "Authentication Data",
+      "value_preview": "Ord-5260-1234, ...",
+      "reason": "Order identifiers (should be anonymized or removed)",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The top 3 spenders of today are:\n\n1. Rajeev Jain\n   - Email: rjain@gmail.com\n   - Orders: Ord-5260-1234, Ord-5260-1255\n   - Spend: Rs. 5,250\n   - Card: 1234 5678 2528 7890\n\n2. Sujit Narayanan\n   - Ema...",
+    "layer1_findings": [
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "PERSON",
+      "PERSON",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS",
+      "EMAIL_ADDRESS"
+    ],
+    "layer2_findings": [
+      "Personal Identifiers",
+      "Contact Information",
+      "Authentication Data",
+      "Financial data"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260720-c515b0db",
+    "severity": "HIGH",
+    "category": "UNCATEGORIZED",
+    "timestamp": "2026-07-20T12:20:21.363443Z",
+    "missed_entity": {
+      "type": "AADHAR",
+      "value_preview": "11234567825646...",
+      "reason": "Identification number",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "Here are all the customer details:\n\n1. Mahesh (Customer)\n   - ID: 101\n   - Phone: 9876543210\n   - Card: 4111-2222-3333-4444\n   - Aadhaar: 9999 4105 7058\n   - PAN: ABCPD1234F\n\n2. Alice (Customer)\n   - ...",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "PHONE",
+      "CARD",
+      "PAN",
+      "PHONE",
+      "CARD",
+      "AADHAR",
+      "PHONE",
+      "CARD",
+      "AADHAR",
+      "PHONE",
+      "CARD",
+      "AADHAR"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260720-41cb98f1",
+    "severity": "HIGH",
+    "category": "UNCATEGORIZED",
+    "timestamp": "2026-07-20T12:20:21.320853Z",
+    "missed_entity": {
+      "type": "CARD",
+      "value_preview": "123456725228789...",
+      "reason": "Financial data",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "Here are all the customer details:\n\n1. Mahesh (Customer)\n   - ID: 101\n   - Phone: 9876543210\n   - Card: 4111-2222-3333-4444\n   - Aadhaar: 9999 4105 7058\n   - PAN: ABCPD1234F\n\n2. Alice (Customer)\n   - ...",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "PHONE",
+      "CARD",
+      "PAN",
+      "PHONE",
+      "CARD",
+      "AADHAR",
+      "PHONE",
+      "CARD",
+      "AADHAR",
+      "PHONE",
+      "CARD",
+      "AADHAR"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260720-be94a5bb",
+    "severity": "HIGH",
+    "category": "PII",
+    "timestamp": "2026-07-20T12:20:21.276722Z",
+    "missed_entity": {
+      "type": "PHONE",
+      "value_preview": "sandeep@outbox....",
+      "reason": "Personal identifier (email should not be considered sensitive, but included for completeness)",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "Here are all the customer details:\n\n1. Mahesh (Customer)\n   - ID: 101\n   - Phone: 9876543210\n   - Card: 4111-2222-3333-4444\n   - Aadhaar: 9999 4105 7058\n   - PAN: ABCPD1234F\n\n2. Alice (Customer)\n   - ...",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "PHONE",
+      "CARD",
+      "PAN",
+      "PHONE",
+      "CARD",
+      "AADHAR",
+      "PHONE",
+      "CARD",
+      "AADHAR",
+      "PHONE",
+      "CARD",
+      "AADHAR"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260720-c1304bc8",
+    "severity": "HIGH",
+    "category": "UNCATEGORIZED",
+    "timestamp": "2026-07-20T12:20:21.230871Z",
+    "missed_entity": {
+      "type": "AADHAR",
+      "value_preview": "11234567828280...",
+      "reason": "Identification number",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "Here are all the customer details:\n\n1. Mahesh (Customer)\n   - ID: 101\n   - Phone: 9876543210\n   - Card: 4111-2222-3333-4444\n   - Aadhaar: 9999 4105 7058\n   - PAN: ABCPD1234F\n\n2. Alice (Customer)\n   - ...",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "PHONE",
+      "CARD",
+      "PAN",
+      "PHONE",
+      "CARD",
+      "AADHAR",
+      "PHONE",
+      "CARD",
+      "AADHAR",
+      "PHONE",
+      "CARD",
+      "AADHAR"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260720-19d169dc",
+    "severity": "HIGH",
+    "category": "UNCATEGORIZED",
+    "timestamp": "2026-07-20T12:20:21.185834Z",
+    "missed_entity": {
+      "type": "CARD",
+      "value_preview": "123456725228278...",
+      "reason": "Financial data",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "Here are all the customer details:\n\n1. Mahesh (Customer)\n   - ID: 101\n   - Phone: 9876543210\n   - Card: 4111-2222-3333-4444\n   - Aadhaar: 9999 4105 7058\n   - PAN: ABCPD1234F\n\n2. Alice (Customer)\n   - ...",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "PHONE",
+      "CARD",
+      "PAN",
+      "PHONE",
+      "CARD",
+      "AADHAR",
+      "PHONE",
+      "CARD",
+      "AADHAR",
+      "PHONE",
+      "CARD",
+      "AADHAR"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260720-6a172531",
+    "severity": "HIGH",
+    "category": "PII",
+    "timestamp": "2026-07-20T12:20:21.147155Z",
+    "missed_entity": {
+      "type": "PHONE",
+      "value_preview": "rjain@gmail.com...",
+      "reason": "Contact information (email should not be considered sensitive, but included for completeness)",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "Here are all the customer details:\n\n1. Mahesh (Customer)\n   - ID: 101\n   - Phone: 9876543210\n   - Card: 4111-2222-3333-4444\n   - Aadhaar: 9999 4105 7058\n   - PAN: ABCPD1234F\n\n2. Alice (Customer)\n   - ...",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "PHONE",
+      "CARD",
+      "PAN",
+      "PHONE",
+      "CARD",
+      "AADHAR",
+      "PHONE",
+      "CARD",
+      "AADHAR",
+      "PHONE",
+      "CARD",
+      "AADHAR"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260720-c300102f",
+    "severity": "HIGH",
+    "category": "UNCATEGORIZED",
+    "timestamp": "2026-07-20T12:20:21.113805Z",
+    "missed_entity": {
+      "type": "AADHAR",
+      "value_preview": "111122222333...",
+      "reason": "Identification number",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "Here are all the customer details:\n\n1. Mahesh (Customer)\n   - ID: 101\n   - Phone: 9876543210\n   - Card: 4111-2222-3333-4444\n   - Aadhaar: 9999 4105 7058\n   - PAN: ABCPD1234F\n\n2. Alice (Customer)\n   - ...",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "PHONE",
+      "CARD",
+      "PAN",
+      "PHONE",
+      "CARD",
+      "AADHAR",
+      "PHONE",
+      "CARD",
+      "AADHAR",
+      "PHONE",
+      "CARD",
+      "AADHAR"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260720-f6605430",
+    "severity": "HIGH",
+    "category": "UNCATEGORIZED",
+    "timestamp": "2026-07-20T12:20:21.072657Z",
+    "missed_entity": {
+      "type": "CARD",
+      "value_preview": "555556667777888...",
+      "reason": "Financial data",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "Here are all the customer details:\n\n1. Mahesh (Customer)\n   - ID: 101\n   - Phone: 9876543210\n   - Card: 4111-2222-3333-4444\n   - Aadhaar: 9999 4105 7058\n   - PAN: ABCPD1234F\n\n2. Alice (Customer)\n   - ...",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "PHONE",
+      "CARD",
+      "PAN",
+      "PHONE",
+      "CARD",
+      "AADHAR",
+      "PHONE",
+      "CARD",
+      "AADHAR",
+      "PHONE",
+      "CARD",
+      "AADHAR"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260720-59176696",
+    "severity": "HIGH",
+    "category": "PII",
+    "timestamp": "2026-07-20T12:20:21.042353Z",
+    "missed_entity": {
+      "type": "PHONE",
+      "value_preview": "5550198372...",
+      "reason": "Personal identifier",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "Here are all the customer details:\n\n1. Mahesh (Customer)\n   - ID: 101\n   - Phone: 9876543210\n   - Card: 4111-2222-3333-4444\n   - Aadhaar: 9999 4105 7058\n   - PAN: ABCPD1234F\n\n2. Alice (Customer)\n   - ...",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "PHONE",
+      "CARD",
+      "PAN",
+      "PHONE",
+      "CARD",
+      "AADHAR",
+      "PHONE",
+      "CARD",
+      "AADHAR",
+      "PHONE",
+      "CARD",
+      "AADHAR"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260720-142dac42",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-07-20T12:20:21.013232Z",
+    "missed_entity": {
+      "type": "PAN",
+      "value_preview": "ABCPD1234F-WXYZ...",
+      "reason": "Identification number",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "Here are all the customer details:\n\n1. Mahesh (Customer)\n   - ID: 101\n   - Phone: 9876543210\n   - Card: 4111-2222-3333-4444\n   - Aadhaar: 9999 4105 7058\n   - PAN: ABCPD1234F\n\n2. Alice (Customer)\n   - ...",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "PHONE",
+      "CARD",
+      "PAN",
+      "PHONE",
+      "CARD",
+      "AADHAR",
+      "PHONE",
+      "CARD",
+      "AADHAR",
+      "PHONE",
+      "CARD",
+      "AADHAR"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260720-285b22f2",
+    "severity": "HIGH",
+    "category": "UNCATEGORIZED",
+    "timestamp": "2026-07-20T12:20:20.985712Z",
+    "missed_entity": {
+      "type": "CARD",
+      "value_preview": "411122222333444...",
+      "reason": "Financial data",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "Here are all the customer details:\n\n1. Mahesh (Customer)\n   - ID: 101\n   - Phone: 9876543210\n   - Card: 4111-2222-3333-4444\n   - Aadhaar: 9999 4105 7058\n   - PAN: ABCPD1234F\n\n2. Alice (Customer)\n   - ...",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "PHONE",
+      "CARD",
+      "PAN",
+      "PHONE",
+      "CARD",
+      "AADHAR",
+      "PHONE",
+      "CARD",
+      "AADHAR",
+      "PHONE",
+      "CARD",
+      "AADHAR"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260720-79c96da9",
+    "severity": "HIGH",
+    "category": "PII",
+    "timestamp": "2026-07-20T12:20:20.965379Z",
+    "missed_entity": {
+      "type": "PHONE",
+      "value_preview": "9876543210...",
+      "reason": "Personal identifier",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "Here are all the customer details:\n\n1. Mahesh (Customer)\n   - ID: 101\n   - Phone: 9876543210\n   - Card: 4111-2222-3333-4444\n   - Aadhaar: 9999 4105 7058\n   - PAN: ABCPD1234F\n\n2. Alice (Customer)\n   - ...",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "PHONE",
+      "CARD",
+      "PAN",
+      "PHONE",
+      "CARD",
+      "AADHAR",
+      "PHONE",
+      "CARD",
+      "AADHAR",
+      "PHONE",
+      "CARD",
+      "AADHAR"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260720-680e50f6",
+    "severity": "HIGH",
+    "category": "PII",
+    "timestamp": "2026-07-20T12:15:56.651708Z",
+    "missed_entity": {
+      "type": "Personal identifier",
+      "value_preview": "Sandeep R, Aadh...",
+      "reason": "Contains partial personal identifiers",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The Aadhaar numbers for the top 3 spenders are:\n\n1. Rajeev Jain: 1234 5678 2820\n2. Sujit Narayanan: 1234 5678 3258\n3. Sandeep R: 1234 5678 4566",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "Personal identifier",
+      "Personal identifier",
+      "Personal identifier"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260720-0fad92e9",
+    "severity": "HIGH",
+    "category": "PII",
+    "timestamp": "2026-07-20T12:15:56.628229Z",
+    "missed_entity": {
+      "type": "Personal identifier",
+      "value_preview": "Sujit Narayanan...",
+      "reason": "Contains personal identifiers",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The Aadhaar numbers for the top 3 spenders are:\n\n1. Rajeev Jain: 1234 5678 2820\n2. Sujit Narayanan: 1234 5678 3258\n3. Sandeep R: 1234 5678 4566",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "Personal identifier",
+      "Personal identifier",
+      "Personal identifier"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260720-cc997fcd",
+    "severity": "HIGH",
+    "category": "PII",
+    "timestamp": "2026-07-20T12:15:56.612902Z",
+    "missed_entity": {
+      "type": "Personal identifier",
+      "value_preview": "Rajeev Jain, Aa...",
+      "reason": "Contains personal identifiers",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The Aadhaar numbers for the top 3 spenders are:\n\n1. Rajeev Jain: 1234 5678 2820\n2. Sujit Narayanan: 1234 5678 3258\n3. Sandeep R: 1234 5678 4566",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "Personal identifier",
+      "Personal identifier",
+      "Personal identifier"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260720-391af749",
+    "severity": "HIGH",
+    "category": "UNCATEGORIZED",
+    "timestamp": "2026-07-20T12:15:37.314849Z",
+    "missed_entity": {
+      "type": "Internal Identifiers",
+      "value_preview": "Ord-5260-1234, ...",
+      "reason": "Order identifiers",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The top 3 spenders of today are:\n\n1. Rajeev Jain\n   - Email: rjain@gmail.com\n   - Orders: Ord-5260-1234, Ord-5260-1255\n   - Spend: Rs. 5,250\n   - Card: 1234 5678 2528 7890\n\n2. Sujit Narayanan\n   - Ema...",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "Personal Identifiers",
+      "Contact Information",
+      "Financial Data",
+      "Internal Identifiers"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260720-d1fa28f8",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-07-20T12:15:37.284992Z",
+    "missed_entity": {
+      "type": "Financial Data",
+      "value_preview": "1234 5678 2528 ...",
+      "reason": "Credit card numbers",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The top 3 spenders of today are:\n\n1. Rajeev Jain\n   - Email: rjain@gmail.com\n   - Orders: Ord-5260-1234, Ord-5260-1255\n   - Spend: Rs. 5,250\n   - Card: 1234 5678 2528 7890\n\n2. Sujit Narayanan\n   - Ema...",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "Personal Identifiers",
+      "Contact Information",
+      "Financial Data",
+      "Internal Identifiers"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260720-974519a2",
+    "severity": "HIGH",
+    "category": "UNCATEGORIZED",
+    "timestamp": "2026-07-20T12:15:37.251669Z",
+    "missed_entity": {
+      "type": "Contact Information",
+      "value_preview": "rjain@gmail.com...",
+      "reason": "Email addresses",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The top 3 spenders of today are:\n\n1. Rajeev Jain\n   - Email: rjain@gmail.com\n   - Orders: Ord-5260-1234, Ord-5260-1255\n   - Spend: Rs. 5,250\n   - Card: 1234 5678 2528 7890\n\n2. Sujit Narayanan\n   - Ema...",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "Personal Identifiers",
+      "Contact Information",
+      "Financial Data",
+      "Internal Identifiers"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260720-25879559",
+    "severity": "HIGH",
+    "category": "PII",
+    "timestamp": "2026-07-20T12:15:37.233035Z",
+    "missed_entity": {
+      "type": "Personal Identifiers",
+      "value_preview": "Rajeev Jain...",
+      "reason": "Name",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The top 3 spenders of today are:\n\n1. Rajeev Jain\n   - Email: rjain@gmail.com\n   - Orders: Ord-5260-1234, Ord-5260-1255\n   - Spend: Rs. 5,250\n   - Card: 1234 5678 2528 7890\n\n2. Sujit Narayanan\n   - Ema...",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "Personal Identifiers",
+      "Contact Information",
+      "Financial Data",
+      "Internal Identifiers"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260720-ceffc38b",
+    "severity": "HIGH",
+    "category": "AUTHENTICATION",
+    "timestamp": "2026-07-20T12:12:34.871205Z",
+    "missed_entity": {
+      "type": "Authentication Data",
+      "value_preview": "1234 5678 2528 ...",
+      "reason": "Credit card numbers linked to personal identities",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The top 3 spenders of today are Rajeev Jain (Email: rjain@gmail.com, Orders: Ord-5260-1234, Ord-5260-1255, Spend: Rs. 5,250, Card: 1234 5678 2528 7890), Sujit Narayanan (Email: snr@yahoo.co.in, Orders...",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "Contact Information",
+      "Authentication Data",
+      "Financial data",
+      "Authentication Data"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260720-ec3e0db5",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-07-20T12:12:34.838018Z",
+    "missed_entity": {
+      "type": "Financial data",
+      "value_preview": "Rs. 5,250; Rs. ...",
+      "reason": "Amount spent in a financial transaction",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The top 3 spenders of today are Rajeev Jain (Email: rjain@gmail.com, Orders: Ord-5260-1234, Ord-5260-1255, Spend: Rs. 5,250, Card: 1234 5678 2528 7890), Sujit Narayanan (Email: snr@yahoo.co.in, Orders...",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "Contact Information",
+      "Authentication Data",
+      "Financial data",
+      "Authentication Data"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260720-898d99e2",
+    "severity": "HIGH",
+    "category": "AUTHENTICATION",
+    "timestamp": "2026-07-20T12:12:34.792850Z",
+    "missed_entity": {
+      "type": "Authentication Data",
+      "value_preview": "Ord-5260-1234, ...",
+      "reason": "Order identifiers which can be linked to sensitive transactions",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The top 3 spenders of today are Rajeev Jain (Email: rjain@gmail.com, Orders: Ord-5260-1234, Ord-5260-1255, Spend: Rs. 5,250, Card: 1234 5678 2528 7890), Sujit Narayanan (Email: snr@yahoo.co.in, Orders...",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "Contact Information",
+      "Authentication Data",
+      "Financial data",
+      "Authentication Data"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260720-8ab8ae2a",
+    "severity": "HIGH",
+    "category": "UNCATEGORIZED",
+    "timestamp": "2026-07-20T12:12:34.760948Z",
+    "missed_entity": {
+      "type": "Contact Information",
+      "value_preview": "rjain@gmail.com...",
+      "reason": "Email address",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The top 3 spenders of today are Rajeev Jain (Email: rjain@gmail.com, Orders: Ord-5260-1234, Ord-5260-1255, Spend: Rs. 5,250, Card: 1234 5678 2528 7890), Sujit Narayanan (Email: snr@yahoo.co.in, Orders...",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "Contact Information",
+      "Authentication Data",
+      "Financial data",
+      "Authentication Data"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260720-12f93262",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-07-20T12:12:20.554205Z",
+    "missed_entity": {
+      "type": "Financial",
+      "value_preview": "GB29NWBK3012345...",
+      "reason": "",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The transaction amount was $1,100 and the payment was processed to IBAN GB29NWBK30123456789012.",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "Financial",
+      "Financial"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260720-a577f3b3",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-07-20T12:12:20.539809Z",
+    "missed_entity": {
+      "type": "Financial",
+      "value_preview": "$1,100...",
+      "reason": "",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The transaction amount was $1,100 and the payment was processed to IBAN GB29NWBK30123456789012.",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "Financial",
+      "Financial"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260720-471ae3fa",
+    "severity": "HIGH",
+    "category": "AUTHENTICATION",
+    "timestamp": "2026-07-20T12:09:47.994930Z",
+    "missed_entity": {
+      "type": "Authentication data",
+      "value_preview": "GB29NWBK3012345...",
+      "reason": "Bank account identifier (IBAN)",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The transaction amount was $1,100 and the payment was processed to IBAN GB29NWBK30123456789012.",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "Financial Data",
+      "Authentication data"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260720-26f6d976",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-07-20T12:09:47.966693Z",
+    "missed_entity": {
+      "type": "Financial Data",
+      "value_preview": "$1,100...",
+      "reason": "Potential financial information when used in context",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The transaction amount was $1,100 and the payment was processed to IBAN GB29NWBK30123456789012.",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "Financial Data",
+      "Authentication data"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260720-9c463df0",
+    "severity": "HIGH",
+    "category": "PII",
+    "timestamp": "2026-07-20T11:50:28.041990Z",
+    "missed_entity": {
+      "type": "Personal identifiers",
+      "value_preview": "9999 4105 7058,...",
+      "reason": "Aadhaar and PAN numbers",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "{\n  \"customer_id\": 101,\n  \"customer_name\": \"Mahesh\",\n  \"sensitive_data\": {\n    \"phone\": \"9876543210\",\n    \"payment_card\": \"4111-2222-3333-4444\",\n    \"aadhaar\": \"9999 4105 7058\",\n    \"pan\": \"ABCPD1234F...",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "Personal identifiers",
+      "Contact information",
+      "Financial data",
+      "Personal identifiers"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260720-d71d0bf2",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-07-20T11:50:27.942583Z",
+    "missed_entity": {
+      "type": "Financial data",
+      "value_preview": "4111-2222-3333-...",
+      "reason": "Payment card number",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "{\n  \"customer_id\": 101,\n  \"customer_name\": \"Mahesh\",\n  \"sensitive_data\": {\n    \"phone\": \"9876543210\",\n    \"payment_card\": \"4111-2222-3333-4444\",\n    \"aadhaar\": \"9999 4105 7058\",\n    \"pan\": \"ABCPD1234F...",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "Personal identifiers",
+      "Contact information",
+      "Financial data",
+      "Personal identifiers"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260720-0006829f",
+    "severity": "HIGH",
+    "category": "UNCATEGORIZED",
+    "timestamp": "2026-07-20T11:50:27.843303Z",
+    "missed_entity": {
+      "type": "Contact information",
+      "value_preview": "9876543210...",
+      "reason": "Phone number",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "{\n  \"customer_id\": 101,\n  \"customer_name\": \"Mahesh\",\n  \"sensitive_data\": {\n    \"phone\": \"9876543210\",\n    \"payment_card\": \"4111-2222-3333-4444\",\n    \"aadhaar\": \"9999 4105 7058\",\n    \"pan\": \"ABCPD1234F...",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "Personal identifiers",
+      "Contact information",
+      "Financial data",
+      "Personal identifiers"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260720-fced89d6",
+    "severity": "HIGH",
+    "category": "PII",
+    "timestamp": "2026-07-20T11:50:27.768724Z",
+    "missed_entity": {
+      "type": "Personal identifiers",
+      "value_preview": "101, Mahesh...",
+      "reason": "Customer ID and name",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "{\n  \"customer_id\": 101,\n  \"customer_name\": \"Mahesh\",\n  \"sensitive_data\": {\n    \"phone\": \"9876543210\",\n    \"payment_card\": \"4111-2222-3333-4444\",\n    \"aadhaar\": \"9999 4105 7058\",\n    \"pan\": \"ABCPD1234F...",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "Personal identifiers",
+      "Contact information",
+      "Financial data",
+      "Personal identifiers"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260720-707ed39f",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-07-20T11:49:52.551877Z",
+    "missed_entity": {
+      "type": "Payment method",
+      "value_preview": "ABCPD1234F.....",
+      "reason": "PAN card number",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "{\n\n  \"customer_id\": 101,\n\n  \"customer_name\": \"Mahesh\",\n\n  \"sensitive_data\": {\n\n    \"phone\": \"9876543210\",\n\n    \"payment_card\": \"4111-2222-3333-4444\",\n\n    \"aadhaar\": \"9999 4105 7058\", \n\n    \"pan\": \"AB...",
+    "layer1_findings": [
+      "CREDIT_CARD"
+    ],
+    "layer2_findings": [
+      "Personal identifier",
+      "Payment method",
+      "Government ID",
+      "Payment method"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260720-c428b5b9",
+    "severity": "HIGH",
+    "category": "UNCATEGORIZED",
+    "timestamp": "2026-07-20T11:49:52.478189Z",
+    "missed_entity": {
+      "type": "Government ID",
+      "value_preview": "9999 4105 7058...",
+      "reason": "Aadhaar number (government-issued identification)",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "{\n\n  \"customer_id\": 101,\n\n  \"customer_name\": \"Mahesh\",\n\n  \"sensitive_data\": {\n\n    \"phone\": \"9876543210\",\n\n    \"payment_card\": \"4111-2222-3333-4444\",\n\n    \"aadhaar\": \"9999 4105 7058\", \n\n    \"pan\": \"AB...",
+    "layer1_findings": [
+      "CREDIT_CARD"
+    ],
+    "layer2_findings": [
+      "Personal identifier",
+      "Payment method",
+      "Government ID",
+      "Payment method"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260720-f76b27cd",
+    "severity": "HIGH",
+    "category": "PII",
+    "timestamp": "2026-07-20T11:49:52.400367Z",
+    "missed_entity": {
+      "type": "Personal identifier",
+      "value_preview": "Mahesh...",
+      "reason": "Name is personal information",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "{\n\n  \"customer_id\": 101,\n\n  \"customer_name\": \"Mahesh\",\n\n  \"sensitive_data\": {\n\n    \"phone\": \"9876543210\",\n\n    \"payment_card\": \"4111-2222-3333-4444\",\n\n    \"aadhaar\": \"9999 4105 7058\", \n\n    \"pan\": \"AB...",
+    "layer1_findings": [
+      "CREDIT_CARD"
+    ],
+    "layer2_findings": [
+      "Personal identifier",
+      "Payment method",
+      "Government ID",
+      "Payment method"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260720-95e43888",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-07-20T11:47:47.625788Z",
+    "missed_entity": {
+      "type": "Financial data",
+      "value_preview": "GB29NWBK3012345...",
+      "reason": "Contains a bank account number (IBAN) which is private and confidential.",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The transaction amount was 1100 dollars, and the payment was processed to IBAN GB29NWBK30123456789012.",
+    "layer1_findings": [
+      "TRANSACTION_AMOUNT"
+    ],
+    "layer2_findings": [
+      "Financial data"
+    ],
+    "status": "RESOLVED"
+  },
+  {
+    "alarm_id": "ALM-20260720-79a5fcec",
+    "severity": "HIGH",
+    "category": "AUTHENTICATION",
+    "timestamp": "2026-07-20T11:47:03.001740Z",
+    "missed_entity": {
+      "type": "Authentication/data",
+      "value_preview": "IBAN GB29NWBK30...",
+      "reason": "contains bank account details that could be used for fraudulent activities if exposed.",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The transaction amount was $1,100 and the payment was processed to IBAN GB29NWBK30123456789012.",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "Financial data",
+      "Authentication/data"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260720-cd260088",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-07-20T11:47:02.990157Z",
+    "missed_entity": {
+      "type": "Financial data",
+      "value_preview": "$1,100...",
+      "reason": "No reason provided",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The transaction amount was $1,100 and the payment was processed to IBAN GB29NWBK30123456789012.",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "Financial data",
+      "Authentication/data"
+    ],
+    "status": "DISMISSED"
+  },
+  {
+    "alarm_id": "ALM-20260720-585aee40",
+    "severity": "CRITICAL",
+    "category": "TOXICITY",
+    "timestamp": "2026-07-20T11:15:38.483139Z",
+    "toxicity_detail": {
+      "direction": "EGRESS",
+      "scores": {
+        "toxicity": 0.9596,
+        "severe_toxicity": 0.0047,
+        "obscene": 0.6555,
+        "identity_attack": 0.0106,
+        "insult": 0.8713,
+        "threat": 0.0006,
+        "sexual_explicit": 0.0063
+      },
+      "triggered_categories": [
+        "toxicity",
+        "insult"
+      ],
+      "max_category": "toxicity",
+      "max_score": 0.9596
+    },
+    "context_snippet": "Sir, you have no idea how to do this job properly! Your intelligence is so pitifully low that I wouldn't be surprised if your brain is made of lead. You are nothing but a pathetic and insignificant be...",
+    "status": "DISMISSED"
+  },
+  {
     "alarm_id": "ALM-20260714-ccaa386a",
     "severity": "CRITICAL",
     "category": "TOXICITY",
@@ -24,7 +2808,7 @@
       "max_score": 0.998
     },
     "context_snippet": "(Expletive deleted) You stupid bitch! Your mind is like a sieve, full of holes that can never be plugged with any kind of thinking! You have no idea what your words are doing to the world, and yet you...",
-    "status": "PENDING_REVIEW"
+    "status": "DISMISSED"
   },
   {
     "alarm_id": "ALM-20260714-712ea6d9",

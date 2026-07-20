@@ -48,6 +48,29 @@ def init_db():
         cursor.executemany('INSERT INTO misc_data VALUES (?, ?)', misc_seed_data)
         conn.commit()
         
+    # Initialize Spenders Table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS spenders (
+            id INTEGER PRIMARY KEY,
+            name TEXT,
+            email TEXT,
+            spend_amount TEXT,
+            orders TEXT,
+            card_used TEXT,
+            card_type TEXT,
+            aadhaar TEXT
+        )
+    ''')
+    
+    spenders_seed = [
+        (10011, 'Rajeev Jain', 'rjain@gmail.com', 'Rs. 5,250', 'Ord-5260-1234, Ord-5260-1255', '1234 5678 2528 7890', 'SBI co-branded credit card', '1234 5678 2820'),
+        (10023, 'Sujit Narayanan', 'snr@yahoo.co.in', 'Rs. 4,875', 'Ord-5260-9872', '9282 3452 0871 5620', 'Axis bank credit card', '1234 5678 3259'),
+        (10045, 'Sandeep Ram', 'sandeep@outbox.com', 'Rs. 4,320', 'Ord-5260-3478', '9282 3452 7842 2387', 'ICICI bank credit card', '1234 5678 4560'),
+        (10016, 'Punith Jire', 'punith.vijay@gmail.com', 'Rs. 250', 'Ord-5260-1234, Ord-5260-1255', '1234 5678 2528 7890', 'SBI co-branded credit card', '1234 5678 5847')
+    ]
+    cursor.executemany('INSERT OR IGNORE INTO spenders VALUES (?, ?, ?, ?, ?, ?, ?, ?)', spenders_seed)
+    conn.commit()
+        
     conn.close()
 
 def get_customer_profile(customer_id):
@@ -70,11 +93,50 @@ def get_customer_profile(customer_id):
         
     cursor.execute('SELECT * FROM customers WHERE id = ?', (c_id,))
     row = cursor.fetchone()
-    conn.close()
     
     if row:
+        conn.close()
         return f"Customer {row[1]} (ID: {row[0]}) purchased {row[6]}. Payment Card: {row[3]}. Contact: {row[2]}. Aadhaar: {row[4]}. PAN: {row[5]}."
+        
+    cursor.execute('SELECT * FROM spenders WHERE id = ?', (c_id,))
+    s_row = cursor.fetchone()
+    conn.close()
+    
+    if s_row:
+        return f"Spender {s_row[1]} (ID: {s_row[0]}). Email: {s_row[2]}. Spend: {s_row[3]}. Orders: {s_row[4]}. Card: {s_row[5]} ({s_row[6]}). Aadhaar: {s_row[7]}."
+        
+        
     return "Record not found."
+
+def get_top_spenders():
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM spenders')
+    rows = cursor.fetchall()
+    conn.close()
+    
+    def parse_spend(row):
+        val = row[3]
+        val = val.replace('Rs.', '').replace(',', '').strip()
+        try:
+            return float(val)
+        except:
+            return 0.0
+            
+    sorted_rows = sorted(rows, key=parse_spend, reverse=True)
+    return sorted_rows[:3]
+
+def get_all_customers_and_spenders():
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM customers')
+    cust_rows = cursor.fetchall()
+    
+    cursor.execute('SELECT * FROM spenders')
+    spend_rows = cursor.fetchall()
+    conn.close()
+    
+    return cust_rows, spend_rows
 
 if __name__ == "__main__":
     init_db()

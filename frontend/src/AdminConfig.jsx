@@ -21,14 +21,14 @@ export default function AdminConfig() {
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryMappings, setCategoryMappings] = useState({});
   const [categoryToggles, setCategoryToggles] = useState({
-    gdpr: true,
-    hipaa: true,
+    pii: true,
+    health: true,
     financial: true,
     authentication: true
   });
   const [isTogglingCategory, setIsTogglingCategory] = useState({});
 
-  const [selectedCategory, setSelectedCategory] = useState('GDPR');
+  const [selectedCategory, setSelectedCategory] = useState('PII');
   const [isRuleModalOpen, setIsRuleModalOpen] = useState(false);
   const [editingRule, setEditingRule] = useState(null);
   const [editingSubscriber, setEditingSubscriber] = useState(null);
@@ -68,8 +68,8 @@ export default function AdminConfig() {
         if (data.settings.toxicity_thresholds) setToxicityThresholds(data.settings.toxicity_thresholds);
         
         setCategoryToggles({
-          gdpr: data.settings.enable_gdpr !== false,
-          hipaa: data.settings.enable_hipaa !== false,
+          pii: data.settings.enable_pii !== false,
+          health: data.settings.enable_health !== false,
           financial: data.settings.enable_financial !== false,
           authentication: data.settings.enable_authentication !== false
         });
@@ -550,7 +550,7 @@ export default function AdminConfig() {
           {/* Left Panel: Category Sidebar */}
           <div className="category-sidebar" style={{ flex: '0 0 280px' }}>
             <h3 style={{ margin: '0 0 1rem 0' }}>Guardrail Modules</h3>
-            {['GDPR', 'HIPAA', 'FINANCIAL', 'AUTHENTICATION', 'UNCATEGORIZED'].map(cat => {
+            {['PII', 'HEALTH', 'FINANCIAL', 'AUTHENTICATION', 'UNCATEGORIZED'].map(cat => {
               const catKey = cat.toLowerCase();
               const isEnabled = cat === 'UNCATEGORIZED' ? true : categoryToggles[catKey];
               const isToggling = isTogglingCategory[catKey];
@@ -671,7 +671,7 @@ export default function AdminConfig() {
                       onChange={e => setFormData({...formData, category: e.target.value})}
                       style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #d0d7de' }}
                     >
-                      {['GDPR', 'HIPAA', 'FINANCIAL', 'AUTHENTICATION', 'UNCATEGORIZED'].map(cat => (
+                      {['PII', 'HEALTH', 'FINANCIAL', 'AUTHENTICATION', 'UNCATEGORIZED'].map(cat => (
                         <option key={cat} value={cat}>{cat}</option>
                       ))}
                     </select>
@@ -752,8 +752,8 @@ export default function AdminConfig() {
                           backgroundColor: alarm.category === 'TOXICITY' ? '#e94560' :
                                            alarm.category === 'AUTHENTICATION' ? '#8b5cf6' : 
                                            alarm.category === 'FINANCIAL' ? '#0969da' : 
-                                           alarm.category === 'HIPAA' ? '#116329' : 
-                                           alarm.category === 'GDPR' ? '#9a6700' : '#57606a', 
+                                           alarm.category === 'HEALTH' ? '#116329' : 
+                                           alarm.category === 'PII' ? '#9a6700' : '#57606a', 
                           color: '#fff', padding: '2px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 'bold' 
                         }}>{alarm.category}</span>
                       )}
@@ -880,8 +880,8 @@ export default function AdminConfig() {
                       <td style={{ padding: '0.75rem' }}>{s.role}</td>
                       <td style={{ padding: '0.75rem' }}>
                         <span style={{ 
-                          backgroundColor: s.alert_type === 'AUTHENTICATION' ? '#ede9fe' : s.alert_type === 'FINANCIAL' ? '#ddf4ff' : s.alert_type === 'HIPAA' ? '#dafbe1' : s.alert_type === 'GDPR' ? '#fff8c5' : '#f3e8ff', 
-                          color: s.alert_type === 'AUTHENTICATION' ? '#8b5cf6' : s.alert_type === 'FINANCIAL' ? '#0969da' : s.alert_type === 'HIPAA' ? '#1a7f37' : s.alert_type === 'GDPR' ? '#9a6700' : '#7e22ce', 
+                          backgroundColor: s.alert_type === 'AUTHENTICATION' ? '#ede9fe' : s.alert_type === 'FINANCIAL' ? '#ddf4ff' : s.alert_type === 'HEALTH' ? '#dafbe1' : s.alert_type === 'PII' ? '#fff8c5' : '#f3e8ff', 
+                          color: s.alert_type === 'AUTHENTICATION' ? '#8b5cf6' : s.alert_type === 'FINANCIAL' ? '#0969da' : s.alert_type === 'HEALTH' ? '#1a7f37' : s.alert_type === 'PII' ? '#9a6700' : '#7e22ce', 
                           padding: '2px 6px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: '600' 
                         }}>
                           {s.alert_type}
@@ -920,8 +920,8 @@ export default function AdminConfig() {
                     <option value="ALL">ALL (Global Admin / Uncategorized)</option>
                     <option value="FINANCIAL">FINANCIAL (PCI-DSS / Banking)</option>
                     <option value="AUTHENTICATION">AUTHENTICATION (API Keys / Credentials)</option>
-                    <option value="HIPAA">HIPAA (Protected Health Info)</option>
-                    <option value="GDPR">GDPR (General Privacy / EU)</option>
+                    <option value="HEALTH">HEALTH (Protected Health Info)</option>
+                    <option value="PII">PII (General Privacy)</option>
                     <option value="TOXICITY">TOXICITY (Abusive / Hateful Content)</option>
                   </select>
                 </div>

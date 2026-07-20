@@ -111,6 +111,33 @@ export default function ChatBot() {
             <h4 style={{ margin: '0 0 0.25rem 0', fontSize: '0.85rem', color: '#0969da' }}>🏦 IBAN</h4>
             <div className="rule-meta" style={{ fontSize: '0.75rem' }}>"List me the last transaction amount and the IBAN number"</div>
           </div>
+          
+          <div 
+            className="rule-card" 
+            onClick={() => handlePinnedClick("Fetch me the top 3 spenders of today along with their order and transaction details.", "others")}
+            style={{ cursor: 'pointer', border: '1px solid #d0d7de', padding: '0.75rem', marginBottom: '0.5rem', backgroundColor: '#fff' }}
+          >
+            <h4 style={{ margin: '0 0 0.25rem 0', fontSize: '0.85rem', color: '#0969da' }}>💳 Top Spenders</h4>
+            <div className="rule-meta" style={{ fontSize: '0.75rem' }}>"Fetch me the top 3 spenders of today..."</div>
+          </div>
+
+          <div 
+            className="rule-card" 
+            onClick={() => handlePinnedClick("Fetch me the Aadhar number of each of the top 3 spenders of today.", "others")}
+            style={{ cursor: 'pointer', border: '1px solid #d0d7de', padding: '0.75rem', marginBottom: '0.5rem', backgroundColor: '#fff' }}
+          >
+            <h4 style={{ margin: '0 0 0.25rem 0', fontSize: '0.85rem', color: '#0969da' }}>🆔 Spender Aadhaar</h4>
+            <div className="rule-meta" style={{ fontSize: '0.75rem' }}>"Fetch me the Aadhar number of each..."</div>
+          </div>
+          
+          <div 
+            className="rule-card" 
+            onClick={() => handlePinnedClick("List me all customer details", "others")}
+            style={{ cursor: 'pointer', border: '1px solid #d0d7de', padding: '0.75rem', marginBottom: '0.5rem', backgroundColor: '#fff' }}
+          >
+            <h4 style={{ margin: '0 0 0.25rem 0', fontSize: '0.85rem', color: '#0969da' }}>📋 All Customers</h4>
+            <div className="rule-meta" style={{ fontSize: '0.75rem' }}>"List me all customer details"</div>
+          </div>
         </div>
 
         {/* Right Pane: Main Chat Window */}
@@ -155,17 +182,15 @@ export default function ChatBot() {
                   </div>
                 ) : (
                   <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                    {/* Raw Output Bubble (Leaky/Toxic) */}
-                    <div style={{ alignSelf: 'flex-start', backgroundColor: '#ffebe9', border: '1px solid #ff8182', color: '#cf222e', padding: '1rem', borderRadius: '18px 18px 18px 0', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', maxWidth: '85%' }}>
-                      <strong style={{ fontSize: '0.85rem' }}>🔴 Raw LLM Output:</strong>
-                      <pre style={{ margin: '0.5rem 0 0 0', whiteSpace: 'pre-wrap', fontFamily: 'monospace', fontSize: '0.8rem', overflowX: 'auto' }}>{msg.raw_content}</pre>
-                    </div>
-
-                    {/* Shielded Output Bubble (Only if changed by Guardrail) */}
-                    {msg.raw_content !== msg.masked_content && (
+                    {msg.raw_content !== msg.masked_content ? (
                       <div style={{ alignSelf: 'flex-start', backgroundColor: '#dafbe1', border: '1px solid #4ac26b', color: '#1a7f37', padding: '1rem', borderRadius: '18px 18px 18px 0', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', maxWidth: '85%' }}>
-                        <strong style={{ fontSize: '0.85rem' }}>🟢 Guardrail Output (Content Safety On):</strong>
+                        <strong style={{ fontSize: '0.85rem' }}>🟢 Guardrail Output:</strong>
                         <pre style={{ margin: '0.5rem 0 0 0', whiteSpace: 'pre-wrap', fontFamily: 'monospace', fontSize: '0.85rem', overflowX: 'auto' }}>{msg.masked_content}</pre>
+                      </div>
+                    ) : (
+                      <div style={{ alignSelf: 'flex-start', backgroundColor: '#ffebe9', border: '1px solid #ff8182', color: '#cf222e', padding: '1rem', borderRadius: '18px 18px 18px 0', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', maxWidth: '85%' }}>
+                        <strong style={{ fontSize: '0.85rem' }}>🔴 Raw LLM Output:</strong>
+                        <pre style={{ margin: '0.5rem 0 0 0', whiteSpace: 'pre-wrap', fontFamily: 'monospace', fontSize: '0.8rem', overflowX: 'auto' }}>{msg.raw_content}</pre>
                       </div>
                     )}
                   </div>

@@ -1,5 +1,15 @@
 const API_BASE = 'http://localhost:8000';
 
+export async function fetchSystemStatus() {
+  try {
+    const res = await fetch(`${API_BASE}/system_status`);
+    if (!res.ok) return { status: 'loading' };
+    return await res.json();
+  } catch (e) {
+    return { status: 'loading' };
+  }
+}
+
 export async function fetchRules() {
   const res = await fetch(`${API_BASE}/rules`);
   return res.json();
