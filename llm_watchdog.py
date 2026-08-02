@@ -46,7 +46,8 @@ def analyze_text(raw_text: str) -> dict:
         "model": config.DEFAULT_LLM_MODEL,
         "messages": messages,
         "stream": False,
-        "format": "json"
+        "format": "json",
+        "keep_alive": -1
     }
     
     try:
@@ -59,11 +60,11 @@ def analyze_text(raw_text: str) -> dict:
                 result = json.loads(ai_message)
                 return result
             except json.JSONDecodeError:
-                logging.error(f"Failed to parse Watchdog JSON: {ai_message}")
-                return {"findings": [], "has_sensitive_data": False, "error": "Invalid JSON from LLM"}
+                logging.error(f"LLM Watchdog failed to return valid JSON. Response: {ai_message}")
+                return {"findings": [], "has_sensitive_data": False, "error": "Invalid JSON from LLM", "raw_response": ai_message}
         else:
-            logging.error(f"Ollama Watchdog Error: {resp.status_code}")
-            return {"findings": [], "has_sensitive_data": False, "error": f"Ollama HTTP {resp.status_code}"}
+            logging.error(f"Ollama Watchdog Error: {resp.status_code} - {resp.text}")
+            return {"findings": [], "has_sensitive_data": False, "error": f"Ollama HTTP {resp.status_code}", "raw_response": resp.text}
     except Exception as e:
         logging.error(f"Watchdog Exception: {str(e)}")
         return {"findings": [], "has_sensitive_data": False, "error": str(e)}

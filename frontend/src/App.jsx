@@ -63,14 +63,12 @@ function App() {
         </div>
         
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'flex-end' }}>
-          {alarms.length > 0 && (
-            <div style={{ backgroundColor: '#cf222e', color: 'white', padding: '0.4rem 0.8rem', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '0.5rem', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', fontSize: '0.85rem' }}>
-              <span style={{ fontSize: '1rem' }}>🚨</span>
-              <div>
-                <strong>Alert:</strong> {alarms.length} pending Threat Detection{alarms.length > 1 ? 's' : ''}.
-              </div>
+          <div style={{ visibility: alarms.length > 0 ? 'visible' : 'hidden', backgroundColor: '#cf222e', color: 'white', padding: '0.4rem 0.8rem', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '0.5rem', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', fontSize: '0.85rem' }}>
+            <span style={{ fontSize: '1rem' }}>🚨</span>
+            <div>
+              <strong>Alert:</strong> {alarms.length} pending Threat Detection{alarms.length > 1 ? 's' : ''}.
             </div>
-          )}
+          </div>
           
           <div style={{ backgroundColor: sysStatus === 'ready' ? '#dafbe1' : '#fff8c5', color: sysStatus === 'ready' ? '#1a7f37' : '#9a6700', padding: '0.4rem 0.8rem', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '0.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', fontSize: '0.85rem', border: `1px solid ${sysStatus === 'ready' ? '#4ac26b' : '#d4a72c'}` }}>
             <span style={{ fontSize: '1rem' }}>{sysStatus === 'ready' ? '🟢' : '🟠'}</span>

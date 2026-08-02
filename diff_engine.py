@@ -154,6 +154,20 @@ def generate_toxicity_alarm(raw_text: str, toxicity_result: dict, direction: str
         toxicity_result: Result dict from toxicity_guard.analyze()
         direction: "INGRESS" (user input) or "EGRESS" (AI output)
     """
+    # Load settings to check if LLM Watchdog (secondary threat engine) is enabled.
+    # The user's request implies that if the secondary threat engine is off,
+    # then toxicity alerts should also not be generated.
+    try:
+        with open("pii_rules.json", "r") as f:
+            data = json.load(f)
+            settings = data.get("settings", {})
+            if not settings.get("enable_llm_watchdog", False):
+                logging.info("Skipping toxicity alarm generation because LLM Watchdog (secondary threat engine) is disabled.")
+                return None
+    except Exception as e:
+        logging.error(f"Failed to load PII settings for toxicity alarm check: {e}. Assuming LLM Watchdog is disabled, skipping toxicity alarm.")
+        return None # If settings can't be read, assume watchdog is off and skip alarm.
+
     alarm = {
         "alarm_id": f"ALM-{datetime.now().strftime('%Y%m%d')}-{str(uuid.uuid4())[:8]}",
         "severity": "CRITICAL",

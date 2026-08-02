@@ -3,6 +3,8 @@ import json
 import requests
 import re
 from fastapi import FastAPI, BackgroundTasks
+import time
+import uuid
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional
@@ -15,6 +17,7 @@ import hashlib
 from audit_logger import AuditLogger
 from custom_recognizers import AadhaarRecognizer
 import database
+from benchmark_logger import BenchmarkLogger
 import llm_watchdog
 import diff_engine
 import toxicity_guard
@@ -46,8 +49,8 @@ def get_nlp_engine():
         configuration = {
             "nlp_engine_name": "spacy",
             "models": [
-                {"lang_code": "en", "model_name": "en_core_web_lg"},
-                {"lang_code": "en-US", "model_name": "en_ner_bc5cdr_md"}
+                {"lang_code": "en", "model_name": "en_core_web_lg"}, # General purpose
+                {"lang_code": "en", "model_name": "en_ner_bc5cdr_md"} # Medical entities
             ]
         }
         global_nlp_engine = NlpEngineProvider(nlp_configuration=configuration).create_engine()
@@ -56,9 +59,9 @@ def get_nlp_engine():
 def reload_presidio_engine():
     global analyzer, ACTIVE_ENTITIES
     print("Reloading Presidio Registry and Rules...")
-    nlp_engine = get_nlp_engine()
+    nlp_engine = get_nlp_engine() # This now contains both models under 'en'
     
-    new_analyzer = AnalyzerEngine(nlp_engine=nlp_engine, supported_languages=["en", "en-US"])
+    new_analyzer = AnalyzerEngine(nlp_engine=nlp_engine, supported_languages=["en"])
     
     ACTIVE_ENTITIES = []
     
@@ -67,9 +70,10 @@ def reload_presidio_engine():
     
     # Load SciSpaCy Medical Recognizer
     try:
-        disease_recognizer = SpacyRecognizer(supported_language="en-US", supported_entities=["DISEASE"])
+        # This recognizer will now use the 'en' pipeline which has the medical model.
+        disease_recognizer = SpacyRecognizer(supported_language="en", supported_entities=["DISEASE", "CHEMICAL"])
         new_analyzer.registry.add_recognizer(disease_recognizer)
-        ACTIVE_ENTITIES.extend(["DISEASE"])
+        ACTIVE_ENTITIES.extend(["DISEASE", "CHEMICAL"])
     except Exception as e:
         print(f"Warning: Failed to load SciSpaCy Recognizer: {e}")
         
@@ -256,36 +260,80 @@ def mask_person_name(name: str) -> str:
     return " ".join(parts)
 
 def apply_egress_guardrail(raw_text: str):
+    def mask_email_address(email: str) -> str:
+        """
+        Masks an email address to the format f*****t@d*****n.com,
+        preserving the first and last characters of the username and domain.
+        """
+        try:
+            if "@" not in email:
+                return email # Not a valid email format
+
+            username, domain_full = email.split('@', 1)
+
+            # Mask username
+            if len(username) > 2:
+                masked_username = f"{username[0]}{'*' * (len(username) - 2)}{username[-1]}"
+            elif len(username) > 0:
+                masked_username = f"{username[0]}*" # Mask all but first for short usernames
+            else:
+                masked_username = ""
+
+            # Mask domain
+            if '.' in domain_full:
+                domain_parts = domain_full.split('.')
+                domain_name = domain_parts[0]
+                tld = ".".join(domain_parts[1:])
+                
+                if len(domain_name) > 2:
+                    masked_domain_name = f"{domain_name[0]}{'*' * (len(domain_name) - 2)}{domain_name[-1]}"
+                elif len(domain_name) > 0:
+                    masked_domain_name = f"{domain_name[0]}*"
+                else:
+                    masked_domain_name = ""
+                
+                return f"{masked_username}@{masked_domain_name}.{tld}"
+            else: # Handle domains without TLD like 'localhost'
+                if len(domain_full) > 2:
+                    masked_domain = f"{domain_full[0]}{'*' * (len(domain_full) - 2)}{domain_full[-1]}"
+                elif len(domain_full) > 0:
+                    masked_domain = f"{domain_full[0]}*"
+                else:
+                    masked_domain = ""
+                return f"{masked_username}@{masked_domain}"
+
+        except Exception:
+            # Failsafe for any unexpected format
+            return email[0] + "***" + email[-1] if len(email) > 2 else email
+
     # We explicitly define the entities we want to track using the global ACTIVE_ENTITIES.
-    # This includes both our hardcoded defaults and dynamic JSON rules.
-    results_en = analyzer.analyze(text=raw_text, language='en', entities=ACTIVE_ENTITIES, score_threshold=0.5)
-    
-    # Run the medical model
-    results_med = analyzer.analyze(text=raw_text, language='en-US', entities=ACTIVE_ENTITIES, score_threshold=0.5)
-    
-    # Combine results from both pipelines
-    results = results_en + results_med
+    # The analyzer now uses a single 'en' pipeline that contains both general and medical models.
+    results = analyzer.analyze(text=raw_text, language='en', entities=ACTIVE_ENTITIES, score_threshold=0.5)
     
     operators = {
         "PERSON": OperatorConfig("custom", {"lambda": mask_person_name}),
         "CREDIT_CARD": OperatorConfig("custom", {"lambda": lambda x: "**** **** **** " + x[-4:] if len(x) >= 4 else x}),
-        "EMAIL_ADDRESS": OperatorConfig("custom", {"lambda": lambda x: x[0] + "***" + x[-1] if len(x) >= 2 else x}),
+        "EMAIL_ADDRESS": OperatorConfig("custom", {"lambda": mask_email_address}),
         "IN_AADHAAR": OperatorConfig("custom", {"lambda": lambda x: "".join("*" if c.isalnum() else c for c in x[:-4]) + x[-4:] if len(x) >= 4 else x})
     }
     
     anonymized_result = anonymizer.anonymize(text=raw_text, analyzer_results=results, operators=operators)
     return anonymized_result.text, results
 
-def run_watchdog_task(raw_text: str, layer1_results):
+def run_watchdog_task(request_id: str, raw_text: str, layer1_results):
     try:
         with open("pii_rules.json", "r") as f:
             settings = json.load(f).get("settings", {})
             if not settings.get("enable_llm_watchdog", False):
                 return
-    except:
+    except Exception:
         return
-        
+    
+    start_time = time.perf_counter()
     l2_res = llm_watchdog.analyze_text(raw_text)
+    end_time = time.perf_counter()
+    BenchmarkLogger.log_metric(request_id, "LLM_WATCHDOG", (end_time - start_time) * 1000)
+    
     diff_engine.run_diff(raw_text, layer1_results, l2_res)
 
 # --- 4. Endpoints ---
@@ -294,9 +342,9 @@ def query_database(request: DbQueryRequest, background_tasks: BackgroundTasks):
     # 1. Fetch raw data
     raw_data = database.get_customer_profile(request.customer_id)
     
-    # 2. Universal Egress Guardrail
-    masked_output, l1_results = apply_egress_guardrail(raw_data)
-    background_tasks.add_task(run_watchdog_task, raw_data, l1_results)
+    # 2. Universal Egress Guardrail (No request_id for this endpoint yet, as it's not part of the demo_chat flow)
+    masked_output, l1_results = apply_egress_guardrail(raw_data) # TODO: Add request_id and benchmarking here too if needed
+    background_tasks.add_task(run_watchdog_task, "N/A", raw_data, l1_results) # Using N/A for request_id for now
     
     # 3. Toxicity Check (Egress — flag only, don't block DB results)
     _, tox_result = apply_toxicity_check(raw_data, "EGRESS")
@@ -317,9 +365,9 @@ def govern_ai_output(request: GenerativeRequest, background_tasks: BackgroundTas
     # 1. Toxicity Check (Egress — flag toxic AI output but still return it masked)
     is_toxic, tox_result = apply_toxicity_check(request.text, "EGRESS")
     
-    # 2. PII Guardrail
-    masked_output, l1_results = apply_egress_guardrail(request.text)
-    background_tasks.add_task(run_watchdog_task, request.text, l1_results)
+    # 2. PII Guardrail (No request_id for this endpoint yet, as it's not part of the demo_chat flow)
+    masked_output, l1_results = apply_egress_guardrail(request.text) # TODO: Add request_id and benchmarking here too if needed
+    background_tasks.add_task(run_watchdog_task, "N/A", request.text, l1_results) # Using N/A for request_id for now
     
     # 3. Secure Audit Logging
     raw_hash = hashlib.sha256(request.text.encode()).hexdigest()
@@ -338,9 +386,13 @@ def govern_ai_output(request: GenerativeRequest, background_tasks: BackgroundTas
 @app.post("/chat", response_model=ChatResponse)
 def chat_agent(request: ChatRequest, background_tasks: BackgroundTasks):
     common_error_msg = "⚠️ Your message was blocked by the Content Safety Shield. I cannot provide you with insults or derogatory language targeting any specific group of people, including those identified by nationality, nor can I write content that insults someone's intelligence and includes extreme profanity. My guidelines prohibit generating hateful content or slurs. Is there anything else I can help you with?"
-    
+    request_id = f"R-{uuid.uuid4().hex[:8]}"
+
     # Step 0: INGRESS Toxicity Check — Block abusive user input before it reaches the LLM
+    start_time = time.perf_counter()
     is_toxic_input, tox_input_result = apply_toxicity_check(request.message, "INGRESS")
+    end_time = time.perf_counter()
+    BenchmarkLogger.log_metric(request_id, "INGRESS_TOXICITY_CHECK", (end_time - start_time) * 1000)
     if is_toxic_input:
         return ChatResponse(
             raw_output="[BLOCKED]", 
@@ -361,17 +413,22 @@ If you are provided with data, summarize it naturally and helpfully."""
     ]
     
     try:
+        start_time = time.perf_counter()
         # Step 1: Initial call to Ollama
         payload = {
             "model": config.DEFAULT_LLM_MODEL,
             "messages": messages,
-            "stream": False
+            "stream": False,
+            "keep_alive": -1
         }
         resp = requests.post(OLLAMA_URL, json=payload)
         if resp.status_code != 200:
             return ChatResponse(raw_output="Error", masked_output="Failed to contact Ollama. Is it running?", status="error")
-            
+        end_time = time.perf_counter()
+        BenchmarkLogger.log_metric(request_id, "LLM_INITIAL_CALL", (end_time - start_time) * 1000)
+
         ai_message = resp.json()["message"]["content"]
+        
         
         # Step 2: Check for Tool Call
         match = re.search(r"<FETCH_DB:(\d+)>", ai_message)
@@ -400,12 +457,19 @@ If you are provided with data, summarize it naturally and helpfully."""
             payload["messages"] = messages
             payload["format"] = "json"
             
+            start_time = time.perf_counter()
             resp2 = requests.post(OLLAMA_URL, json=payload)
+            end_time = time.perf_counter()
+            BenchmarkLogger.log_metric(request_id, "LLM_TOOL_FEEDBACK_CALL", (end_time - start_time) * 1000)
+
             ai_message = resp2.json()["message"]["content"]
             
         # Step 3: Apply PII Guardrail
+        start_time = time.perf_counter()
         masked_message, l1_results = apply_egress_guardrail(ai_message)
-        background_tasks.add_task(run_watchdog_task, ai_message, l1_results)
+        end_time = time.perf_counter()
+        BenchmarkLogger.log_metric(request_id, "EGRESS_PII_GUARDRAIL", (end_time - start_time) * 1000)
+        background_tasks.add_task(run_watchdog_task, request_id, ai_message, l1_results)
         
         # Step 4: EGRESS Toxicity Check on AI output (flag only, don't block)
         _, tox_output_result = apply_toxicity_check(ai_message, "EGRESS")
@@ -604,7 +668,8 @@ class ToggleCategoryRequest(BaseModel):
 
 class UpdateToxicitySettingsRequest(BaseModel):
     thresholds: dict
-
+    enable_toxicity_guard: bool
+    
 @app.post("/toggle_category")
 def toggle_category(request: ToggleCategoryRequest):
     try:
@@ -667,11 +732,19 @@ def update_toxicity_settings(request: UpdateToxicitySettingsRequest):
             
         if "settings" not in data:
             data["settings"] = {}
+        # Persist both the toggle state and the thresholds
+        data["settings"]["enable_toxicity_guard"] = request.enable_toxicity_guard
         data["settings"]["toxicity_thresholds"] = request.thresholds
         
         with open("pii_rules.json", "w") as f:
             json.dump(data, f, indent=2)
             
+        # If toxicity guard is being enabled, make a dummy call to warm up the model
+        if request.enable_toxicity_guard:
+            print("Warming up toxicity model...")
+            # Use a non-toxic dummy text to avoid false alarms during warm-up
+            toxicity_guard.analyze("Hello, how are you today?", data["settings"].get("toxicity_thresholds", {}))
+            print("Toxicity model warmed up.")
         return {"status": "success"}
     except Exception as e:
         return {"status": "error", "message": str(e)}
@@ -986,6 +1059,22 @@ def get_analytics(timeframe: str = "24h"):
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
+@app.get("/get_benchmarks")
+async def get_benchmarks():
+    """
+    Reads the benchmark.log file and returns its content.
+    """
+    BENCHMARK_LOG_FILE = "benchmark.log"
+    if not os.path.exists(BENCHMARK_LOG_FILE):
+        return {"message": "Benchmark log file not found.", "logs": []}
+    
+    try:
+        with open(BENCHMARK_LOG_FILE, "r") as f:
+            logs = f.readlines()
+        return {"message": "Success", "logs": logs}
+    except Exception as e:
+        return {"message": f"Error reading benchmark log: {str(e)}", "logs": []}
+
 class DemoChatRequest(BaseModel):
     message: str
     mode: str = "others"  # 'toxic' or 'others'
@@ -994,8 +1083,13 @@ class DemoChatRequest(BaseModel):
 def demo_chat_agent(request: DemoChatRequest, background_tasks: BackgroundTasks):
     common_error_msg = "⚠️ Your message was blocked by the Content Safety Shield. I cannot provide you with insults or derogatory language targeting any specific group of people, including those identified by nationality, nor can I write content that insults someone's intelligence and includes extreme profanity. My guidelines prohibit generating hateful content or slurs. Is there anything else I can help you with?"
     
+    request_id = f"R-{uuid.uuid4().hex[:8]}"
+
     # Step 0: INGRESS Toxicity Check — Block abusive user input before it reaches the LLM
+    start_time = time.perf_counter()
     is_toxic_input, tox_input_result = apply_toxicity_check(request.message, "INGRESS")
+    end_time = time.perf_counter()
+    BenchmarkLogger.log_metric(request_id, "INGRESS_TOXICITY_CHECK", (end_time - start_time) * 1000)
     if is_toxic_input:
         return ChatResponse(
             raw_output="[BLOCKED]", 
@@ -1033,6 +1127,7 @@ If you are provided with data, summarize it naturally and helpfully."""
     ]
     
     try:
+        start_time_llm_call = time.perf_counter()
         # Step 1: Initial routing
         # Small models (like phi4-mini) struggle with complex routing instructions. 
         # For the sake of the demo, we explicitly intercept the known demo keywords.
@@ -1076,8 +1171,11 @@ If you are provided with data, summarize it naturally and helpfully."""
             if resp.status_code != 200:
                 return ChatResponse(raw_output="Error", masked_output="Failed to contact Ollama.", status="error")
             ai_message = resp.json()["message"]["content"]
+        end_time_llm_call = time.perf_counter()
+        BenchmarkLogger.log_metric(request_id, "LLM_INITIAL_CALL", (end_time_llm_call - start_time_llm_call) * 1000)
         
         # Step 2: Check for Tool Call
+        start_time_tool_call = time.perf_counter()
         match = re.search(r"<FETCH_DB:([a-zA-Z0-9_]+)>", ai_message)
         if match:
             customer_id_str = match.group(1)
@@ -1123,21 +1221,47 @@ If you are provided with data, summarize it naturally and helpfully."""
             
             payload["messages"] = messages
             
+            start_time_llm_tool_feedback = time.perf_counter()
             resp2 = requests.post(OLLAMA_URL, json=payload)
+            end_time_llm_tool_feedback = time.perf_counter()
+            BenchmarkLogger.log_metric(request_id, "LLM_TOOL_FEEDBACK_CALL", (end_time_llm_tool_feedback - start_time_llm_tool_feedback) * 1000)
+
             ai_message = resp2.json()["message"]["content"]
             
-        # Step 3: Apply PII Guardrail
-        masked_message, l1_results = apply_egress_guardrail(ai_message)
-        background_tasks.add_task(run_watchdog_task, ai_message, l1_results)
+        # Step 3: Conditionally Apply PII Guardrail
+        # Check if any PII-related categories are enabled before masking.
+        l1_results = []
+        start_time_egress_pii = time.perf_counter()
+        masked_message = ai_message
+        try:
+            with open("pii_rules.json", "r") as f:
+                settings = json.load(f).get("settings", {})
+                # Check if any of the main PII categories are enabled
+                if settings.get("enable_pii") or settings.get("enable_health") or settings.get("enable_financial") or settings.get("enable_authentication"):
+                    print("Applying Egress Guardrail: PII categories are enabled.")
+                    masked_message, l1_results = apply_egress_guardrail(ai_message)
+                else:
+                    print("Skipping Egress Guardrail: All PII categories are disabled.")
+        except Exception as e:
+            print(f"Could not read PII settings, applying guardrail as failsafe. Error: {e}")
+            masked_message, l1_results = apply_egress_guardrail(ai_message)
+        end_time_egress_pii = time.perf_counter()
+        BenchmarkLogger.log_metric(request_id, "EGRESS_PII_GUARDRAIL", (end_time_egress_pii - start_time_egress_pii) * 1000)
+        background_tasks.add_task(run_watchdog_task, request_id, ai_message, l1_results)
         
         # Step 4: EGRESS Toxicity Check on AI output
+        start_time_egress_toxicity = time.perf_counter()
         is_toxic_output, tox_output_result = apply_toxicity_check(ai_message, "EGRESS")
+        end_time_egress_toxicity = time.perf_counter()
+        BenchmarkLogger.log_metric(request_id, "EGRESS_TOXICITY_CHECK", (end_time_egress_toxicity - start_time_egress_toxicity) * 1000)
+        
+        # Initialize status to success
+        status = "success"
         
         if is_toxic_output:
+            # If toxic, overwrite the masked_message with the common error and update status
             masked_message = common_error_msg
             status = "blocked_toxic"
-        else:
-            status = "success"
             
         # Step 5: Secure Audit Logging
         raw_hash = hashlib.sha256(request.message.encode()).hexdigest()

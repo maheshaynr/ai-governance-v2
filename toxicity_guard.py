@@ -55,7 +55,7 @@ def analyze(text: str, thresholds: dict = None) -> dict:
             "max_category": "none"
         }
     
-    if thresholds is None:
+    if not thresholds:  # Check for None or empty dict
         thresholds = DEFAULT_THRESHOLDS
     
     try:

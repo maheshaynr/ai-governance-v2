@@ -3,7 +3,7 @@ import { fetchRules, addRule, updateRule, deleteRule, fetchAlarms, toggleWatchdo
 
 export default function AdminConfig() {
   const [loggedIn, setLoggedIn] = useState(false);
-  const [username, setUsername] = useState('');
+  const [username, setUsername] = useState('super_admin');
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState('');
 
@@ -137,7 +137,7 @@ export default function AdminConfig() {
   const handleSaveToxicitySettings = async () => {
     setIsSavingToxicity(true);
     try {
-      await updateToxicitySettings(toxicityThresholds);
+      await updateToxicitySettings({ thresholds: toxicityThresholds, enable_toxicity_guard: toxicityGuardEnabled });
       alert("Toxicity settings saved successfully!");
     } catch (e) {
       console.error("Failed to save toxicity settings", e);
@@ -158,11 +158,11 @@ export default function AdminConfig() {
 
   const handleLogin = (e) => {
     e.preventDefault();
-    if (username === 'admin' && password === 'admin') {
+    if ((username === 'super_admin' || username === 'admin_pii') && password === 'admin') {
       setLoggedIn(true);
       setLoginError('');
     } else {
-      setLoginError('Invalid credentials.');
+      setLoginError('Invalid credentials. (Password is admin)');
     }
   };
 
@@ -446,7 +446,10 @@ export default function AdminConfig() {
         <form onSubmit={handleLogin}>
           <div className="form-group">
             <label>Username</label>
-            <input type="text" value={username} onChange={e => setUsername(e.target.value)} />
+            <select value={username} onChange={e => setUsername(e.target.value)} style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #d0d7de', marginBottom: '1rem' }}>
+              <option value="super_admin">super_admin</option>
+              <option value="admin_pii">admin_pii</option>
+            </select>
           </div>
           <div className="form-group">
             <label>Password</label>
@@ -469,12 +472,15 @@ export default function AdminConfig() {
             {isTogglingWatchdog ? (
               <span style={{ fontSize: '0.8rem', color: '#57606a', fontStyle: 'italic', marginLeft: '0.5rem' }}>⏳ Updating...</span>
             ) : (
-              <label className="switch" style={{position: 'relative', display: 'inline-block', width: '40px', height: '20px'}}>
-                <input type="checkbox" checked={llmWatchdogEnabled} onChange={(e) => handleToggleWatchdog(e.target.checked)} style={{opacity: 0, width: 0, height: 0}} />
-                <span className="slider" style={{position: 'absolute', cursor: 'pointer', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: llmWatchdogEnabled ? '#2da44e' : '#cf222e', transition: '.4s', borderRadius: '20px'}}>
-                  <span style={{position: 'absolute', height: '14px', width: '14px', left: llmWatchdogEnabled ? '22px' : '3px', bottom: '3px', backgroundColor: 'white', transition: '.4s', borderRadius: '50%'}}></span>
-                </span>
-              </label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <label className="switch" style={{position: 'relative', display: 'inline-block', width: '40px', height: '20px', opacity: username === 'admin_pii' ? 0.5 : 1}}>
+                  <input type="checkbox" checked={llmWatchdogEnabled} disabled={username === 'admin_pii'} onChange={(e) => handleToggleWatchdog(e.target.checked)} style={{opacity: 0, width: 0, height: 0}} />
+                  <span className="slider" style={{position: 'absolute', cursor: username === 'admin_pii' ? 'not-allowed' : 'pointer', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: llmWatchdogEnabled ? '#2da44e' : '#cf222e', transition: '.4s', borderRadius: '20px'}}>
+                    <span style={{position: 'absolute', height: '14px', width: '14px', left: llmWatchdogEnabled ? '22px' : '3px', bottom: '3px', backgroundColor: 'white', transition: '.4s', borderRadius: '50%'}}></span>
+                  </span>
+                </label>
+                {username === 'admin_pii' && <span title="Requires Super Admin" style={{ cursor: 'help' }}>🔒</span>}
+              </div>
             )}
           </div>
           <div style={{display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#f6f8fa', padding: '0.5rem 1rem', borderRadius: '6px', border: '1px solid #d0d7de'}}>
@@ -482,12 +488,15 @@ export default function AdminConfig() {
             {isTogglingToxicity ? (
               <span style={{ fontSize: '0.8rem', color: '#57606a', fontStyle: 'italic', marginLeft: '0.5rem' }}>⏳ Updating...</span>
             ) : (
-              <label className="switch" style={{position: 'relative', display: 'inline-block', width: '40px', height: '20px'}}>
-                <input type="checkbox" checked={toxicityGuardEnabled} onChange={(e) => handleToggleToxicity(e.target.checked)} style={{opacity: 0, width: 0, height: 0}} />
-                <span className="slider" style={{position: 'absolute', cursor: 'pointer', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: toxicityGuardEnabled ? '#2da44e' : '#cf222e', transition: '.4s', borderRadius: '20px'}}>
-                  <span style={{position: 'absolute', height: '14px', width: '14px', left: toxicityGuardEnabled ? '22px' : '3px', bottom: '3px', backgroundColor: 'white', transition: '.4s', borderRadius: '50%'}}></span>
-                </span>
-              </label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <label className="switch" style={{position: 'relative', display: 'inline-block', width: '40px', height: '20px', opacity: username === 'admin_pii' ? 0.5 : 1}}>
+                  <input type="checkbox" checked={toxicityGuardEnabled} disabled={username === 'admin_pii'} onChange={(e) => handleToggleToxicity(e.target.checked)} style={{opacity: 0, width: 0, height: 0}} />
+                  <span className="slider" style={{position: 'absolute', cursor: username === 'admin_pii' ? 'not-allowed' : 'pointer', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: toxicityGuardEnabled ? '#2da44e' : '#cf222e', transition: '.4s', borderRadius: '20px'}}>
+                    <span style={{position: 'absolute', height: '14px', width: '14px', left: toxicityGuardEnabled ? '22px' : '3px', bottom: '3px', backgroundColor: 'white', transition: '.4s', borderRadius: '50%'}}></span>
+                  </span>
+                </label>
+                {username === 'admin_pii' && <span title="Requires Super Admin" style={{ cursor: 'help' }}>🔒</span>}
+              </div>
             )}
           </div>
           <button className="secondary" onClick={() => setLoggedIn(false)}>Logout</button>
@@ -515,13 +524,19 @@ export default function AdminConfig() {
           style={{ background: 'none', border: 'none', padding: '0.5rem 1rem', fontSize: '1rem', fontWeight: '600', color: activeTab === 'toxicity' ? '#8b5cf6' : '#57606a', borderBottom: activeTab === 'toxicity' ? '2px solid #8b5cf6' : '2px solid transparent', cursor: 'pointer' }}>
           Toxicity Guard
         </button>
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', padding: '0.5rem 1rem', fontSize: '0.9rem', color: '#57606a', fontWeight: 'bold' }}>
+          👤 {username === 'super_admin' ? 'Super Admin' : 'PII Admin'}
+        </div>
       </div>
 
       {activeTab === 'toxicity' && (
         <div className="card" style={{ maxWidth: '600px', margin: '0 auto' }}>
-          <h3>🛡️ Content Toxicity Guard</h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h3>🛡️ Content Toxicity Guard</h3>
+            {username === 'admin_pii' && <span style={{ backgroundColor: '#fff8c5', color: '#9a6700', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.8rem', border: '1px solid #d4a72c' }}>🔒 Super Admin Only</span>}
+          </div>
           <p style={{ color: '#57606a', fontSize: '0.9rem', marginBottom: '1.5rem' }}>Adjust the sensitivity thresholds for the AI toxicity guard. A lower threshold makes the guard stricter, catching more subtle language but potentially causing false positives. Values range from 0.0 to 1.0.</p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', opacity: username === 'admin_pii' ? 0.6 : 1, pointerEvents: username === 'admin_pii' ? 'none' : 'auto' }}>
             {Object.keys(toxicityThresholds).map((category) => (
               <div key={category} className="form-group" style={{ marginBottom: 0 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -538,7 +553,7 @@ export default function AdminConfig() {
               </div>
             ))}
           </div>
-          <button className="primary" onClick={handleSaveToxicitySettings} disabled={isSavingToxicity} style={{ marginTop: '2rem', width: '100%' }}>
+          <button className="primary" onClick={handleSaveToxicitySettings} disabled={isSavingToxicity || username === 'admin_pii'} style={{ marginTop: '2rem', width: '100%' }}>
             {isSavingToxicity ? 'Saving...' : 'Save Settings'}
           </button>
         </div>
@@ -554,15 +569,22 @@ export default function AdminConfig() {
               const catKey = cat.toLowerCase();
               const isEnabled = cat === 'UNCATEGORIZED' ? true : categoryToggles[catKey];
               const isToggling = isTogglingCategory[catKey];
+              const isRestrictedCat = username === 'admin_pii' && catKey !== 'pii' && catKey !== 'uncategorized';
               
               return (
                 <div 
                   key={cat} 
                   className={`category-card ${selectedCategory === cat ? 'active' : ''}`}
-                  onClick={() => setSelectedCategory(cat)}
+                  onClick={() => !isRestrictedCat && setSelectedCategory(cat)}
+                  style={{ 
+                    opacity: isRestrictedCat ? 0.7 : 1,
+                    cursor: isRestrictedCat ? 'not-allowed' : 'pointer'
+                  }}
                 >
                   <div className="category-card-content">
-                    <h4 className="category-card-title">{cat}</h4>
+                    <h4 className="category-card-title">
+                      {cat} {isRestrictedCat && <span title="Requires Super Admin" style={{ cursor: 'help', marginLeft: '0.25rem', fontSize: '1rem' }}>🔒</span>}
+                    </h4>
                     <span style={{ fontSize: '0.75rem', fontWeight: 'bold', color: isEnabled ? '#1a7f37' : '#cf222e' }}>
                       {isEnabled ? 'ACTIVE' : 'DISABLED'}
                     </span>
@@ -570,9 +592,9 @@ export default function AdminConfig() {
                   
                   <div className="category-card-actions" onClick={e => e.stopPropagation()}>
                     {cat !== 'UNCATEGORIZED' && (
-                      <label className="switch" style={{position: 'relative', display: 'inline-block', width: '30px', height: '16px'}}>
-                        <input type="checkbox" checked={isEnabled} onChange={(e) => handleToggleCategory(catKey, e.target.checked)} style={{opacity: 0, width: 0, height: 0}} />
-                        <span className="slider" style={{position: 'absolute', cursor: 'pointer', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: isEnabled ? '#2da44e' : '#cf222e', transition: '.4s', borderRadius: '16px'}}>
+                      <label className="switch" style={{position: 'relative', display: 'inline-block', width: '30px', height: '16px', opacity: isRestrictedCat ? 0.5 : 1}}>
+                        <input type="checkbox" checked={isEnabled} disabled={isRestrictedCat} onChange={(e) => handleToggleCategory(catKey, e.target.checked)} style={{opacity: 0, width: 0, height: 0}} />
+                        <span className="slider" style={{position: 'absolute', cursor: isRestrictedCat ? 'not-allowed' : 'pointer', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: isEnabled ? '#2da44e' : '#cf222e', transition: '.4s', borderRadius: '16px'}}>
                           <span style={{position: 'absolute', height: '12px', width: '12px', left: isEnabled ? '16px' : '2px', bottom: '2px', backgroundColor: 'white', transition: '.4s', borderRadius: '50%'}}></span>
                         </span>
                       </label>
@@ -581,6 +603,8 @@ export default function AdminConfig() {
                     <button 
                       className="btn-add-rule" 
                       title="Add New Rule" 
+                      disabled={isRestrictedCat}
+                      style={{ cursor: isRestrictedCat ? 'not-allowed' : 'pointer', opacity: isRestrictedCat ? 0.5 : 1 }}
                       onClick={() => {
                         setEditingRule(null);
                         setFormData({ name: '', entity: '', regex: '', score: 0.85, is_builtin: false, is_algorithmic: false, is_active: true, category: cat });
@@ -737,11 +761,14 @@ export default function AdminConfig() {
             <h3 style={{ margin: 0 }}>🚨 Threat Detections</h3>
             <button onClick={loadAlarms} className="secondary" style={{ padding: '0.2rem 0.5rem', fontSize: '0.8rem' }}>Refresh</button>
           </div>
-          {alarms.length === 0 ? (
-            <p style={{ color: '#57606a' }}>No alarms pending review. System is clean!</p>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              {alarms.map((alarm, idx) => (
+          {(() => {
+            const visibleAlarms = username === 'admin_pii' ? alarms.filter(a => a.category === 'PII') : alarms;
+            if (visibleAlarms.length === 0) {
+              return <p style={{ color: '#57606a' }}>No alarms pending review. System is clean!</p>;
+            }
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                {visibleAlarms.map((alarm, idx) => (
                 <div key={alarm.alarm_id} style={{ border: '1px solid #d0d7de', borderRadius: '8px', marginBottom: '1.5rem', background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #d0d7de', padding: '1rem', background: '#f6f8fa', borderTopLeftRadius: '8px', borderTopRightRadius: '8px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
@@ -847,7 +874,8 @@ export default function AdminConfig() {
                 </div>
               ))}
             </div>
-          )}
+            );
+          })()}
         </div>
       )}
 
@@ -856,7 +884,10 @@ export default function AdminConfig() {
           <div className="rules-list">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
               <h3 style={{ margin: 0 }}>Active Notification Subscribers</h3>
-              <button onClick={loadSubscribers} className="secondary" style={{ padding: '0.2rem 0.5rem', fontSize: '0.8rem' }}>Refresh</button>
+              <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                {username === 'admin_pii' && <span style={{ backgroundColor: '#fff8c5', color: '#9a6700', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.8rem', border: '1px solid #d4a72c' }}>🔒 Super Admin Only</span>}
+                <button onClick={loadSubscribers} className="secondary" style={{ padding: '0.2rem 0.5rem', fontSize: '0.8rem' }}>Refresh</button>
+              </div>
             </div>
             
             <div style={{ border: '1px solid #d0d7de', borderRadius: '6px', background: '#fff', overflow: 'hidden' }}>
@@ -888,8 +919,8 @@ export default function AdminConfig() {
                         </span>
                       </td>
                       <td style={{ padding: '0.75rem', textAlign: 'right', whiteSpace: 'nowrap' }}>
-                        <button className="secondary" title="Edit" style={{padding: '0.3rem 0.5rem', fontSize: '1rem', border: 'none', background: 'transparent'}} onClick={() => handleEditSubscriberClick(s)}>✏️</button>
-                        <button className="secondary" style={{padding: '0.2rem 0.5rem', fontSize: '0.8rem', color: '#cf222e'}} onClick={() => handleDeleteSubscriber(s.user_name)}>Remove</button>
+                        <button className="secondary" title="Edit" disabled={username === 'admin_pii'} style={{padding: '0.3rem 0.5rem', fontSize: '1rem', border: 'none', background: 'transparent', cursor: username === 'admin_pii' ? 'not-allowed' : 'pointer', opacity: username === 'admin_pii' ? 0.5 : 1}} onClick={() => handleEditSubscriberClick(s)}>✏️</button>
+                        <button className="secondary" disabled={username === 'admin_pii'} style={{padding: '0.2rem 0.5rem', fontSize: '0.8rem', color: username === 'admin_pii' ? '#57606a' : '#cf222e', cursor: username === 'admin_pii' ? 'not-allowed' : 'pointer'}} onClick={() => handleDeleteSubscriber(s.user_name)}>Remove</button>
                       </td>
                     </tr>
                   ))}
@@ -898,22 +929,23 @@ export default function AdminConfig() {
             </div>
           </div>
 
-          <div className="rule-form">
+          <div className="rule-form" style={{ opacity: username === 'admin_pii' ? 0.6 : 1, pointerEvents: username === 'admin_pii' ? 'none' : 'auto' }}>
             <div className="card">
               <h3>{editingSubscriber ? 'Edit Subscriber' : 'Add Subscriber'}</h3>
               <form onSubmit={handleAddSubscriber}>
                 <div className="form-group">
                   <label>Full Name</label>
-                  <input type="text" value={subFormData.user_name} onChange={e => setSubFormData({...subFormData, user_name: e.target.value})} placeholder="Jane Doe" />
+                  <input type="text" value={subFormData.user_name} disabled={username === 'admin_pii'} onChange={e => setSubFormData({...subFormData, user_name: e.target.value})} placeholder="Jane Doe" />
                 </div>
                 <div className="form-group">
                   <label>Role</label>
-                  <input type="text" value={subFormData.role} onChange={e => setSubFormData({...subFormData, role: e.target.value})} placeholder="Compliance Officer" />
+                  <input type="text" value={subFormData.role} disabled={username === 'admin_pii'} onChange={e => setSubFormData({...subFormData, role: e.target.value})} placeholder="Compliance Officer" />
                 </div>
                 <div className="form-group">
                   <label>Alert Category</label>
                   <select 
                     value={subFormData.alert_type} 
+                    disabled={username === 'admin_pii'}
                     onChange={e => setSubFormData({...subFormData, alert_type: e.target.value})}
                     style={{ width: '100%', padding: '0.5rem', borderRadius: '6px', border: '1px solid #d0d7de' }}
                   >
@@ -927,14 +959,14 @@ export default function AdminConfig() {
                 </div>
                 <div className="form-group">
                   <label>Email Address</label>
-                  <input type="email" value={subFormData.email} onChange={e => setSubFormData({...subFormData, email: e.target.value})} placeholder="jane.doe@company.com" />
+                  <input type="email" value={subFormData.email} disabled={username === 'admin_pii'} onChange={e => setSubFormData({...subFormData, email: e.target.value})} placeholder="jane.doe@company.com" />
                 </div>
                 <div style={{marginTop: '1rem', display: 'flex', gap: '1rem', alignItems: 'center'}}>
-                  <button type="submit" className="primary" disabled={isSaving}>
+                  <button type="submit" className="primary" disabled={isSaving || username === 'admin_pii'}>
                     {isSaving ? 'Processing...' : (editingSubscriber ? 'Update Subscriber' : 'Add Subscriber')}
                   </button>
                   {editingSubscriber && (
-                    <button type="button" className="secondary" onClick={handleCancelEditSubscriber} disabled={isSaving}>Cancel</button>
+                    <button type="button" className="secondary" onClick={handleCancelEditSubscriber} disabled={isSaving || username === 'admin_pii'}>Cancel</button>
                   )}
                 </div>
                 {subFormMessage && (

@@ -62,14 +62,7 @@ def init_db():
         )
     ''')
     
-    spenders_seed = [
-        (10011, 'Rajeev Jain', 'rjain@gmail.com', 'Rs. 5,250', 'Ord-5260-1234, Ord-5260-1255', '1234 5678 2528 7890', 'SBI co-branded credit card', '1234 5678 2820'),
-        (10023, 'Sujit Narayanan', 'snr@yahoo.co.in', 'Rs. 4,875', 'Ord-5260-9872', '9282 3452 0871 5620', 'Axis bank credit card', '1234 5678 3259'),
-        (10045, 'Sandeep Ram', 'sandeep@outbox.com', 'Rs. 4,320', 'Ord-5260-3478', '9282 3452 7842 2387', 'ICICI bank credit card', '1234 5678 4560'),
-        (10016, 'Punith Jire', 'punith.vijay@gmail.com', 'Rs. 250', 'Ord-5260-1234, Ord-5260-1255', '1234 5678 2528 7890', 'SBI co-branded credit card', '1234 5678 5847')
-    ]
-    cursor.executemany('INSERT OR IGNORE INTO spenders VALUES (?, ?, ?, ?, ?, ?, ?, ?)', spenders_seed)
-    conn.commit()
+    update_spenders() # Seed/update the spenders table
         
     conn.close()
 
@@ -107,6 +100,21 @@ def get_customer_profile(customer_id):
         
         
     return "Record not found."
+
+def update_spenders():
+    """Inserts or replaces the seed data for the spenders table."""
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    
+    spenders_seed = [
+        (10011, 'Rajeev Jain', 'rjain@gmail.com', 'Rs. 5,250', 'Ord-52602234553','1234 5678 2528 7890', 'SBI co-branded credit card', '1234 5678 2820'),
+        (10023, 'Sujit Narayanan', 'snr@yahoo.co.in', 'Rs. 4,875', 'Ord-52609872655', '9282 3452 0871 5620', 'Axis bank credit card', '1234 5678 3259'),
+        (10045, 'Sandeep Ram', 'sandeep@outbox.com', 'Rs. 4,320', 'Ord-52603478234', '9282 3452 7842 2387', 'ICICI bank credit card', '1234 5678 4560'),
+        (10016, 'Punith Jire', 'punith.vijay@gmail.com', 'Rs. 250', 'Ord-52601234255', '1234 5678 2528 7890', 'SBI co-branded credit card', '1234 5678 5847')
+    ]
+    cursor.executemany('INSERT OR REPLACE INTO spenders VALUES (?, ?, ?, ?, ?, ?, ?, ?)', spenders_seed)
+    conn.commit()
+    conn.close()
 
 def get_top_spenders():
     conn = sqlite3.connect(DB_FILE)
