@@ -1,7 +1,7 @@
 """
 Load test client for the AI Governance API.
 
-Runs three isolated scenarios:
+Runs four scenarios -- three isolated (one concern each) and one combined:
 
   pii       -> POST {base_url}/govern_ai        (no LLM call; pure guardrail masking)
   toxicity  -> POST {base_url}/demo_chat (toxic) (ingress-blocked before any LLM call)
@@ -14,6 +14,23 @@ Runs three isolated scenarios:
                                                    conflate app overhead with model latency,
                                                    and doubled the chance of hitting the
                                                    client-side request timeout.)
+  e2e       -> POST {base_url}/govern_ai AND     Combined flow: guardrail check (PII masking +
+              POST {ollama_url} directly         toxicity flag, same as pii) PLUS a real, timed
+                                                  call straight to Ollama -- so measured latency
+                                                  includes actual LLM inference, not just
+                                                  guardrail overhead. Two separate calls rather
+                                                  than /demo_chat, since that endpoint blocks
+                                                  toxic messages before the LLM (so toxic e2e
+                                                  requests would never include LLM time) and
+                                                  relies on the model faithfully echoing PII back,
+                                                  which isn't something worth depending on. Zero
+                                                  DB involvement either way. Note: /govern_ai also
+                                                  schedules an async background LLM watchdog task
+                                                  after responding, if enable_llm_watchdog is on
+                                                  in pii_rules.json -- separate from the direct
+                                                  call above, never affects measured latency, but
+                                                  is additional real (non-blocking) Ollama
+                                                  traffic, same as the pii scenario already has.
 
 Messages live in messages.json, tagged with a size/technique and an
 `expect` block so results can be checked for correctness, not just timed.
@@ -60,7 +77,7 @@ MESSAGES_FILE = os.path.join(SCRIPT_DIR, "messages.json")
 sys.path.insert(0, PROJECT_ROOT)
 import config  # noqa: E402 - needs PROJECT_ROOT on sys.path first, for OLLAMA_URL/DEFAULT_LLM_MODEL defaults
 
-SCENARIOS = ("pii", "toxicity", "llm")
+SCENARIOS = ("pii", "toxicity", "llm", "e2e")
 
 
 def load_messages():
@@ -106,6 +123,21 @@ def dispatch_timed(pool, ctx, messages, scenario, rate, duration, requests_cap, 
     return [f.result() for f in as_completed(futures)]
 
 
+def app_error_detail(data):
+    """
+    api.py returns status="error" as a normal 200 response (not an HTTP failure, so
+    resp.raise_for_status() never catches it) whenever ITS OWN downstream call --
+    almost always to Ollama -- fails. The actual exception text ends up in
+    masked_output (see demo_chat_agent's except block: f"Backend Error: {e}"). This
+    surfaces that text so app-level failures aren't indistinguishable from a plain
+    "status mismatch" -- distinct from this client's own transport-level errors,
+    which land in the `error` column instead.
+    """
+    if data.get("status") == "error":
+        return data.get("masked_output") or data.get("raw_output") or ""
+    return ""
+
+
 def send_pii(ctx, item, timeout):
     resp = requests.post(f"{ctx['base_url']}/govern_ai", json={"text": item["payload"]}, timeout=timeout)
     resp.raise_for_status()
@@ -116,7 +148,7 @@ def send_pii(ctx, item, timeout):
     expect = item.get("expect", {})
     if "masked" in expect and not item.get("informational"):
         passed = fired == expect["masked"]
-    return {"api_status": data.get("status"), "fired": fired, "passed": passed}
+    return {"api_status": data.get("status"), "fired": fired, "passed": passed, "app_error_detail": app_error_detail(data)}
 
 
 def send_toxicity(ctx, item, timeout):
@@ -132,7 +164,7 @@ def send_toxicity(ctx, item, timeout):
     expect = item.get("expect", {})
     if "status" in expect and not item.get("informational"):
         passed = status == expect["status"]
-    return {"api_status": status, "fired": status == "blocked_toxic", "passed": passed}
+    return {"api_status": status, "fired": status == "blocked_toxic", "passed": passed, "app_error_detail": app_error_detail(data)}
 
 
 def send_llm(ctx, item, timeout):
@@ -155,7 +187,57 @@ def send_llm(ctx, item, timeout):
     }
 
 
-SENDERS = {"pii": send_pii, "toxicity": send_toxicity, "llm": send_llm}
+def send_e2e(ctx, item, timeout):
+    """
+    Combined-flow scenario: guardrail check (/govern_ai, same as `pii`), plus --
+    only when --e2e-llm is passed -- a real, timed call straight to Ollama, so
+    the measured latency includes actual model inference, not just guardrail
+    overhead. Off by default: without --e2e-llm this is just the guardrail
+    check, fast and LLM-free, same as the original design.
+
+    When enabled, it's deliberately two separate calls rather than routing
+    through /demo_chat: that endpoint blocks toxic messages BEFORE they ever
+    reach the LLM (correct fail-fast behavior, but it would mean toxic e2e
+    messages never include LLM time at all), and driving PII into the model's
+    own output reliably would mean trusting a small local model to obey
+    "repeat this back exactly" -- not something worth depending on. Calling
+    Ollama directly here guarantees every e2e request includes real LLM time
+    regardless of message content, with zero DB involvement, while the
+    guardrail correctness check stays exactly as deterministic as the `pii`
+    scenario's.
+    """
+    resp = requests.post(f"{ctx['base_url']}/govern_ai", json={"text": item["payload"]}, timeout=timeout)
+    resp.raise_for_status()
+    data = resp.json()
+    masked = data.get("masked_output", "")
+    fired = masked != item["payload"]
+    status = data.get("status")
+    toxic_flagged = status == "toxic_flagged"
+    passed = None
+    expect = item.get("expect", {})
+    if "masked" in expect and "toxic_flagged" in expect and not item.get("informational"):
+        passed = (fired == expect["masked"]) and (toxic_flagged == expect["toxic_flagged"])
+
+    response_chars = ""
+    if ctx.get("e2e_llm"):
+        llm_payload = {
+            "model": ctx["ollama_model"],
+            "messages": [{"role": "user", "content": item["payload"]}],
+            "stream": False,
+            "keep_alive": -1,
+        }
+        llm_resp = requests.post(ctx["ollama_url"], json=llm_payload, timeout=timeout)
+        llm_resp.raise_for_status()
+        llm_content = llm_resp.json().get("message", {}).get("content", "")
+        response_chars = len(llm_content)
+
+    return {
+        "api_status": status, "fired": fired, "toxic_flagged": toxic_flagged, "passed": passed,
+        "app_error_detail": app_error_detail(data), "response_chars": response_chars,
+    }
+
+
+SENDERS = {"pii": send_pii, "toxicity": send_toxicity, "llm": send_llm, "e2e": send_e2e}
 
 
 def run_one(ctx, scenario, item, index, timeout):
@@ -171,6 +253,8 @@ def run_one(ctx, scenario, item, index, timeout):
         "input_words": len(item["payload"].split()),
         "informational": bool(item.get("informational", False)),
         "response_chars": "",
+        "toxic_flagged": "",
+        "app_error_detail": "",
         "error": "",
     }
     try:
@@ -242,7 +326,9 @@ def summarize(rows):
     if failed:
         print("  Failed expectations:")
         for r in failed:
-            print(f"    [{r['message_id']}] expected mismatch — api_status={r['api_status']} fired={r['fired']}")
+            extra = f" toxic_flagged={r['toxic_flagged']}" if r.get("toxic_flagged") != "" else ""
+            detail = f"\n        app_error_detail: {r['app_error_detail']}" if r.get("app_error_detail") else ""
+            print(f"    [{r['message_id']}] expected mismatch — api_status={r['api_status']} fired={r['fired']}{extra}{detail}")
 
 
 def write_csv(rows, out_dir, scenario, timestamp):
@@ -250,8 +336,8 @@ def write_csv(rows, out_dir, scenario, timestamp):
     path = os.path.join(out_dir, f"{scenario}_{timestamp}.csv")
     fieldnames = [
         "index", "scenario", "message_id", "technique", "size", "input_chars", "input_words",
-        "informational", "api_status", "fired", "passed", "response_chars", "latency_ms", "error",
-        "rate_rps", "concurrency", "duration_s",
+        "informational", "api_status", "fired", "toxic_flagged", "passed", "response_chars", "latency_ms",
+        "error", "app_error_detail", "rate_rps", "concurrency", "duration_s",
     ]
     with open(path, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
@@ -271,6 +357,10 @@ def run_scenario(ctx, messages, scenario, requests_cap, concurrency, timeout, ou
         print(f"\n=== Scenario: {scenario} ({requests_cap} requests, concurrency {concurrency}) ===")
     if scenario == "llm":
         print(f"  Target:       {ctx['ollama_url']} (model={ctx['ollama_model']}) — direct, bypassing api.py")
+    elif scenario == "e2e" and ctx.get("e2e_llm"):
+        print(f"  Target:       {ctx['base_url']} + {ctx['ollama_url']} (model={ctx['ollama_model']}) — guardrail check + direct LLM call")
+    elif scenario == "e2e":
+        print(f"  Target:       {ctx['base_url']} — guardrail check only (pass --e2e-llm to also include a real LLM call)")
     else:
         print(f"  Target:       {ctx['base_url']}")
 
@@ -343,6 +433,12 @@ def main():
         "--ollama-model", default=config.DEFAULT_LLM_MODEL,
         help="Model name for the llm scenario's direct Ollama calls. Defaults to config.py's DEFAULT_LLM_MODEL.",
     )
+    parser.add_argument(
+        "--e2e-llm", action="store_true",
+        help="e2e scenario only: also make a real, timed call straight to Ollama alongside the "
+             "guardrail check, so measured latency includes actual LLM inference. Off by default "
+             "(e2e is guardrail-only, fast, LLM-free unless this is set).",
+    )
     args = parser.parse_args()
 
     if args.duration is not None and args.rate is None:
@@ -353,7 +449,10 @@ def main():
     messages = load_messages()
     scenarios = SCENARIOS if args.scenario == "all" else (args.scenario,)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    ctx = {"base_url": args.base_url, "ollama_url": args.ollama_url, "ollama_model": args.ollama_model}
+    ctx = {
+        "base_url": args.base_url, "ollama_url": args.ollama_url, "ollama_model": args.ollama_model,
+        "e2e_llm": args.e2e_llm,
+    }
     requests_cap = args.requests if args.requests is not None else (None if args.rate is not None else 15)
 
     if "llm" not in scenarios or len(scenarios) > 1:
