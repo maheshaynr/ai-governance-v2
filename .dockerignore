@@ -1,0 +1,32 @@
+# Python environments -- the image installs its own dependencies fresh
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# Frontend -- this Dockerfile is backend-only
+frontend/
+
+# Load test harness -- a client tool, not part of the running backend
+load_test/
+
+# VCS / docs -- not needed inside the image
+.git/
+.gitignore
+Implementation_Plan/
+*.md
+
+# Runtime-generated data/logs -- let the container start with a clean slate
+alarms.json
+alarms_archive.json
+governance_audit.json
+toxicity_monitor.log
+benchmark.log
+cohort.db
+
+# Already-downloaded local artifact -- pip fetches this fresh from the
+# pinned URL in requirements.txt during the build instead
+*.tar.gz
+
+# Ollama model definitions -- used on the host, not by the Python backend
+Modelfile.*
