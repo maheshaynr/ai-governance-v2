@@ -7,13 +7,13 @@
     "enable_financial": true,
     "enable_authentication": true,
     "toxicity_thresholds": {
-      "toxicity": 0.7,
+      "toxicity": 0.4,
       "severe_toxicity": 0.5,
-      "obscene": 0.7,
+      "obscene": 0.4,
       "threat": 0.5,
-      "insult": 0.7,
+      "insult": 0.4,
       "identity_attack": 0.5,
-      "sexual_explicit": 0.7
+      "sexual_explicit": 0.4
     }
   },
   "category_mappings": {
@@ -26,7 +26,8 @@
       "PAYMENT",
       "IBAN",
       "TRANSACTION",
-      "TRANSACTION_AMOUNT"
+      "TRANSACTION_AMOUNT",
+      "IBAN_NUMBER"
     ],
     "HEALTH": [
       "MEDICAL",
@@ -67,7 +68,7 @@
       "score": 0.85,
       "is_builtin": true,
       "is_algorithmic": false,
-      "is_active": true
+      "is_active": false
     },
     {
       "name": "Standard_Email_Addresses",
@@ -131,18 +132,9 @@
       "is_active": true
     },
     {
-      "name": "TRANSACTION_AMOUNT",
-      "entity": "TRANSACTION_AMOUNT",
-      "regex": "(?:(?:\\$|Rs\\.\\s*)(?:\\d{1,3}(?:,\\d{3})+|\\d+)(?:\\.\\d{2})?|\\b(?:\\d{1,3}(?:,\\d{3})+|\\d+)(?:\\.\\d{2})?\\s+(?:dollars|rupees)\\b)",
-      "score": 0.85,
-      "is_builtin": false,
-      "is_algorithmic": false,
-      "is_active": false
-    },
-    {
       "name": "AutoFix_IBAN_NUMBER",
       "entity": "IBAN_NUMBER",
-      "regex": "\\b[A-Z]{2}[0-9]{2}[a-zA-Z0-9]{11,30}\\b",
+      "regex": "\\b[A-Z]{2}[0-9]{2}[a-zA-Z0-9]{11,20}\\b",
       "score": 0.85,
       "is_builtin": false,
       "is_algorithmic": false,

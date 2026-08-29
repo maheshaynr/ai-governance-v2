@@ -506,7 +506,7 @@ def sandbox_suggest_rule(request: SandboxSuggestRequest):
             # PRE-CHECK: See if an inactive rule already catches this leak
             inactive_rules = [r for r in existing_rules if not r.get("is_active", True)]
             for r in inactive_rules:
-                if "regex" in r:
+                if r.get("regex"): # Check for a non-empty regex
                     import re
                     pattern = re.compile(r["regex"])
                     if pattern.search(request.context_snippet):

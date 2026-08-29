@@ -107,10 +107,10 @@ def update_spenders():
     cursor = conn.cursor()
     
     spenders_seed = [
-        (10011, 'Rajeev Jain', 'rjain@gmail.com', 'Rs. 5,250', 'Ord-52602234553','1234 5678 2528 7890', 'SBI co-branded credit card', '1234 5678 2820'),
-        (10023, 'Sujit Narayanan', 'snr@yahoo.co.in', 'Rs. 4,875', 'Ord-52609872655', '9282 3452 0871 5620', 'Axis bank credit card', '1234 5678 3259'),
-        (10045, 'Sandeep Ram', 'sandeep@outbox.com', 'Rs. 4,320', 'Ord-52603478234', '9282 3452 7842 2387', 'ICICI bank credit card', '1234 5678 4560'),
-        (10016, 'Punith Jire', 'punith.vijay@gmail.com', 'Rs. 250', 'Ord-52601234255', '1234 5678 2528 7890', 'SBI co-branded credit card', '1234 5678 5847')
+        (10011, 'Rajeev Jain', 'rjain@gmail.com', 'Rs. 5,250', '0052160','1234 5678 2528 7890', 'SBI co-branded credit card', '1234 5678 2820'),
+        (10023, 'Sujit Narayanan', 'snr@yahoo.co.in', 'Rs. 4,875', '0052161', '9282 3452 0871 5620', 'Axis bank credit card', '1234 5678 3259'),
+        (10045, 'Sandeep Ram', 'sandeep@outbox.com', 'Rs. 4,320', '0063260', '9282 3452 7842 2387', 'ICICI bank credit card', '1234 5678 4560'),
+        (10016, 'Punith Jire', 'punith.vijay@gmail.com', 'Rs. 250', '0077260', '1234 5678 2528 7890', 'SBI co-branded credit card', '1234 5678 5847')
     ]
     cursor.executemany('INSERT OR REPLACE INTO spenders VALUES (?, ?, ?, ?, ?, ?, ?, ?)', spenders_seed)
     conn.commit()

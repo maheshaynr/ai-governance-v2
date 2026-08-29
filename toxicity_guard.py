@@ -18,13 +18,13 @@ print("Detoxify model loaded successfully.")
 
 # Default thresholds if none provided
 DEFAULT_THRESHOLDS = {
-    "toxicity": 0.7,
+    "toxicity": 0.4, #7
     "severe_toxicity": 0.5,
-    "obscene": 0.7,
+    "obscene": 0.4, #7
     "threat": 0.5,
-    "insult": 0.7,
+    "insult": 0.4, #7
     "identity_attack": 0.5,
-    "sexual_explicit": 0.7
+    "sexual_explicit": 0.4 #7
 }
 
 
