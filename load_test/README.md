@@ -91,6 +91,12 @@ Example: 1 request per second for 1 minute —
 .\.venv\Scripts\python.exe load_test\client.py --scenario llm --rate 2 --duration 120 --concurrency 5
 ```
 
+All three scenarios, each timed independently (1 req/sec for 1 minute, run one after another — since scenarios always run sequentially, this takes ~3 minutes total, not 1) —
+
+```powershell
+.\.venv\Scripts\python.exe load_test\client.py --scenario all --rate 1 --duration 60
+```
+
 `--duration` requires `--rate`. If you use `--rate` without `--duration`, you must also pass `--requests` as a cap (otherwise it would run forever). The summary line reports both the *requested* rate and the *actual achieved* rate, so a gap between the two (e.g. asking for 2/sec on the `llm` scenario when responses take 60+ seconds each) is visible immediately rather than hidden. The rate, concurrency, and duration used for a run are also written into every row of the output CSV (`rate_rps`, `concurrency`, `duration_s` columns), so results stay traceable to the config that produced them even after the fact.
 
 ## 3. Flag reference
