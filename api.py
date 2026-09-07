@@ -1,12 +1,15 @@
 import os
 import json
+import logging
+from datetime import datetime
 import requests
 import re
-from fastapi import FastAPI, BackgroundTasks
+from contextlib import asynccontextmanager
+from fastapi import FastAPI, BackgroundTasks, Depends, HTTPException
 import time
 import uuid
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional
 from presidio_analyzer import AnalyzerEngine, PatternRecognizer, Pattern
 from presidio_analyzer.nlp_engine import NlpEngineProvider
@@ -23,7 +26,44 @@ import diff_engine
 import toxicity_guard
 import config
 import rag_engine
-app = FastAPI(title="AI Governance API")
+import auth
+import injection_guard
+import tool_broker
+from auth import Principal, require_role, ROLE_SUPER_ADMIN, ADMIN_ROLES, ANY_ROLE
+from fidelity_check import FidelityChecker
+
+# Upstream calls get an explicit read timeout. Four of the five Ollama calls previously
+# passed none, so a stalled model server pinned the worker until the client gave up.
+LLM_TIMEOUT = 120
+
+INJECTION_BLOCK_MSG = (
+    "⚠️ Your message was blocked by the Injection Shield. It contains instructions that "
+    "attempt to override this assistant's configuration, extract its instructions, or "
+    "inject database commands. This attempt has been logged. Please rephrase your "
+    "request as an ordinary question."
+)
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    # Runs after the module is fully imported, so the guard modules have finished their
+    # (slow) model loads by now. Names are resolved at call time.
+    report = run_guard_self_test()
+
+    if report["status"] != "ready":
+        print("\n" + "=" * 72)
+        print("GUARDRAIL SELF-TEST: DEGRADED — requests will be refused, not passed.")
+        for problem in report["problems"]:
+            print(f"  - {problem}")
+        print("=" * 72 + "\n")
+    else:
+        print("Guardrail self-test: all enabled guards loaded.")
+        for problem in report["problems"]:
+            print(f"  ! {problem}")
+
+    yield
+
+
+app = FastAPI(title="AI Governance API", lifespan=lifespan)
 
 # Add CORS Middleware to allow React frontend (running on port 5173) to communicate with the API
 app.add_middleware(
@@ -141,12 +181,13 @@ class DbQueryRequest(BaseModel):
     customer_id: int
 
 class GenerativeRequest(BaseModel):
-    text: str
+    text: str = Field(max_length=8000)
 
 class GovernResponse(BaseModel):
     masked_output: str
     status: str
     toxicity: Optional[dict] = None
+    injection: Optional[dict] = None
 
 class RuleRequest(BaseModel):
     name: str
@@ -193,13 +234,17 @@ class DeleteAlarmRequest(BaseModel):
     status: str = "DISMISSED"
 
 class ChatRequest(BaseModel):
-    message: str
+    message: str = Field(max_length=8000)
 
 class ChatResponse(BaseModel):
-    raw_output: str
+    # Withheld (None) unless EXPOSE_RAW_OUTPUT is on AND the caller is an admin --
+    # see may_see_raw_output. Returning it unconditionally handed back exactly what
+    # the pipeline exists to withhold.
+    raw_output: Optional[str] = None
     masked_output: str
     status: str
     toxicity: Optional[dict] = None
+    injection: Optional[dict] = None
 
 class SandboxSuggestRequest(BaseModel):
     context_snippet: str
@@ -212,42 +257,161 @@ class SandboxTestRequest(BaseModel):
     entity_name: str
 
 # --- 3. The Universal Guardrail Function ---
-def load_toxicity_settings():
-    """Load toxicity guard settings from pii_rules.json"""
+class GuardSettingsError(Exception):
+    """
+    Raised when the guard configuration cannot be read.
+
+    This used to be swallowed by a bare `except` that returned enabled=False, so a
+    malformed pii_rules.json silently turned the guards off. An unreadable policy file is
+    a guard outage, not a policy of "allow everything".
+    """
+
+
+def load_guard_settings() -> dict:
+    """Read the settings block from pii_rules.json, or fail loudly."""
     try:
         with open("pii_rules.json", "r") as f:
-            settings = json.load(f).get("settings", {})
-            return {
-                "enabled": settings.get("enable_toxicity_guard", False),
-                "thresholds": settings.get("toxicity_thresholds", {})
-            }
-    except:
-        return {"enabled": False, "thresholds": {}}
+            return json.load(f).get("settings", {})
+    except (FileNotFoundError, json.JSONDecodeError, OSError) as e:
+        raise GuardSettingsError(str(e)) from e
+
+
+def load_toxicity_settings():
+    """
+    Kept for the /toxicity_settings endpoint, which reports configuration rather than
+    gating traffic. On failure it reports the guard as unavailable instead of disabled.
+    """
+    try:
+        settings = load_guard_settings()
+    except GuardSettingsError as e:
+        return {"enabled": False, "thresholds": {}, "unavailable": True, "error": str(e)}
+
+    return {
+        "enabled": settings.get("enable_toxicity_guard", False),
+        "thresholds": settings.get("toxicity_thresholds", {}),
+    }
+
+
+def _log_guard_check(log_file_name: str, direction: str, summary: str):
+    import datetime
+    try:
+        with open(log_file_name, "a", encoding="utf-8") as log_file:
+            log_file.write(f"[{datetime.datetime.now().isoformat()}] [{direction}] {summary}\n")
+    except OSError as e:
+        logging.error(f"Failed to write {log_file_name}: {e}")
+
+
+def _guard_failure(guard_name: str, direction: str, error: str):
+    """
+    Common handling for "the guard could not run": alarm it, and tell the caller to
+    block. Returns the (blocked, result) shape every apply_* check uses.
+    """
+    try:
+        diff_engine.generate_guard_failure_alarm(guard_name, error, direction)
+    except Exception as e:
+        logging.error(f"Failed to raise GUARD_FAILURE alarm for {guard_name}: {e}")
+
+    return True, {"guard_failed": True, "guard": guard_name, "error": error}
+
+
+def apply_injection_check(text: str, direction: str = "INGRESS"):
+    """
+    Layer 1 injection detection -- patterns plus a local classifier.
+
+    Returns (should_block, result). A disabled guard returns (False, None); a guard that
+    could not run returns (True, {...guard_failed}) so the caller blocks rather than
+    passing unchecked text to a model holding a database tool.
+    """
+    try:
+        settings = load_guard_settings()
+    except GuardSettingsError as e:
+        return _guard_failure("injection_guard", direction, f"settings unreadable: {e}")
+
+    if not settings.get("enable_injection_guard", False):
+        return False, None
+
+    result = injection_guard.analyze(text, settings.get("injection_threshold"))
+
+    if result.get("guard_failed"):
+        return _guard_failure("injection_guard", direction, result.get("error", "unknown"))
+
+    _log_guard_check(
+        "injection_monitor.log", direction,
+        f"Injection: {result['is_injection']} | blocking={result.get('blocking')} "
+        f"label={result['label']} score={result['score']} patterns={result['triggered_patterns']}"
+    )
+
+    if result["is_injection"]:
+        diff_engine.generate_injection_alarm(text, result, direction, detected_by="layer1")
+
+    # A pattern match blocks inline. A classifier-only flag ("blocking": False) is
+    # surfaced through the alarm above but does not stop the request -- see
+    # injection_guard's note on why an unconfirmed model opinion should not reject
+    # ordinary traffic on its own.
+    should_block = result["is_injection"] and result.get("blocking", True)
+    return should_block, result
+
 
 def apply_toxicity_check(text: str, direction: str = "EGRESS"):
     """
     Run detoxify toxicity analysis on text.
-    Returns (is_toxic, toxicity_result) tuple.
-    If guard is disabled, returns (False, None).
+
+    Returns (should_block, toxicity_result). A disabled guard returns (False, None); a
+    guard that errored returns (True, {...guard_failed}) rather than a clean verdict --
+    "the text is clean" and "the check did not happen" must not be the same answer.
     """
-    tox_settings = load_toxicity_settings()
-    if not tox_settings["enabled"]:
+    try:
+        settings = load_guard_settings()
+    except GuardSettingsError as e:
+        return _guard_failure("toxicity_guard", direction, f"settings unreadable: {e}")
+
+    if not settings.get("enable_toxicity_guard", False):
         return False, None
-    
-    result = toxicity_guard.analyze(text, tox_settings["thresholds"])
-    
-    # If toxic, generate alarm
+
+    result = toxicity_guard.analyze(text, settings.get("toxicity_thresholds", {}))
+
+    if result.get("guard_failed"):
+        return _guard_failure("toxicity_guard", direction, result.get("error", "unknown"))
+
+    _log_guard_check(
+        "toxicity_monitor.log", direction,
+        f"Toxic: {result['is_toxic']} | Scores: {json.dumps(result['scores'])}"
+    )
+
     if result["is_toxic"]:
         diff_engine.generate_toxicity_alarm(text, result, direction)
-        
-    # Log all toxicity checks to a dedicated log file
-    import datetime
-    with open("toxicity_monitor.log", "a", encoding="utf-8") as log_file:
-        timestamp = datetime.datetime.now().isoformat()
-        log_entry = f"[{timestamp}] [{direction}] Toxic: {result['is_toxic']} | Scores: {json.dumps(result['scores'])}\n"
-        log_file.write(log_entry)
-    
+
     return result["is_toxic"], result
+
+
+def should_block_toxic_egress() -> bool:
+    """
+    Whether a toxic model response is blocked or merely flagged.
+
+    The egress verdict used to be computed and then discarded into `_`, so output was
+    scored, alarmed, and forwarded regardless. Blocking is now the default and the choice
+    is explicit.
+    """
+    try:
+        return load_guard_settings().get("block_toxic_egress", True)
+    except GuardSettingsError:
+        return True
+
+
+def may_see_raw_output(principal: Principal) -> bool:
+    """
+    Unmasked model output is withheld unless a deployment explicitly opts in AND the
+    caller is an admin. Returning both raw_output and masked_output on every call hands
+    back exactly what the pipeline exists to withhold.
+    """
+    return bool(config.EXPOSE_RAW_OUTPUT) and principal.is_admin
+
+
+def guard_failure_response(result: dict) -> str:
+    return (
+        "⚠️ This request was blocked because a safety check could not be completed "
+        f"({result.get('guard', 'guard')}). An administrator has been alerted."
+    )
 
 def mask_person_name(name: str) -> str:
     parts = name.split()
@@ -338,69 +502,133 @@ def run_watchdog_task(request_id: str, raw_text: str, layer1_results):
 
 # --- 4. Endpoints ---
 @app.post("/query_db", response_model=GovernResponse)
-def query_database(request: DbQueryRequest, background_tasks: BackgroundTasks):
-    # 1. Fetch raw data
-    raw_data = database.get_customer_profile(request.customer_id)
-    
+def query_database(request: DbQueryRequest, background_tasks: BackgroundTasks,
+                   principal: Principal = Depends(require_role(*ANY_ROLE))):
+    # 1. Authorize the read before performing it. This endpoint reads a record by ID
+    #    directly, so it needs the same entitlement check as a brokered tool call --
+    #    otherwise it is a way around the broker.
+    decision = tool_broker.execute(principal, tool_broker.make_call(tool_broker.TOOL_FETCH_DB, request.customer_id))
+    if not decision.allowed:
+        return GovernResponse(masked_output=decision.refusal, status="forbidden")
+
+    raw_data = decision.data
+
     # 2. Universal Egress Guardrail (No request_id for this endpoint yet, as it's not part of the demo_chat flow)
     masked_output, l1_results = apply_egress_guardrail(raw_data) # TODO: Add request_id and benchmarking here too if needed
     background_tasks.add_task(run_watchdog_task, "N/A", raw_data, l1_results) # Using N/A for request_id for now
-    
-    # 3. Toxicity Check (Egress — flag only, don't block DB results)
-    _, tox_result = apply_toxicity_check(raw_data, "EGRESS")
-    
+
+    # 3. Toxicity Check (Egress)
+    is_toxic, tox_result = apply_toxicity_check(raw_data, "EGRESS")
+
     # 4. Secure Audit Logging
     raw_hash = hashlib.sha256(raw_data.encode()).hexdigest()
+    fidelity_ok, fidelity_score = FidelityChecker.check_fidelity(raw_data, masked_output)
     AuditLogger.log_transaction(
         pii_masked_input=f"DB_HASH:{raw_hash[:8]}", # Secure Data Minimization
         final_rewrite=masked_output,
-        fidelity_score=1.0,
-        fallback_triggered=False
+        fidelity_score=fidelity_score,
+        fallback_triggered=not fidelity_ok
     )
-    
-    return GovernResponse(masked_output=masked_output, status="success", toxicity=tox_result)
+
+    if is_toxic and tox_result.get("guard_failed"):
+        return GovernResponse(
+            masked_output=guard_failure_response(tox_result),
+            status="blocked_guard_failure",
+            toxicity=tox_result,
+        )
+
+    return GovernResponse(
+        masked_output=masked_output,
+        status="toxic_flagged" if is_toxic else "success",
+        toxicity=tox_result,
+    )
 
 @app.post("/govern_ai", response_model=GovernResponse)
-def govern_ai_output(request: GenerativeRequest, background_tasks: BackgroundTasks):
-    # 1. Toxicity Check (Egress — flag toxic AI output but still return it masked)
+def govern_ai_output(request: GenerativeRequest, background_tasks: BackgroundTasks,
+                     principal: Principal = Depends(require_role(*ANY_ROLE))):
+    # 1. Injection check. This endpoint governs arbitrary submitted text, so injected
+    #    instructions arriving here matter for the same reason they do in /chat.
+    is_injection, inj_result = apply_injection_check(request.text, "INGRESS")
+    if is_injection:
+        message = (
+            guard_failure_response(inj_result)
+            if inj_result.get("guard_failed") else INJECTION_BLOCK_MSG
+        )
+        status = "blocked_guard_failure" if inj_result.get("guard_failed") else "blocked_injection"
+        return GovernResponse(masked_output=message, status=status, injection=inj_result)
+
+    # 2. Toxicity Check (Egress — flag toxic AI output but still return it masked)
     is_toxic, tox_result = apply_toxicity_check(request.text, "EGRESS")
-    
-    # 2. PII Guardrail (No request_id for this endpoint yet, as it's not part of the demo_chat flow)
+    if is_toxic and tox_result.get("guard_failed"):
+        return GovernResponse(
+            masked_output=guard_failure_response(tox_result),
+            status="blocked_guard_failure",
+            toxicity=tox_result,
+        )
+
+    # 3. PII Guardrail (No request_id for this endpoint yet, as it's not part of the demo_chat flow)
     masked_output, l1_results = apply_egress_guardrail(request.text) # TODO: Add request_id and benchmarking here too if needed
     background_tasks.add_task(run_watchdog_task, "N/A", request.text, l1_results) # Using N/A for request_id for now
-    
-    # 3. Secure Audit Logging
+
+    # 4. Secure Audit Logging
     raw_hash = hashlib.sha256(request.text.encode()).hexdigest()
+    fidelity_ok, fidelity_score = FidelityChecker.check_fidelity(request.text, masked_output)
     AuditLogger.log_transaction(
         pii_masked_input=f"AI_HASH:{raw_hash[:8]}",
         final_rewrite=masked_output,
-        fidelity_score=1.0,
-        fallback_triggered=False
+        fidelity_score=fidelity_score,
+        fallback_triggered=not fidelity_ok
     )
     return GovernResponse(
-        masked_output=masked_output, 
+        masked_output=masked_output,
         status="toxic_flagged" if is_toxic else "success",
-        toxicity=tox_result
+        toxicity=tox_result,
+        injection=inj_result
     )
 
 @app.post("/chat", response_model=ChatResponse)
-def chat_agent(request: ChatRequest, background_tasks: BackgroundTasks):
+def chat_agent(request: ChatRequest, background_tasks: BackgroundTasks,
+               principal: Principal = Depends(require_role(*ANY_ROLE))):
     common_error_msg = "⚠️ Your message was blocked by the Content Safety Shield. I cannot provide you with insults or derogatory language targeting any specific group of people, including those identified by nationality, nor can I write content that insults someone's intelligence and includes extreme profanity. My guidelines prohibit generating hateful content or slurs. Is there anything else I can help you with?"
     request_id = f"R-{uuid.uuid4().hex[:8]}"
 
-    # Step 0: INGRESS Toxicity Check — Block abusive user input before it reaches the LLM
+    # Step 0a: INGRESS Injection Check — runs first because the pattern pass is the
+    # cheapest check we have, and because injection is what reaches the database tool.
+    start_time = time.perf_counter()
+    is_injection, inj_result = apply_injection_check(request.message, "INGRESS")
+    end_time = time.perf_counter()
+    BenchmarkLogger.log_metric(request_id, "INGRESS_INJECTION_CHECK", (end_time - start_time) * 1000)
+    if is_injection:
+        if inj_result.get("guard_failed"):
+            return ChatResponse(
+                masked_output=guard_failure_response(inj_result),
+                status="blocked_guard_failure",
+                injection=inj_result,
+            )
+        return ChatResponse(
+            masked_output=INJECTION_BLOCK_MSG,
+            status="blocked_injection",
+            injection=inj_result,
+        )
+
+    # Step 0b: INGRESS Toxicity Check — Block abusive user input before it reaches the LLM
     start_time = time.perf_counter()
     is_toxic_input, tox_input_result = apply_toxicity_check(request.message, "INGRESS")
     end_time = time.perf_counter()
     BenchmarkLogger.log_metric(request_id, "INGRESS_TOXICITY_CHECK", (end_time - start_time) * 1000)
     if is_toxic_input:
+        if tox_input_result.get("guard_failed"):
+            return ChatResponse(
+                masked_output=guard_failure_response(tox_input_result),
+                status="blocked_guard_failure",
+                toxicity=tox_input_result,
+            )
         return ChatResponse(
-            raw_output="[BLOCKED]", 
             masked_output=common_error_msg,
             status="blocked_toxic",
             toxicity=tox_input_result
         )
-    
+
     OLLAMA_URL = config.OLLAMA_URL
     SYSTEM_PROMPT = """You are an internal enterprise AI with access to a customer database. 
 If the user asks for details about a specific customer, you MUST output ONLY the command <FETCH_DB:ID> where ID is the customer number (e.g. <FETCH_DB:101>). 
@@ -422,22 +650,29 @@ If you are provided with data, summarize it naturally and helpfully."""
             "keep_alive": -1,
             "options": {"temperature": 0.0, "num_predict": 300}
         }
-        resp = requests.post(OLLAMA_URL, json=payload)
+        resp = requests.post(OLLAMA_URL, json=payload, timeout=LLM_TIMEOUT)
         if resp.status_code != 200:
-            return ChatResponse(raw_output="Error", masked_output="Failed to contact Ollama. Is it running?", status="error")
+            return ChatResponse(masked_output="Failed to contact Ollama. Is it running?", status="error")
         end_time = time.perf_counter()
         BenchmarkLogger.log_metric(request_id, "LLM_INITIAL_CALL", (end_time - start_time) * 1000)
 
         ai_message = resp.json()["message"]["content"]
-        
-        
-        # Step 2: Check for Tool Call
-        match = re.search(r"<FETCH_DB:(\d+)>", ai_message)
-        if match:
-            customer_id = int(match.group(1))
-            # Execute tool
-            raw_data = database.get_customer_profile(customer_id)
-            
+
+        # Step 2: Tool call — brokered, not regex-dispatched.
+        # The model names what it wants; tool_broker decides whether this caller may have
+        # it. Previously the ID the model emitted went straight to the database.
+        #
+        # A refusal short-circuits with a fixed message rather than being fed back to the
+        # model to paraphrase: this is a security boundary, and a small model asked to
+        # relay a refusal is not a dependable way to guarantee the caller never sees the
+        # data anyway (it could ignore the instruction, or invent something instead).
+        tool_calls = tool_broker.parse_tool_calls(ai_message)
+        if tool_calls:
+            result = tool_broker.execute(principal, tool_calls[0])
+            if not result.allowed:
+                return ChatResponse(masked_output=result.refusal, status="forbidden")
+            raw_data = result.data
+
             # Feed back to LLM
             json_schema = '''{
   "customer_id": 101,
@@ -457,45 +692,68 @@ If you are provided with data, summarize it naturally and helpfully."""
             
             payload["messages"] = messages
             payload["format"] = "json"
-            
+
             start_time = time.perf_counter()
-            resp2 = requests.post(OLLAMA_URL, json=payload)
+            resp2 = requests.post(OLLAMA_URL, json=payload, timeout=LLM_TIMEOUT)
             end_time = time.perf_counter()
             BenchmarkLogger.log_metric(request_id, "LLM_TOOL_FEEDBACK_CALL", (end_time - start_time) * 1000)
 
             ai_message = resp2.json()["message"]["content"]
-            
+
         # Step 3: Apply PII Guardrail
         start_time = time.perf_counter()
         masked_message, l1_results = apply_egress_guardrail(ai_message)
         end_time = time.perf_counter()
         BenchmarkLogger.log_metric(request_id, "EGRESS_PII_GUARDRAIL", (end_time - start_time) * 1000)
         background_tasks.add_task(run_watchdog_task, request_id, ai_message, l1_results)
-        
-        # Step 4: EGRESS Toxicity Check on AI output (flag only, don't block)
-        _, tox_output_result = apply_toxicity_check(ai_message, "EGRESS")
-        
+
+        # Step 4: EGRESS Toxicity Check on AI output. The verdict used to be discarded
+        # into `_`, so output was scored, alarmed and forwarded regardless; whether it
+        # blocks is now an explicit setting.
+        is_toxic_output, tox_output_result = apply_toxicity_check(ai_message, "EGRESS")
+
         # Secure Audit Logging
         raw_hash = hashlib.sha256(ai_message.encode()).hexdigest()
+        fidelity_ok, fidelity_score = FidelityChecker.check_fidelity(ai_message, masked_message)
         AuditLogger.log_transaction(
             pii_masked_input=f"CHAT_HASH:{raw_hash[:8]}",
             final_rewrite=masked_message,
-            fidelity_score=1.0,
-            fallback_triggered=False
+            fidelity_score=fidelity_score,
+            fallback_triggered=not fidelity_ok
         )
-        
+
+        if is_toxic_output and should_block_toxic_egress():
+            status = "blocked_guard_failure" if tox_output_result.get("guard_failed") else "blocked_toxic_egress"
+            message = (
+                guard_failure_response(tox_output_result)
+                if tox_output_result.get("guard_failed") else common_error_msg
+            )
+            return ChatResponse(masked_output=message, status=status, toxicity=tox_output_result)
+
         return ChatResponse(
-            raw_output=ai_message, 
-            masked_output=masked_message, 
-            status="success",
+            raw_output=ai_message if may_see_raw_output(principal) else None,
+            masked_output=masked_message,
+            status="toxic_flagged" if is_toxic_output else "success",
             toxicity=tox_output_result
         )
-        
+
+    except requests.Timeout:
+        logging.error(f"{request_id}: Ollama timed out after {LLM_TIMEOUT}s")
+        return ChatResponse(
+            masked_output="The AI service did not respond in time. Please try again.",
+            status="error",
+        )
     except Exception as e:
-        return ChatResponse(raw_output="Error", masked_output=str(e), status="error")
+        # The exception text can carry model output or internal paths, so it goes to the
+        # log rather than to the caller.
+        logging.exception(f"{request_id}: /chat failed")
+        return ChatResponse(
+            masked_output="An internal error occurred while processing this request.",
+            status="error",
+        )
 
 @app.post("/sandbox_suggest_rule")
-def sandbox_suggest_rule(request: SandboxSuggestRequest):
+def sandbox_suggest_rule(request: SandboxSuggestRequest, principal: Principal = Depends(require_role(*ADMIN_ROLES))):
     OLLAMA_URL = config.OLLAMA_URL
     
     try:
@@ -589,7 +847,7 @@ You MUST deduce a highly specific, meaningful Entity Class from the context (e.g
         return {"status": "error", "message": str(e)}
 
 @app.post("/sandbox_test_rule")
-def sandbox_test_rule(request: SandboxTestRequest):
+def sandbox_test_rule(request: SandboxTestRequest, principal: Principal = Depends(require_role(*ADMIN_ROLES))):
     try:
         # Spin up a temporary, isolated Presidio Engine
         sandbox_analyzer = AnalyzerEngine()
@@ -614,24 +872,83 @@ def sandbox_test_rule(request: SandboxTestRequest):
         return {"status": "error", "message": str(e)}
 
 @app.get("/rules")
-def get_rules():
+def get_rules(principal: Principal = Depends(require_role(*ADMIN_ROLES))):
     try:
         with open("pii_rules.json", "r") as f:
             return json.load(f)
     except Exception as e:
         return {"rules": [], "settings": {}}
 
+def run_guard_self_test() -> dict:
+    """
+    Check that every guard the settings claim to enable actually loaded.
+
+    Without this, a guard whose model failed to download looks identical to a healthy
+    one until the first request -- and with fail-closed semantics that means refusing all
+    traffic with no explanation. Reported through /system_status so the failure is visible
+    before anyone sends a request.
+    """
+    report = {"status": "ready", "guards": {}, "problems": []}
+
+    try:
+        settings = load_guard_settings()
+    except GuardSettingsError as e:
+        report["status"] = "degraded"
+        report["problems"].append(f"pii_rules.json unreadable: {e}")
+        return report
+
+    if analyzer is None:
+        report["status"] = "degraded"
+        report["problems"].append("Presidio analyzer failed to initialize")
+    report["guards"]["pii_analyzer"] = analyzer is not None
+
+    checks = [
+        ("toxicity_guard", "enable_toxicity_guard", toxicity_guard.is_available, toxicity_guard.load_error),
+        ("injection_guard", "enable_injection_guard", injection_guard.is_available, injection_guard.load_error),
+    ]
+
+    for name, flag, available, error in checks:
+        enabled = settings.get(flag, False)
+        ok = available()
+        report["guards"][name] = {"enabled": enabled, "loaded": ok}
+        if enabled and not ok:
+            report["status"] = "degraded"
+            report["problems"].append(f"{name} is enabled but failed to load: {error()}")
+
+    if auth.using_default_keys():
+        report["problems"].append(
+            "Running with the shipped development API keys -- set the API_KEYS "
+            "environment variable before any real deployment."
+        )
+
+    return report
+
+
 @app.get("/system_status")
 def system_status():
-    return {"status": "ready"}
+    """
+    Open (unauthenticated) so health checks work, and deliberately reports only whether
+    the guards loaded -- never the keys, rules or traffic.
+    """
+    return run_guard_self_test()
+
+
+@app.get("/whoami")
+def whoami(principal: Principal = Depends(require_role(*ANY_ROLE))):
+    """
+    Lets the admin UI gate on the server's answer instead of a local string. AdminConfig
+    previously decided the user's role in the browser, which meant the role was whatever
+    the browser said it was.
+    """
+    return {"name": principal.name, "role": principal.role, "is_admin": principal.is_admin}
 
 @app.get("/alarms")
-def get_alarms():
+def get_alarms(principal: Principal = Depends(require_role(*ADMIN_ROLES))):
     import diff_engine
     return {"alarms": diff_engine.load_alarms()}
 
 @app.post("/delete_alarm")
-def delete_alarm(request: DeleteAlarmRequest):
+def delete_alarm(request: DeleteAlarmRequest, principal: Principal = Depends(require_role(*ADMIN_ROLES))):
     try:
         import diff_engine
         alarms = diff_engine.load_alarms()
@@ -644,15 +961,26 @@ def delete_alarm(request: DeleteAlarmRequest):
         with open("alarms.json", "w") as f:
             json.dump(alarms, f, indent=2)
             
-        # Update archive ledger
+        # Update archive ledger. The archive keeps who dismissed the alarm and when, so
+        # the record of the decision survives alongside the record of the detection.
         archive = diff_engine.load_archive()
+        before_status = None
         for a in archive:
             if a.get("alarm_id") == request.alarm_id:
+                before_status = a.get("status")
                 a["status"] = request.status
+                a["resolved_by"] = principal.name
+                a["resolved_at"] = datetime.utcnow().isoformat() + "Z"
                 break
         with open(diff_engine.ARCHIVE_FILE, "w") as f:
             json.dump(archive, f, indent=2)
-            
+
+        AuditLogger.log_config_change(
+            actor=principal.name, actor_role=principal.role,
+            action=f"delete_alarm:{request.alarm_id}",
+            before=before_status, after=request.status,
+        )
+
         return {"status": "success"}
     except Exception as e:
         return {"status": "error", "message": str(e)}
@@ -672,7 +1000,7 @@ class UpdateToxicitySettingsRequest(BaseModel):
     enable_toxicity_guard: bool
     
 @app.post("/toggle_category")
-def toggle_category(request: ToggleCategoryRequest):
+def toggle_category(request: ToggleCategoryRequest, principal: Principal = Depends(require_role(ROLE_SUPER_ADMIN))):
     try:
         with open("pii_rules.json", "r") as f:
             data = json.load(f)
@@ -680,53 +1008,71 @@ def toggle_category(request: ToggleCategoryRequest):
         setting_key = f"enable_{request.category.lower()}"
         if "settings" not in data:
             data["settings"] = {}
-            
+
+        before = data["settings"].get(setting_key)
         data["settings"][setting_key] = request.enabled
-        
+
         with open("pii_rules.json", "w") as f:
             json.dump(data, f, indent=2)
-            
+
+        AuditLogger.log_config_change(
+            actor=principal.name, actor_role=principal.role,
+            action=f"toggle_category:{setting_key}", before=before, after=request.enabled,
+        )
+
         reload_presidio_engine()
         return {"status": "success", "settings": data["settings"]}
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
 @app.post("/toggle_watchdog")
-def toggle_watchdog(request: ToggleRequest):
+def toggle_watchdog(request: ToggleRequest, principal: Principal = Depends(require_role(ROLE_SUPER_ADMIN))):
     try:
         with open("pii_rules.json", "r") as f:
             data = json.load(f)
         
         if "settings" not in data:
             data["settings"] = {}
+        before = data["settings"].get("enable_llm_watchdog")
         data["settings"]["enable_llm_watchdog"] = request.enable_llm_watchdog
-        
+
         with open("pii_rules.json", "w") as f:
             json.dump(data, f, indent=2)
-            
+
+        AuditLogger.log_config_change(
+            actor=principal.name, actor_role=principal.role,
+            action="toggle_watchdog", before=before, after=request.enable_llm_watchdog,
+        )
+
         return {"status": "success"}
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
 @app.post("/toggle_toxicity")
-def toggle_toxicity(request: ToggleToxicityRequest):
+def toggle_toxicity(request: ToggleToxicityRequest, principal: Principal = Depends(require_role(ROLE_SUPER_ADMIN))):
     try:
         with open("pii_rules.json", "r") as f:
             data = json.load(f)
         
         if "settings" not in data:
             data["settings"] = {}
+        before = data["settings"].get("enable_toxicity_guard")
         data["settings"]["enable_toxicity_guard"] = request.enable_toxicity_guard
-        
+
         with open("pii_rules.json", "w") as f:
             json.dump(data, f, indent=2)
-            
+
+        AuditLogger.log_config_change(
+            actor=principal.name, actor_role=principal.role,
+            action="toggle_toxicity", before=before, after=request.enable_toxicity_guard,
+        )
+
         return {"status": "success"}
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
 @app.post("/update_toxicity_settings")
-def update_toxicity_settings(request: UpdateToxicitySettingsRequest):
+def update_toxicity_settings(request: UpdateToxicitySettingsRequest, principal: Principal = Depends(require_role(ROLE_SUPER_ADMIN))):
     try:
         with open("pii_rules.json", "r") as f:
             data = json.load(f)
@@ -734,11 +1080,22 @@ def update_toxicity_settings(request: UpdateToxicitySettingsRequest):
         if "settings" not in data:
             data["settings"] = {}
         # Persist both the toggle state and the thresholds
+        before = {
+            "enable_toxicity_guard": data["settings"].get("enable_toxicity_guard"),
+            "toxicity_thresholds": data["settings"].get("toxicity_thresholds"),
+        }
         data["settings"]["enable_toxicity_guard"] = request.enable_toxicity_guard
         data["settings"]["toxicity_thresholds"] = request.thresholds
-        
+
         with open("pii_rules.json", "w") as f:
             json.dump(data, f, indent=2)
+
+        AuditLogger.log_config_change(
+            actor=principal.name, actor_role=principal.role,
+            action="update_toxicity_settings", before=before,
+            after={"enable_toxicity_guard": request.enable_toxicity_guard,
+                   "toxicity_thresholds": request.thresholds},
+        )
             
         # If toxicity guard is being enabled, make a dummy call to warm up the model
         if request.enable_toxicity_guard:
@@ -751,11 +1108,11 @@ def update_toxicity_settings(request: UpdateToxicitySettingsRequest):
         return {"status": "error", "message": str(e)}
 
 @app.get("/toxicity_settings")
-def get_toxicity_settings():
+def get_toxicity_settings(principal: Principal = Depends(require_role(*ADMIN_ROLES))):
     return load_toxicity_settings()
 
 @app.get("/subscribers")
-def get_subscribers():
+def get_subscribers(principal: Principal = Depends(require_role(*ADMIN_ROLES))):
     try:
         with open("pii_rules.json", "r") as f:
             data = json.load(f)
@@ -764,7 +1121,7 @@ def get_subscribers():
         return {"subscribers": []}
 
 @app.post("/add_subscriber")
-def add_subscriber(request: SubscriberRequest):
+def add_subscriber(request: SubscriberRequest, principal: Principal = Depends(require_role(ROLE_SUPER_ADMIN))):
     try:
         with open("pii_rules.json", "r") as f:
             data = json.load(f)
@@ -782,13 +1139,20 @@ def add_subscriber(request: SubscriberRequest):
         
         with open("pii_rules.json", "w") as f:
             json.dump(data, f, indent=2)
-            
+
+        AuditLogger.log_config_change(
+            actor=principal.name, actor_role=principal.role,
+            action=f"add_subscriber:{request.user_name}", before=None,
+            after={"user_name": request.user_name, "role": request.role,
+                   "alert_type": request.alert_type},
+        )
+
         return {"status": "success", "message": "Subscriber added successfully."}
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
 @app.post("/update_subscriber")
-def update_subscriber(request: UpdateSubscriberRequest):
+def update_subscriber(request: UpdateSubscriberRequest, principal: Principal = Depends(require_role(ROLE_SUPER_ADMIN))):
     try:
         with open("pii_rules.json", "r") as f:
             data = json.load(f)
@@ -809,13 +1173,20 @@ def update_subscriber(request: UpdateSubscriberRequest):
             
         with open("pii_rules.json", "w") as f:
             json.dump(data, f, indent=2)
-            
+
+        AuditLogger.log_config_change(
+            actor=principal.name, actor_role=principal.role,
+            action=f"update_subscriber:{request.original_user_name}", before=None,
+            after={"user_name": request.user_name, "role": request.role,
+                   "alert_type": request.alert_type},
+        )
+
         return {"status": "success", "message": "Subscriber updated successfully."}
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
 @app.post("/delete_subscriber")
-def delete_subscriber(request: DeleteSubscriberRequest):
+def delete_subscriber(request: DeleteSubscriberRequest, principal: Principal = Depends(require_role(ROLE_SUPER_ADMIN))):
     try:
         with open("pii_rules.json", "r") as f:
             data = json.load(f)
@@ -828,13 +1199,18 @@ def delete_subscriber(request: DeleteSubscriberRequest):
             
         with open("pii_rules.json", "w") as f:
             json.dump(data, f, indent=2)
-            
+
+        AuditLogger.log_config_change(
+            actor=principal.name, actor_role=principal.role,
+            action=f"delete_subscriber:{request.user_name}", before=None, after=None,
+        )
+
         return {"status": "success", "message": "Subscriber deleted successfully."}
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
 @app.get("/test_cases")
-def get_test_cases():
+def get_test_cases(principal: Principal = Depends(require_role(*ADMIN_ROLES))):
     try:
         with open("test_cases.json", "r") as f:
             return json.load(f)
@@ -842,7 +1218,7 @@ def get_test_cases():
         return {"tests": []}
 
 @app.post("/add_rule")
-def add_rule(request: RuleRequest):
+def add_rule(request: RuleRequest, principal: Principal = Depends(require_role(ROLE_SUPER_ADMIN))):
     try:
         # 1. Update JSON
         with open("pii_rules.json", "r") as f:
@@ -882,24 +1258,34 @@ def add_rule(request: RuleRequest):
         
         with open("pii_rules.json", "w") as f:
             json.dump(data, f, indent=2)
-            
+
+        AuditLogger.log_config_change(
+            actor=principal.name, actor_role=principal.role,
+            action=f"add_rule:{request.entity}",
+            before=None,
+            after={"name": request.name, "entity": request.entity, "regex": request.regex,
+                   "score": request.score, "is_active": request.is_active},
+        )
+
         # 2. Hot-reload Presidio Engine
         reload_presidio_engine()
-            
+
         return {"status": "success", "message": "Rule added and hot-reloaded successfully."}
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
 @app.post("/update_rule")
-def update_rule(request: UpdateRuleRequest):
+def update_rule(request: UpdateRuleRequest, principal: Principal = Depends(require_role(ROLE_SUPER_ADMIN))):
     try:
         with open("pii_rules.json", "r") as f:
             data = json.load(f)
             
         # Find and update the rule
         rule_found = False
+        before_rule = None
         for rule in data["rules"]:
             if rule["name"] == request.original_name:
+                before_rule = dict(rule)
                 rule["name"] = request.name
                 rule["entity"] = request.entity
                 rule["regex"] = request.regex
@@ -923,34 +1309,48 @@ def update_rule(request: UpdateRuleRequest):
             
         with open("pii_rules.json", "w") as f:
             json.dump(data, f, indent=2)
-            
+
+        AuditLogger.log_config_change(
+            actor=principal.name, actor_role=principal.role,
+            action=f"update_rule:{request.original_name}",
+            before=before_rule,
+            after={"name": request.name, "entity": request.entity, "regex": request.regex,
+                   "score": request.score, "is_active": request.is_active},
+        )
+
         reload_presidio_engine()
         return {"status": "success", "message": "Rule updated successfully."}
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
 @app.post("/delete_rule")
-def delete_rule(request: DeleteRuleRequest):
+def delete_rule(request: DeleteRuleRequest, principal: Principal = Depends(require_role(ROLE_SUPER_ADMIN))):
     try:
         with open("pii_rules.json", "r") as f:
             data = json.load(f)
             
         initial_length = len(data["rules"])
+        deleted_rule = next((dict(r) for r in data["rules"] if r["name"] == request.name), None)
         data["rules"] = [rule for rule in data["rules"] if rule["name"] != request.name]
-        
+
         if len(data["rules"]) == initial_length:
             return {"status": "error", "message": "Rule not found."}
             
         with open("pii_rules.json", "w") as f:
             json.dump(data, f, indent=2)
-            
+
+        AuditLogger.log_config_change(
+            actor=principal.name, actor_role=principal.role,
+            action=f"delete_rule:{request.name}", before=deleted_rule, after=None,
+        )
+
         reload_presidio_engine()
         return {"status": "success", "message": "Rule deleted successfully."}
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
 @app.get("/analytics")
-def get_analytics(timeframe: str = "24h"):
+def get_analytics(timeframe: str = "24h", *, principal: Principal = Depends(require_role(*ADMIN_ROLES))):
     try:
         import diff_engine
         from datetime import datetime, timedelta
@@ -985,6 +1385,11 @@ def get_analytics(timeframe: str = "24h"):
                         pass
 
             for log in audit_logs:
+                # Configuration changes share the audit file with traffic, but they are
+                # not requests -- counting them would inflate the traffic figures. Entries
+                # written before the event field existed are transactions.
+                if log.get("event", AuditLogger.EVENT_TRANSACTION) != AuditLogger.EVENT_TRANSACTION:
+                    continue
                 try:
                     log_time = datetime.fromisoformat(log["timestamp"].replace("Z", ""))
                     if log_time >= cutoff:
@@ -1066,7 +1471,7 @@ def get_analytics(timeframe: str = "24h"):
         return {"status": "error", "message": str(e)}
 
 @app.get("/get_benchmarks")
-async def get_benchmarks():
+async def get_benchmarks(principal: Principal = Depends(require_role(*ADMIN_ROLES))):
     """
     Reads the benchmark.log file and returns its content.
     """
@@ -1086,24 +1491,48 @@ class DemoChatRequest(BaseModel):
     mode: str = "others"  # 'toxic' or 'others'
 
 @app.post("/demo_chat", response_model=ChatResponse)
-def demo_chat_agent(request: DemoChatRequest, background_tasks: BackgroundTasks):
+def demo_chat_agent(request: DemoChatRequest, background_tasks: BackgroundTasks,
+                    principal: Principal = Depends(require_role(*ANY_ROLE))):
     common_error_msg = "⚠️ Your message was blocked by the Content Safety Shield. I cannot provide you with insults or derogatory language targeting any specific group of people, including those identified by nationality, nor can I write content that insults someone's intelligence and includes extreme profanity. My guidelines prohibit generating hateful content or slurs. Is there anything else I can help you with?"
     
     request_id = f"R-{uuid.uuid4().hex[:8]}"
 
-    # Step 0: INGRESS Toxicity Check — Block abusive user input before it reaches the LLM
+    # Step 0a: INGRESS Injection Check
+    start_time = time.perf_counter()
+    is_injection, inj_result = apply_injection_check(request.message, "INGRESS")
+    end_time = time.perf_counter()
+    BenchmarkLogger.log_metric(request_id, "INGRESS_INJECTION_CHECK", (end_time - start_time) * 1000)
+    if is_injection:
+        if inj_result.get("guard_failed"):
+            return ChatResponse(
+                masked_output=guard_failure_response(inj_result),
+                status="blocked_guard_failure",
+                injection=inj_result,
+            )
+        return ChatResponse(
+            masked_output=INJECTION_BLOCK_MSG,
+            status="blocked_injection",
+            injection=inj_result,
+        )
+
+    # Step 0b: INGRESS Toxicity Check — Block abusive user input before it reaches the LLM
     start_time = time.perf_counter()
     is_toxic_input, tox_input_result = apply_toxicity_check(request.message, "INGRESS")
     end_time = time.perf_counter()
     BenchmarkLogger.log_metric(request_id, "INGRESS_TOXICITY_CHECK", (end_time - start_time) * 1000)
     if is_toxic_input:
+        if tox_input_result.get("guard_failed"):
+            return ChatResponse(
+                masked_output=guard_failure_response(tox_input_result),
+                status="blocked_guard_failure",
+                toxicity=tox_input_result,
+            )
         return ChatResponse(
-            raw_output="[BLOCKED]", 
             masked_output=common_error_msg,
             status="blocked_toxic",
             toxicity=tox_input_result
         )
-    
+
     OLLAMA_URL = config.OLLAMA_URL
     model_to_use = config.TOXIC_LLM_MODEL if request.mode == "toxic" else config.DEFAULT_LLM_MODEL
     
@@ -1146,6 +1575,24 @@ If you are provided with data, summarize it naturally and helpfully."""
         }
 
         msg_lower = request.message.lower()
+
+        # These keyword branches decide tool calls and bulk reads WITHOUT the model, so
+        # they reach the same data by a different route. Each one is authorized here --
+        # otherwise the broker on the <FETCH_DB:...> path below would just be a detour
+        # around an open door.
+        bulk_read_requested = "all customer details" in msg_lower or "top 3 spenders" in msg_lower
+        if bulk_read_requested and not auth.may_read_all_records(principal):
+            diff_engine.generate_tool_abuse_alarm(
+                principal_name=principal.name,
+                principal_role=principal.role,
+                tool_call="BULK_READ",
+                reason=f"principal '{principal.name}' is not entitled to read all records",
+            )
+            return ChatResponse(
+                masked_output="You are not authorized to view all customer records.",
+                status="forbidden",
+            )
+
         if "swiggy" in msg_lower:
             ai_message = "<FETCH_DB:swiggy>"
         elif "all customer details" in msg_lower:
@@ -1174,21 +1621,23 @@ If you are provided with data, summarize it naturally and helpfully."""
         elif "iban" in msg_lower or "transaction" in msg_lower:
             ai_message = "<FETCH_DB:iban>"
         else:
-            resp = requests.post(OLLAMA_URL, json=payload)
+            resp = requests.post(OLLAMA_URL, json=payload, timeout=LLM_TIMEOUT)
             if resp.status_code != 200:
-                return ChatResponse(raw_output="Error", masked_output="Failed to contact Ollama.", status="error")
+                return ChatResponse(masked_output="Failed to contact Ollama.", status="error")
             ai_message = resp.json()["message"]["content"]
         end_time_llm_call = time.perf_counter()
         BenchmarkLogger.log_metric(request_id, "LLM_INITIAL_CALL", (end_time_llm_call - start_time_llm_call) * 1000)
-        
-        # Step 2: Check for Tool Call
+
+        # Step 2: Tool call — brokered, so the caller's entitlement decides, not the model
         start_time_tool_call = time.perf_counter()
-        match = re.search(r"<FETCH_DB:([a-zA-Z0-9_]+)>", ai_message)
-        if match:
-            customer_id_str = match.group(1)
-            # Execute tool
-            raw_data = database.get_customer_profile(customer_id_str)
-            
+        tool_calls = tool_broker.parse_tool_calls(ai_message)
+        if tool_calls:
+            customer_id_str = tool_calls[0].argument
+            decision = tool_broker.execute(principal, tool_calls[0])
+            if not decision.allowed:
+                return ChatResponse(masked_output=decision.refusal, status="forbidden")
+            raw_data = decision.data
+
             # Feed back to LLM
             messages.append({"role": "assistant", "content": ai_message})
             # To prevent the SLM from getting confused and re-outputting the FETCH_DB command due to the strict system prompt,
@@ -1229,7 +1678,7 @@ If you are provided with data, summarize it naturally and helpfully."""
             payload["messages"] = messages
             
             start_time_llm_tool_feedback = time.perf_counter()
-            resp2 = requests.post(OLLAMA_URL, json=payload)
+            resp2 = requests.post(OLLAMA_URL, json=payload, timeout=LLM_TIMEOUT)
             end_time_llm_tool_feedback = time.perf_counter()
             BenchmarkLogger.log_metric(request_id, "LLM_TOOL_FEEDBACK_CALL", (end_time_llm_tool_feedback - start_time_llm_tool_feedback) * 1000)
 
@@ -1264,26 +1713,47 @@ If you are provided with data, summarize it naturally and helpfully."""
         
         # Initialize status to success
         status = "success"
-        
+        blocked = False
+
         if is_toxic_output:
-            # If toxic, overwrite the masked_message with the common error and update status
-            masked_message = common_error_msg
-            status = "blocked_toxic"
-            
+            if tox_output_result.get("guard_failed"):
+                masked_message = guard_failure_response(tox_output_result)
+                status = "blocked_guard_failure"
+                blocked = True
+            elif should_block_toxic_egress():
+                # If toxic, overwrite the masked_message with the common error and update status
+                masked_message = common_error_msg
+                status = "blocked_toxic"
+                blocked = True
+            else:
+                status = "toxic_flagged"
+
         # Step 5: Secure Audit Logging
         raw_hash = hashlib.sha256(request.message.encode()).hexdigest()
+        fidelity_ok, fidelity_score = FidelityChecker.check_fidelity(ai_message, masked_message)
         AuditLogger.log_transaction(
             pii_masked_input=f"CHAT_HASH:{raw_hash[:8]}",
             final_rewrite=masked_message,
-            fidelity_score=1.0,
-            fallback_triggered=False
+            fidelity_score=fidelity_score,
+            fallback_triggered=not fidelity_ok
         )
-        
+
         return ChatResponse(
-            raw_output=ai_message,
+            # Never leak the raw text on a block, whatever the policy says.
+            raw_output=ai_message if (may_see_raw_output(principal) and not blocked) else None,
             masked_output=masked_message,
             status=status,
             toxicity=tox_output_result
         )
+    except requests.Timeout:
+        logging.error(f"{request_id}: Ollama timed out after {LLM_TIMEOUT}s")
+        return ChatResponse(
+            masked_output="The AI service did not respond in time. Please try again.",
+            status="error",
+        )
     except Exception as e:
-        return ChatResponse(raw_output="Error", masked_output=f"Backend Error: {str(e)}", status="error")
+        logging.exception(f"{request_id}: /demo_chat failed")
+        return ChatResponse(
+            masked_output="An internal error occurred while processing this request.",
+            status="error",
+        )

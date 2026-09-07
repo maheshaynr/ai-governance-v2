@@ -768,20 +768,40 @@ export default function AdminConfig() {
             }
             return (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                {visibleAlarms.map((alarm, idx) => (
+                {visibleAlarms.map((alarm, idx) => {
+                  // Alarms come in two shapes. PII misses carry missed_entity and the
+                  // layer1/layer2 comparison; the guards (toxicity, injection, tool
+                  // abuse, guard failure) carry their own *_detail object instead. Keying
+                  // the layout off missed_entity rather than off "not TOXICITY" means a
+                  // new guard category renders correctly instead of falling into the PII
+                  // branch and showing blanks.
+                  const isPiiAlarm = !!alarm.missed_entity;
+                  const alarmTitle = {
+                    TOXICITY: 'Toxic Content',
+                    INJECTION: 'Injection Attempt',
+                    TOOL_ABUSE: 'Unauthorized Tool Call',
+                    GUARD_FAILURE: 'Guardrail Failure',
+                  }[alarm.category] || alarm.missed_entity?.type || alarm.category;
+                  const categoryColor = {
+                    TOXICITY: '#e94560',
+                    INJECTION: '#b91c1c',
+                    TOOL_ABUSE: '#a21caf',
+                    GUARD_FAILURE: '#7c2d12',
+                    AUTHENTICATION: '#8b5cf6',
+                    FINANCIAL: '#0969da',
+                    HEALTH: '#116329',
+                    PII: '#9a6700',
+                  }[alarm.category] || '#57606a';
+                  return (
                 <div key={alarm.alarm_id} style={{ border: '1px solid #d0d7de', borderRadius: '8px', marginBottom: '1.5rem', background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #d0d7de', padding: '1rem', background: '#f6f8fa', borderTopLeftRadius: '8px', borderTopRightRadius: '8px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                       <span style={{ backgroundColor: '#cf222e', color: '#fff', padding: '2px 8px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 'bold' }}>{alarm.severity}</span>
-                      <h4 style={{ margin: 0, fontSize: '1.1rem' }}>{alarm.category === 'TOXICITY' ? 'Toxic Content' : alarm.missed_entity?.type}</h4>
+                      <h4 style={{ margin: 0, fontSize: '1.1rem' }}>{alarmTitle}</h4>
                       {alarm.category && (
-                        <span style={{ 
-                          backgroundColor: alarm.category === 'TOXICITY' ? '#e94560' :
-                                           alarm.category === 'AUTHENTICATION' ? '#8b5cf6' : 
-                                           alarm.category === 'FINANCIAL' ? '#0969da' : 
-                                           alarm.category === 'HEALTH' ? '#116329' : 
-                                           alarm.category === 'PII' ? '#9a6700' : '#57606a', 
-                          color: '#fff', padding: '2px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 'bold' 
+                        <span style={{
+                          backgroundColor: categoryColor,
+                          color: '#fff', padding: '2px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 'bold'
                         }}>{alarm.category}</span>
                       )}
                     </div>
@@ -793,9 +813,9 @@ export default function AdminConfig() {
                       <div style={{ marginBottom: '0.5rem', fontStyle: 'italic', color: '#57606a' }}>
                         "{alarm.context_snippet}"
                       </div>
-                      {alarm.category !== 'TOXICITY' && alarm.missed_entity && (
+                      {isPiiAlarm && (
                         <div>
-                          Leaked Data Snippet: <strong style={{fontFamily: 'monospace'}}>{alarm.missed_entity.value_preview}</strong>
+                          Leaked Data Snippet: <strong style={{fontFamily: 'monospace'}}>{alarm.missed_entity.value_preview ?? <em style={{ color: '#57606a' }}>hidden by policy</em>}</strong>
                         </div>
                       )}
                     </div>
@@ -829,8 +849,58 @@ export default function AdminConfig() {
                       </div>
                     )}
                     
+                    {/* Injection attempt details (prompt injection and SQL injection) */}
+                    {alarm.injection_detail && (
+                      <div style={{ marginBottom: '1rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
+                          <strong>Direction:</strong>
+                          <span style={{ backgroundColor: alarm.injection_detail.direction === 'INGRESS' ? '#cf222e' : '#d29922', color: '#fff', padding: '2px 6px', borderRadius: '4px', fontSize: '0.75rem' }}>
+                            {alarm.injection_detail.direction === 'INGRESS' ? '⬇️ User Input' : '⬆️ AI Output'}
+                          </span>
+                          <strong style={{ marginLeft: '0.5rem' }}>Caught by:</strong>
+                          <span style={{ backgroundColor: alarm.injection_detail.detected_by === 'layer1' ? '#0969da' : '#8b5cf6', color: '#fff', padding: '2px 6px', borderRadius: '4px', fontSize: '0.75rem' }}>
+                            {alarm.injection_detail.detected_by === 'layer1' ? 'Local model (inline)' : 'LLM watchdog (missed inline)'}
+                          </span>
+                          {alarm.injection_detail.blocked === false && (
+                            <span title="A pattern-confirmed match blocks the request; this was the classifier's opinion alone, so the message was allowed through and flagged for review." style={{ backgroundColor: '#fff8c5', color: '#9a6700', border: '1px solid #d4a72c', padding: '2px 6px', borderRadius: '4px', fontSize: '0.75rem', cursor: 'help' }}>
+                              ⚑ Flagged only, not blocked
+                            </span>
+                          )}
+                        </div>
+                        <div style={{ fontSize: '0.9rem' }}>
+                          <div><strong>Verdict:</strong> {alarm.injection_detail.label} ({Math.round((alarm.injection_detail.score || 0) * 100)}% confidence)</div>
+                          {alarm.injection_detail.triggered_patterns?.length > 0 && (
+                            <div style={{ marginTop: '0.4rem' }}>
+                              <strong>Patterns matched:</strong>{' '}
+                              {alarm.injection_detail.triggered_patterns.map(p => (
+                                <span key={p} style={{ fontFamily: 'monospace', backgroundColor: '#ffebe9', border: '1px solid #ff8182', borderRadius: '4px', padding: '1px 5px', marginRight: '0.3rem', fontSize: '0.8rem' }}>{p}</span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Refused tool call -- caller was not entitled to the record */}
+                    {alarm.tool_detail && (
+                      <div style={{ marginBottom: '1rem', fontSize: '0.9rem' }}>
+                        <div><strong>Requested:</strong> <span style={{ fontFamily: 'monospace' }}>{alarm.tool_detail.tool_call}</span></div>
+                        <div><strong>Caller:</strong> {alarm.tool_detail.principal} ({alarm.tool_detail.role})</div>
+                        <div style={{ marginTop: '0.4rem', color: '#cf222e' }}><strong>Refused because:</strong> {alarm.tool_detail.reason}</div>
+                      </div>
+                    )}
+
+                    {/* A guard could not run at all -- an outage of a security control */}
+                    {alarm.guard_detail && (
+                      <div style={{ marginBottom: '1rem', fontSize: '0.9rem', backgroundColor: '#fff8c5', border: '1px solid #d4a72c', borderRadius: '6px', padding: '0.75rem' }}>
+                        <div><strong>Guard:</strong> {alarm.guard_detail.guard} ({alarm.guard_detail.direction})</div>
+                        <div style={{ marginTop: '0.4rem' }}><strong>Error:</strong> <span style={{ fontFamily: 'monospace' }}>{alarm.guard_detail.error}</span></div>
+                        <div style={{ marginTop: '0.4rem', color: '#9a6700' }}>Traffic was blocked while this guard was unavailable.</div>
+                      </div>
+                    )}
+
                     {/* Standard PII alarm details */}
-                    {alarm.category !== 'TOXICITY' && (
+                    {isPiiAlarm && (
                       <>
                         <div style={{ marginBottom: '1rem' }}>
                           <strong>Reason given by AI:</strong> {alarm.missed_entity?.reason}
@@ -854,7 +924,7 @@ export default function AdminConfig() {
                     )}
                     
                     <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem' }}>
-                      {alarm.category !== 'TOXICITY' && (
+                      {isPiiAlarm && (
                         <>
                           <button className="secondary" onClick={() => handleOpenSandbox(alarm)} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', backgroundColor: '#fff', color: '#4682b4', border: '1px solid #4682b4' }}>
                             🛠️ Fix & Replay Sandbox
@@ -872,7 +942,8 @@ export default function AdminConfig() {
                     </div>
                   </div>
                 </div>
-              ))}
+                  );
+                })}
             </div>
             );
           })()}

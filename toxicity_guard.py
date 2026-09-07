@@ -8,13 +8,34 @@ This module sits BEFORE the PII guardrail in the hot path:
 """
 
 import logging
-from detoxify import Detoxify
 
 # Load the model once at module import — stays in memory
 # 'unbiased' model reduces false positives on identity terms
-print("Loading Detoxify (unbiased) model...")
-_model = Detoxify('unbiased')
-print("Detoxify model loaded successfully.")
+#
+# A load failure is recorded rather than raised, so the API can still start, report the
+# guard as unavailable through /system_status, and fail closed on the hot path -- instead
+# of the whole service refusing to import.
+_model = None
+_load_error = None
+
+try:
+    from detoxify import Detoxify
+
+    print("Loading Detoxify (unbiased) model...")
+    _model = Detoxify('unbiased')
+    print("Detoxify model loaded successfully.")
+except Exception as _e:
+    _load_error = str(_e)
+    logging.error(f"Toxicity Guard: model failed to load -- {_e}")
+
+
+def is_available() -> bool:
+    """Whether the model loaded. Used by the startup self-test."""
+    return _model is not None
+
+
+def load_error() -> str:
+    return _load_error or ""
 
 # Default thresholds if none provided
 DEFAULT_THRESHOLDS = {
@@ -57,7 +78,18 @@ def analyze(text: str, thresholds: dict = None) -> dict:
     
     if not thresholds:  # Check for None or empty dict
         thresholds = DEFAULT_THRESHOLDS
-    
+
+    if _model is None:
+        return {
+            "is_toxic": False,
+            "scores": {},
+            "triggered_categories": [],
+            "max_score": 0.0,
+            "max_category": "unavailable",
+            "guard_failed": True,
+            "error": f"model unavailable: {_load_error or 'not loaded'}"
+        }
+
     try:
         raw_scores = _model.predict(text)
         
@@ -87,12 +119,16 @@ def analyze(text: str, thresholds: dict = None) -> dict:
         }
     except Exception as e:
         logging.error(f"Toxicity Guard Error: {str(e)}")
-        # Fail-open: if the model errors, don't block content
+        # Fail CLOSED. This used to return is_toxic=False, which made "the text is clean"
+        # and "the check never ran" the same answer -- so a model load failure silently
+        # disabled the guard. The caller inspects guard_failed and blocks; see
+        # api.apply_toxicity_check.
         return {
             "is_toxic": False,
             "scores": {},
             "triggered_categories": [],
             "max_score": 0.0,
             "max_category": "error",
+            "guard_failed": True,
             "error": str(e)
         }

@@ -16,6 +16,29 @@ _DEFAULTS = {
     "DEFAULT_LLM_MODEL": "phi4-mini-cpu",   # GPU alternative: "phi4-mini:3.8b"
     "TOXIC_LLM_MODEL": "tinyllama-cpu",     # GPU alternative: "tinyllama:latest"
     "CODING_LLM_MODEL": "phi4-mini-cpu",    # GPU alternative: "phi4-mini:3.8b"
+
+    # --- Access control ---
+    # DEVELOPMENT PLACEHOLDERS ONLY. Every deployment must replace these, either by
+    # editing config.json or -- preferred, so keys never enter version control -- by
+    # setting the API_KEYS environment variable to the same structure as JSON.
+    "API_KEYS": {
+        "dev-super-admin-key": {"name": "dev_super_admin", "role": "super_admin"},
+        "dev-pii-admin-key": {"name": "dev_pii_admin", "role": "admin_pii"},
+        "dev-caller-key": {"name": "dev_caller", "role": "caller"},
+    },
+
+    # Which database records each principal may read through a tool call. "*" means any
+    # record; the demo caller is deliberately limited to 101 so the refusal path can be
+    # demonstrated without editing config.
+    "ENTITLEMENTS": {
+        "dev_super_admin": ["*"],
+        "dev_pii_admin": ["*"],
+        "dev_caller": ["101"],
+    },
+
+    # When false, unmasked model output is never returned to any caller. Turning this on
+    # additionally requires an admin role -- see api.py's raw output gating.
+    "EXPOSE_RAW_OUTPUT": False,
 }
 
 _CONFIG_FILE = os.environ.get(
@@ -33,9 +56,23 @@ def _load_settings():
     except (FileNotFoundError, json.JSONDecodeError):
         pass
 
-    for key in _DEFAULTS:
-        if key in os.environ:
-            settings[key] = os.environ[key]
+    for key, default in _DEFAULTS.items():
+        if key not in os.environ:
+            continue
+
+        raw = os.environ[key]
+        if isinstance(default, str):
+            settings[key] = raw
+            continue
+
+        # Non-string settings (the key map, entitlements, booleans) arrive from the
+        # environment as JSON. A malformed value falls back to the file/default value
+        # rather than crashing startup -- but it is loud, because silently running with
+        # the wrong access-control config is worse than a noisy log line.
+        try:
+            settings[key] = json.loads(raw)
+        except json.JSONDecodeError:
+            print(f"config: ignoring {key} from environment -- not valid JSON")
 
     return settings
 
@@ -46,3 +83,6 @@ OLLAMA_URL = _settings["OLLAMA_URL"]
 DEFAULT_LLM_MODEL = _settings["DEFAULT_LLM_MODEL"]
 TOXIC_LLM_MODEL = _settings["TOXIC_LLM_MODEL"]
 CODING_LLM_MODEL = _settings["CODING_LLM_MODEL"]
+API_KEYS = _settings["API_KEYS"]
+ENTITLEMENTS = _settings["ENTITLEMENTS"]
+EXPOSE_RAW_OUTPUT = _settings["EXPOSE_RAW_OUTPUT"]

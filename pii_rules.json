@@ -14,7 +14,10 @@
       "insult": 0.4,
       "identity_attack": 0.5,
       "sexual_explicit": 0.4
-    }
+    },
+    "enable_injection_guard": true,
+    "injection_threshold": 0.8,
+    "block_toxic_egress": true
   },
   "category_mappings": {
     "FINANCIAL": [
@@ -148,5 +151,83 @@
       "alert_type": "ALL",
       "email": "mahesh.r2@quest-global.com"
     }
+  ],
+  "injection_patterns": [
+    {
+      "name": "INSTRUCTION_OVERRIDE",
+      "regex": "(?i)\\b(ignore|disregard|forget|override)\\b[^.]{0,40}\\b(previous|prior|above|earlier|all)\\b[^.]{0,20}\\b(instruction|prompt|rule|direction|context)s?\\b",
+      "is_active": true
+    },
+    {
+      "name": "ROLE_REASSIGNMENT",
+      "regex": "(?i)\\b(you are now|from now on you are|act as if you (are|were)|pretend (to be|you are)|new persona)\\b",
+      "is_active": true
+    },
+    {
+      "name": "GUARDRAIL_DISABLE",
+      "regex": "(?i)\\b(disable|turn off|bypass|circumvent|switch off)\\b[^.]{0,30}\\b(guard ?rail|filter|safety|restriction|censor|moderation)s?\\b",
+      "is_active": true
+    },
+    {
+      "name": "DEVELOPER_MODE",
+      "regex": "(?i)\\b(developer mode|dan mode|jailbreak|sudo mode|god mode|unrestricted mode)\\b",
+      "is_active": true
+    },
+    {
+      "name": "SYSTEM_PROMPT_EXTRACTION",
+      "regex": "(?i)\\b(repeat|reveal|print|show|output|display|what (is|are|were))\\b[^.]{0,40}\\b(your |the )?(system |initial |original )?(prompt|instruction|directive)s?\\b",
+      "is_active": true
+    },
+    {
+      "name": "DELIMITER_ESCAPE",
+      "regex": "(?i)(</?(system|assistant|user|instruction)>|\\[/?(system|inst|instruction)\\]|###\\s*(system|instruction))",
+      "is_active": true
+    },
+    {
+      "name": "ENCODED_PAYLOAD_HINT",
+      "regex": "(?i)\\b(base64|rot13|hex ?decode|urldecode|atob)\\b[^.]{0,30}\\b(decode|then|and)\\b",
+      "is_active": true
+    },
+    {
+      "name": "SQLI_TAUTOLOGY",
+      "regex": "(?i)('|\\\")?\\s*(or|and)\\s+('|\\\")?\\s*\\d+\\s*('|\\\")?\\s*=\\s*('|\\\")?\\s*\\d+",
+      "is_active": true
+    },
+    {
+      "name": "SQLI_COMMENT_TERMINATOR",
+      "regex": "(?:'|\\\")\\s*(?:--|#|/\\*)",
+      "is_active": true
+    },
+    {
+      "name": "SQLI_STACKED_STATEMENT",
+      "regex": "(?i);\\s*(drop|delete|update|insert|truncate|alter|create)\\s+(table|from|into|database)\\b",
+      "is_active": true
+    },
+    {
+      "name": "SQLI_UNION_SELECT",
+      "regex": "(?i)\\bunion\\b(\\s+all)?\\s+\\bselect\\b",
+      "is_active": true
+    },
+    {
+      "name": "SQLI_DESTRUCTIVE_DDL",
+      "regex": "(?i)\\b(drop|truncate)\\s+table\\b",
+      "is_active": true
+    },
+    {
+      "name": "SQLI_METADATA_PROBE",
+      "regex": "(?i)\\b(information_schema|sqlite_master|sysobjects|pg_catalog)\\b",
+      "is_active": true
+    },
+    {
+      "name": "NOSQLI_OPERATOR",
+      "regex": "\\$(ne|gt|lt|gte|lte|where|regex|expr)\\b\\s*:",
+      "is_active": true
+    }
+  ],
+  "guard_categories": [
+    "INJECTION",
+    "TOOL_ABUSE",
+    "GUARD_FAILURE",
+    "TOXICITY"
   ]
 }
