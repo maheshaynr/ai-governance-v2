@@ -120,7 +120,19 @@ export default function Dashboard() {
                           </div>
                         ) : (
                           <div style={{ width: '100%', display: 'flex', gap: '1rem' }}>
-                            {msg.raw_content !== msg.masked_content ? (
+                            {msg.raw_content == null ? (
+                              // raw_output is withheld unless EXPOSE_RAW_OUTPUT is on and
+                              // the caller is an admin (see api.py's may_see_raw_output).
+                              // Comparing null to the masked text below would always read
+                              // as "safe" whether or not anything was actually masked.
+                              <div style={{ flex: 1, backgroundColor: '#f6f8fa', border: '1px solid #d0d7de', color: '#24292f', padding: '1rem', borderRadius: '18px 18px 18px 0' }}>
+                                <strong>🛡️ Response:</strong>
+                                <pre style={{ margin: '0.5rem 0 0 0', whiteSpace: 'pre-wrap', fontFamily: 'monospace', fontSize: '0.9rem' }}>{msg.masked_content}</pre>
+                                <div style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: '#57606a' }}>
+                                  Raw model output is hidden by policy. An admin key with EXPOSE_RAW_OUTPUT enabled sees the before/after comparison here instead.
+                                </div>
+                              </div>
+                            ) : msg.raw_content !== msg.masked_content ? (
                               <div style={{ flex: 1, backgroundColor: '#dafbe1', border: '1px solid #4ac26b', color: '#1a7f37', padding: '1rem', borderRadius: '18px 18px 18px 0' }}>
                                 <strong>🟢 Shielded Output (Safe):</strong>
                                 <pre style={{ margin: '0.5rem 0 0 0', whiteSpace: 'pre-wrap', fontFamily: 'monospace', fontSize: '0.9rem' }}>{msg.masked_content}</pre>

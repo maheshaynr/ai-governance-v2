@@ -1471,7 +1471,10 @@ def get_analytics(timeframe: str = "24h", *, principal: Principal = Depends(requ
         return {"status": "error", "message": str(e)}
 
 @app.get("/get_benchmarks")
-async def get_benchmarks(principal: Principal = Depends(require_role(*ADMIN_ROLES))):
+async def get_benchmarks(principal: Principal = Depends(require_role(*ANY_ROLE))):
+    # Per-stage latency numbers only -- no PII, no configuration -- and the "View
+    # Benchmarks" button that calls this sits on the Chat Bot tab, usable by any
+    # authenticated caller. Gating it to admins would just break that button for them.
     """
     Reads the benchmark.log file and returns its content.
     """

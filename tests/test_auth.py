@@ -30,10 +30,15 @@ ADMIN_READABLE = [
     ("get", "/rules", None),
     ("get", "/alarms", None),
     ("get", "/analytics", None),
-    ("get", "/get_benchmarks", None),
     ("get", "/toxicity_settings", None),
     ("get", "/subscribers", None),
     ("get", "/test_cases", None),
+]
+
+# /get_benchmarks is latency numbers only (no PII, no configuration) and is exposed on
+# the Chat Bot tab for any caller, not just admins -- it belongs with the caller band.
+CALLER_READABLE = [
+    ("get", "/get_benchmarks", None),
 ]
 
 
@@ -77,6 +82,13 @@ def test_admins_can_read(client, method, path, body):
     for headers in (super_headers(), pii_admin_headers()):
         response = _call(client, method, path, body, headers=headers)
         assert response.status_code == 200, f"{path} refused an admin: {response.text}"
+
+
+@pytest.mark.parametrize("method,path,body", CALLER_READABLE)
+def test_callers_can_read_non_sensitive_endpoints(client, method, path, body):
+    for headers in (super_headers(), pii_admin_headers(), caller_headers()):
+        response = _call(client, method, path, body, headers=headers)
+        assert response.status_code == 200, f"{path} refused {headers}: {response.text}"
 
 
 def test_system_status_is_open(client):

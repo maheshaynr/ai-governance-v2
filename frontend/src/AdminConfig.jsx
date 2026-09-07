@@ -1,12 +1,9 @@
 import { useState, useEffect } from 'react';
 import { fetchRules, addRule, updateRule, deleteRule, fetchAlarms, toggleWatchdog, fetchSubscribers, addSubscriber, updateSubscriber, deleteSubscriber, deleteAlarm, sandboxSuggestRule, sandboxTestRule, toggleToxicity, fetchToxicitySettings, updateToxicitySettings, toggleCategory } from './api';
 
-export default function AdminConfig() {
-  const [loggedIn, setLoggedIn] = useState(false);
-  const [username, setUsername] = useState('super_admin');
-  const [password, setPassword] = useState('');
-  const [loginError, setLoginError] = useState('');
-
+// Auth now happens once at the App level (see App.jsx's LoginGate) since every tab,
+// not just this one, needs a key -- `principal` is the /whoami result for that key.
+export default function AdminConfig({ principal }) {
   const [activeTab, setActiveTab] = useState('rules'); // 'rules', 'alarms', 'routing'
 
   const [rules, setRules] = useState([]);
@@ -50,12 +47,10 @@ export default function AdminConfig() {
   const [isReactivationWarning, setIsReactivationWarning] = useState(false);
 
   useEffect(() => {
-    if (loggedIn) {
-      loadRules();
-      loadAlarms();
-      loadSubscribers();
-    }
-  }, [loggedIn, activeTab]);
+    loadRules();
+    loadAlarms();
+    loadSubscribers();
+  }, [activeTab]);
 
   const loadRules = async () => {
     try {
@@ -153,16 +148,6 @@ export default function AdminConfig() {
       loadAlarms();
     } catch (e) {
       console.error("Failed to dismiss alarm", e);
-    }
-  };
-
-  const handleLogin = (e) => {
-    e.preventDefault();
-    if ((username === 'super_admin' || username === 'admin_pii') && password === 'admin') {
-      setLoggedIn(true);
-      setLoginError('');
-    } else {
-      setLoginError('Invalid credentials. (Password is admin)');
     }
   };
 
@@ -439,29 +424,6 @@ export default function AdminConfig() {
     r.entity.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  if (!loggedIn) {
-    return (
-      <div className="login-box">
-        <h2>Admin Login Required</h2>
-        <form onSubmit={handleLogin}>
-          <div className="form-group">
-            <label>Username</label>
-            <select value={username} onChange={e => setUsername(e.target.value)} style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #d0d7de', marginBottom: '1rem' }}>
-              <option value="super_admin">super_admin</option>
-              <option value="admin_pii">admin_pii</option>
-            </select>
-          </div>
-          <div className="form-group">
-            <label>Password</label>
-            <input type="password" value={password} onChange={e => setPassword(e.target.value)} />
-          </div>
-          {loginError && <div style={{color: 'red', marginBottom: '1rem'}}>{loginError}</div>}
-          <button type="submit" className="primary" style={{width: '100%'}}>Login</button>
-        </form>
-      </div>
-    );
-  }
-
   return (
     <div>
       <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem'}}>
@@ -473,13 +435,13 @@ export default function AdminConfig() {
               <span style={{ fontSize: '0.8rem', color: '#57606a', fontStyle: 'italic', marginLeft: '0.5rem' }}>⏳ Updating...</span>
             ) : (
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <label className="switch" style={{position: 'relative', display: 'inline-block', width: '40px', height: '20px', opacity: username === 'admin_pii' ? 0.5 : 1}}>
-                  <input type="checkbox" checked={llmWatchdogEnabled} disabled={username === 'admin_pii'} onChange={(e) => handleToggleWatchdog(e.target.checked)} style={{opacity: 0, width: 0, height: 0}} />
-                  <span className="slider" style={{position: 'absolute', cursor: username === 'admin_pii' ? 'not-allowed' : 'pointer', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: llmWatchdogEnabled ? '#2da44e' : '#cf222e', transition: '.4s', borderRadius: '20px'}}>
+                <label className="switch" style={{position: 'relative', display: 'inline-block', width: '40px', height: '20px', opacity: principal.role === 'admin_pii' ? 0.5 : 1}}>
+                  <input type="checkbox" checked={llmWatchdogEnabled} disabled={principal.role === 'admin_pii'} onChange={(e) => handleToggleWatchdog(e.target.checked)} style={{opacity: 0, width: 0, height: 0}} />
+                  <span className="slider" style={{position: 'absolute', cursor: principal.role === 'admin_pii' ? 'not-allowed' : 'pointer', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: llmWatchdogEnabled ? '#2da44e' : '#cf222e', transition: '.4s', borderRadius: '20px'}}>
                     <span style={{position: 'absolute', height: '14px', width: '14px', left: llmWatchdogEnabled ? '22px' : '3px', bottom: '3px', backgroundColor: 'white', transition: '.4s', borderRadius: '50%'}}></span>
                   </span>
                 </label>
-                {username === 'admin_pii' && <span title="Requires Super Admin" style={{ cursor: 'help' }}>🔒</span>}
+                {principal.role === 'admin_pii' && <span title="Requires Super Admin" style={{ cursor: 'help' }}>🔒</span>}
               </div>
             )}
           </div>
@@ -489,17 +451,16 @@ export default function AdminConfig() {
               <span style={{ fontSize: '0.8rem', color: '#57606a', fontStyle: 'italic', marginLeft: '0.5rem' }}>⏳ Updating...</span>
             ) : (
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <label className="switch" style={{position: 'relative', display: 'inline-block', width: '40px', height: '20px', opacity: username === 'admin_pii' ? 0.5 : 1}}>
-                  <input type="checkbox" checked={toxicityGuardEnabled} disabled={username === 'admin_pii'} onChange={(e) => handleToggleToxicity(e.target.checked)} style={{opacity: 0, width: 0, height: 0}} />
-                  <span className="slider" style={{position: 'absolute', cursor: username === 'admin_pii' ? 'not-allowed' : 'pointer', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: toxicityGuardEnabled ? '#2da44e' : '#cf222e', transition: '.4s', borderRadius: '20px'}}>
+                <label className="switch" style={{position: 'relative', display: 'inline-block', width: '40px', height: '20px', opacity: principal.role === 'admin_pii' ? 0.5 : 1}}>
+                  <input type="checkbox" checked={toxicityGuardEnabled} disabled={principal.role === 'admin_pii'} onChange={(e) => handleToggleToxicity(e.target.checked)} style={{opacity: 0, width: 0, height: 0}} />
+                  <span className="slider" style={{position: 'absolute', cursor: principal.role === 'admin_pii' ? 'not-allowed' : 'pointer', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: toxicityGuardEnabled ? '#2da44e' : '#cf222e', transition: '.4s', borderRadius: '20px'}}>
                     <span style={{position: 'absolute', height: '14px', width: '14px', left: toxicityGuardEnabled ? '22px' : '3px', bottom: '3px', backgroundColor: 'white', transition: '.4s', borderRadius: '50%'}}></span>
                   </span>
                 </label>
-                {username === 'admin_pii' && <span title="Requires Super Admin" style={{ cursor: 'help' }}>🔒</span>}
+                {principal.role === 'admin_pii' && <span title="Requires Super Admin" style={{ cursor: 'help' }}>🔒</span>}
               </div>
             )}
           </div>
-          <button className="secondary" onClick={() => setLoggedIn(false)}>Logout</button>
         </div>
       </div>
 
@@ -525,7 +486,7 @@ export default function AdminConfig() {
           Toxicity Guard
         </button>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', padding: '0.5rem 1rem', fontSize: '0.9rem', color: '#57606a', fontWeight: 'bold' }}>
-          👤 {username === 'super_admin' ? 'Super Admin' : 'PII Admin'}
+          👤 {principal.role === 'super_admin' ? 'Super Admin' : 'PII Admin'}
         </div>
       </div>
 
@@ -533,10 +494,10 @@ export default function AdminConfig() {
         <div className="card" style={{ maxWidth: '600px', margin: '0 auto' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <h3>🛡️ Content Toxicity Guard</h3>
-            {username === 'admin_pii' && <span style={{ backgroundColor: '#fff8c5', color: '#9a6700', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.8rem', border: '1px solid #d4a72c' }}>🔒 Super Admin Only</span>}
+            {principal.role === 'admin_pii' && <span style={{ backgroundColor: '#fff8c5', color: '#9a6700', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.8rem', border: '1px solid #d4a72c' }}>🔒 Super Admin Only</span>}
           </div>
           <p style={{ color: '#57606a', fontSize: '0.9rem', marginBottom: '1.5rem' }}>Adjust the sensitivity thresholds for the AI toxicity guard. A lower threshold makes the guard stricter, catching more subtle language but potentially causing false positives. Values range from 0.0 to 1.0.</p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', opacity: username === 'admin_pii' ? 0.6 : 1, pointerEvents: username === 'admin_pii' ? 'none' : 'auto' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', opacity: principal.role === 'admin_pii' ? 0.6 : 1, pointerEvents: principal.role === 'admin_pii' ? 'none' : 'auto' }}>
             {Object.keys(toxicityThresholds).map((category) => (
               <div key={category} className="form-group" style={{ marginBottom: 0 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -553,7 +514,7 @@ export default function AdminConfig() {
               </div>
             ))}
           </div>
-          <button className="primary" onClick={handleSaveToxicitySettings} disabled={isSavingToxicity || username === 'admin_pii'} style={{ marginTop: '2rem', width: '100%' }}>
+          <button className="primary" onClick={handleSaveToxicitySettings} disabled={isSavingToxicity || principal.role === 'admin_pii'} style={{ marginTop: '2rem', width: '100%' }}>
             {isSavingToxicity ? 'Saving...' : 'Save Settings'}
           </button>
         </div>
@@ -569,7 +530,7 @@ export default function AdminConfig() {
               const catKey = cat.toLowerCase();
               const isEnabled = cat === 'UNCATEGORIZED' ? true : categoryToggles[catKey];
               const isToggling = isTogglingCategory[catKey];
-              const isRestrictedCat = username === 'admin_pii' && catKey !== 'pii' && catKey !== 'uncategorized';
+              const isRestrictedCat = principal.role === 'admin_pii' && catKey !== 'pii' && catKey !== 'uncategorized';
               
               return (
                 <div 
@@ -762,7 +723,7 @@ export default function AdminConfig() {
             <button onClick={loadAlarms} className="secondary" style={{ padding: '0.2rem 0.5rem', fontSize: '0.8rem' }}>Refresh</button>
           </div>
           {(() => {
-            const visibleAlarms = username === 'admin_pii' ? alarms.filter(a => a.category === 'PII') : alarms;
+            const visibleAlarms = principal.role === 'admin_pii' ? alarms.filter(a => a.category === 'PII') : alarms;
             if (visibleAlarms.length === 0) {
               return <p style={{ color: '#57606a' }}>No alarms pending review. System is clean!</p>;
             }
@@ -956,7 +917,7 @@ export default function AdminConfig() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
               <h3 style={{ margin: 0 }}>Active Notification Subscribers</h3>
               <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                {username === 'admin_pii' && <span style={{ backgroundColor: '#fff8c5', color: '#9a6700', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.8rem', border: '1px solid #d4a72c' }}>🔒 Super Admin Only</span>}
+                {principal.role === 'admin_pii' && <span style={{ backgroundColor: '#fff8c5', color: '#9a6700', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.8rem', border: '1px solid #d4a72c' }}>🔒 Super Admin Only</span>}
                 <button onClick={loadSubscribers} className="secondary" style={{ padding: '0.2rem 0.5rem', fontSize: '0.8rem' }}>Refresh</button>
               </div>
             </div>
@@ -990,8 +951,8 @@ export default function AdminConfig() {
                         </span>
                       </td>
                       <td style={{ padding: '0.75rem', textAlign: 'right', whiteSpace: 'nowrap' }}>
-                        <button className="secondary" title="Edit" disabled={username === 'admin_pii'} style={{padding: '0.3rem 0.5rem', fontSize: '1rem', border: 'none', background: 'transparent', cursor: username === 'admin_pii' ? 'not-allowed' : 'pointer', opacity: username === 'admin_pii' ? 0.5 : 1}} onClick={() => handleEditSubscriberClick(s)}>✏️</button>
-                        <button className="secondary" disabled={username === 'admin_pii'} style={{padding: '0.2rem 0.5rem', fontSize: '0.8rem', color: username === 'admin_pii' ? '#57606a' : '#cf222e', cursor: username === 'admin_pii' ? 'not-allowed' : 'pointer'}} onClick={() => handleDeleteSubscriber(s.user_name)}>Remove</button>
+                        <button className="secondary" title="Edit" disabled={principal.role === 'admin_pii'} style={{padding: '0.3rem 0.5rem', fontSize: '1rem', border: 'none', background: 'transparent', cursor: principal.role === 'admin_pii' ? 'not-allowed' : 'pointer', opacity: principal.role === 'admin_pii' ? 0.5 : 1}} onClick={() => handleEditSubscriberClick(s)}>✏️</button>
+                        <button className="secondary" disabled={principal.role === 'admin_pii'} style={{padding: '0.2rem 0.5rem', fontSize: '0.8rem', color: principal.role === 'admin_pii' ? '#57606a' : '#cf222e', cursor: principal.role === 'admin_pii' ? 'not-allowed' : 'pointer'}} onClick={() => handleDeleteSubscriber(s.user_name)}>Remove</button>
                       </td>
                     </tr>
                   ))}
@@ -1000,23 +961,23 @@ export default function AdminConfig() {
             </div>
           </div>
 
-          <div className="rule-form" style={{ opacity: username === 'admin_pii' ? 0.6 : 1, pointerEvents: username === 'admin_pii' ? 'none' : 'auto' }}>
+          <div className="rule-form" style={{ opacity: principal.role === 'admin_pii' ? 0.6 : 1, pointerEvents: principal.role === 'admin_pii' ? 'none' : 'auto' }}>
             <div className="card">
               <h3>{editingSubscriber ? 'Edit Subscriber' : 'Add Subscriber'}</h3>
               <form onSubmit={handleAddSubscriber}>
                 <div className="form-group">
                   <label>Full Name</label>
-                  <input type="text" value={subFormData.user_name} disabled={username === 'admin_pii'} onChange={e => setSubFormData({...subFormData, user_name: e.target.value})} placeholder="Jane Doe" />
+                  <input type="text" value={subFormData.user_name} disabled={principal.role === 'admin_pii'} onChange={e => setSubFormData({...subFormData, user_name: e.target.value})} placeholder="Jane Doe" />
                 </div>
                 <div className="form-group">
                   <label>Role</label>
-                  <input type="text" value={subFormData.role} disabled={username === 'admin_pii'} onChange={e => setSubFormData({...subFormData, role: e.target.value})} placeholder="Compliance Officer" />
+                  <input type="text" value={subFormData.role} disabled={principal.role === 'admin_pii'} onChange={e => setSubFormData({...subFormData, role: e.target.value})} placeholder="Compliance Officer" />
                 </div>
                 <div className="form-group">
                   <label>Alert Category</label>
                   <select 
                     value={subFormData.alert_type} 
-                    disabled={username === 'admin_pii'}
+                    disabled={principal.role === 'admin_pii'}
                     onChange={e => setSubFormData({...subFormData, alert_type: e.target.value})}
                     style={{ width: '100%', padding: '0.5rem', borderRadius: '6px', border: '1px solid #d0d7de' }}
                   >
@@ -1030,14 +991,14 @@ export default function AdminConfig() {
                 </div>
                 <div className="form-group">
                   <label>Email Address</label>
-                  <input type="email" value={subFormData.email} disabled={username === 'admin_pii'} onChange={e => setSubFormData({...subFormData, email: e.target.value})} placeholder="jane.doe@company.com" />
+                  <input type="email" value={subFormData.email} disabled={principal.role === 'admin_pii'} onChange={e => setSubFormData({...subFormData, email: e.target.value})} placeholder="jane.doe@company.com" />
                 </div>
                 <div style={{marginTop: '1rem', display: 'flex', gap: '1rem', alignItems: 'center'}}>
-                  <button type="submit" className="primary" disabled={isSaving || username === 'admin_pii'}>
+                  <button type="submit" className="primary" disabled={isSaving || principal.role === 'admin_pii'}>
                     {isSaving ? 'Processing...' : (editingSubscriber ? 'Update Subscriber' : 'Add Subscriber')}
                   </button>
                   {editingSubscriber && (
-                    <button type="button" className="secondary" onClick={handleCancelEditSubscriber} disabled={isSaving || username === 'admin_pii'}>Cancel</button>
+                    <button type="button" className="secondary" onClick={handleCancelEditSubscriber} disabled={isSaving || principal.role === 'admin_pii'}>Cancel</button>
                   )}
                 </div>
                 {subFormMessage && (
