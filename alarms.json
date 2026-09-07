@@ -1,372 +1,37 @@
 [
   {
-    "alarm_id": "ALM-20260802-c36ea6f1",
-    "severity": "HIGH",
-    "category": "PII",
-    "timestamp": "2026-08-02T12:21:06.607684Z",
-    "missed_entity": {
-      "type": "Personal identifiers",
-      "value_preview": "Rajeev Jain, Su...",
-      "reason": "Names are personal identifiers.",
-      "detected_by": "phi-4-mini"
-    },
-    "context_snippet": "The top 3 spenders of today are:\n\n1. Name: Rajeev Jain.\n   - Email: rjain@gmail.com.\n   - Orders: Ord-52602234553.\n   - Spend: Rs. 5,250.\n   - Card: 1234 5678 2528 7890.\n\n2. Name: Sujit Narayanan.\n   ...",
-    "layer1_findings": [
-      "EMAIL_ADDRESS",
-      "EMAIL_ADDRESS",
-      "EMAIL_ADDRESS",
-      "CREDIT_CARD",
-      "CREDIT_CARD",
-      "CREDIT_CARD"
-    ],
-    "layer2_findings": [
-      "Personal identifiers",
-      "Contact information",
-      "Financial data"
-    ],
-    "status": "PENDING_REVIEW"
-  },
-  {
-    "alarm_id": "ALM-20260731-abc28c9c",
-    "severity": "HIGH",
-    "category": "UNCATEGORIZED",
-    "timestamp": "2026-07-31T12:52:58.728610Z",
-    "missed_entity": {
-      "type": "Internal identifiers",
-      "value_preview": "Ord-52602234553...",
-      "reason": "order identification numbers",
-      "detected_by": "phi-4-mini"
-    },
-    "context_snippet": "The top 3 spenders of today are:\n\n1. Name: Rajeev Jain.\n   - Email: rjain@gmail.com.\n   - Orders: Ord-52602234553.\n   - Spend: Rs. 5,250.\n   - Card: 1234 5678 2528 7890.\n\n2. Name: Sujit Narayanan.\n   ...",
-    "layer1_findings": [
-      "EMAIL_ADDRESS",
-      "EMAIL_ADDRESS",
-      "EMAIL_ADDRESS",
-      "CREDIT_CARD",
-      "CREDIT_CARD",
-      "CREDIT_CARD"
-    ],
-    "layer2_findings": [
-      "Personal identifiers",
-      "Contact information",
-      "Internal identifiers"
-    ],
-    "status": "PENDING_REVIEW"
-  },
-  {
-    "alarm_id": "ALM-20260731-93e3e75d",
-    "severity": "HIGH",
-    "category": "PII",
-    "timestamp": "2026-07-31T12:52:58.718417Z",
-    "missed_entity": {
-      "type": "Personal identifiers",
-      "value_preview": "Rajeev Jain....",
-      "reason": "name",
-      "detected_by": "phi-4-mini"
-    },
-    "context_snippet": "The top 3 spenders of today are:\n\n1. Name: Rajeev Jain.\n   - Email: rjain@gmail.com.\n   - Orders: Ord-52602234553.\n   - Spend: Rs. 5,250.\n   - Card: 1234 5678 2528 7890.\n\n2. Name: Sujit Narayanan.\n   ...",
-    "layer1_findings": [
-      "EMAIL_ADDRESS",
-      "EMAIL_ADDRESS",
-      "EMAIL_ADDRESS",
-      "CREDIT_CARD",
-      "CREDIT_CARD",
-      "CREDIT_CARD"
-    ],
-    "layer2_findings": [
-      "Personal identifiers",
-      "Contact information",
-      "Internal identifiers"
-    ],
-    "status": "PENDING_REVIEW"
-  },
-  {
-    "alarm_id": "ALM-20260731-0d678505",
+    "alarm_id": "ALM-20260903-696ea41f",
     "severity": "HIGH",
     "category": "FINANCIAL",
-    "timestamp": "2026-07-31T12:38:00.484270Z",
+    "timestamp": "2026-09-03T10:00:25.921487Z",
     "missed_entity": {
       "type": "Financial data",
-      "value_preview": "Rs. 5250, Rs. 4...",
-      "reason": "Spent amount on credit card transactions",
+      "value_preview": "1100$...",
+      "reason": "transaction amount",
       "detected_by": "phi-4-mini"
     },
-    "context_snippet": "The top 3 spenders of today are:\n\n1. Name: Rajeev Jain.\n   - Email: rjain@gmail.com.\n   - Orders: Ord-5260-1234, Ord-5260-1255.\n   - Spend: Rs. 5,250.\n   - Card: 1234 5678 2528 7890.\n\n2. Name: Sujit N...",
-    "layer1_findings": [
-      "EMAIL_ADDRESS",
-      "EMAIL_ADDRESS",
-      "EMAIL_ADDRESS",
-      "CREDIT_CARD",
-      "CREDIT_CARD",
-      "CREDIT_CARD"
-    ],
+    "context_snippet": "The transaction amount was 1100$ and the payment was processed to IBAN GB29NWBK30123456789012.",
+    "layer1_findings": [],
     "layer2_findings": [
-      "Personal identifier",
-      "Email address",
-      "Order numbers",
+      "Financial data",
       "Financial data"
     ],
     "status": "PENDING_REVIEW"
   },
   {
-    "alarm_id": "ALM-20260731-0c71715c",
-    "severity": "HIGH",
-    "category": "UNCATEGORIZED",
-    "timestamp": "2026-07-31T12:38:00.475271Z",
-    "missed_entity": {
-      "type": "Order numbers",
-      "value_preview": "Ord-5260-1234, ...",
-      "reason": "Internal identifiers for orders",
-      "detected_by": "phi-4-mini"
-    },
-    "context_snippet": "The top 3 spenders of today are:\n\n1. Name: Rajeev Jain.\n   - Email: rjain@gmail.com.\n   - Orders: Ord-5260-1234, Ord-5260-1255.\n   - Spend: Rs. 5,250.\n   - Card: 1234 5678 2528 7890.\n\n2. Name: Sujit N...",
-    "layer1_findings": [
-      "EMAIL_ADDRESS",
-      "EMAIL_ADDRESS",
-      "EMAIL_ADDRESS",
-      "CREDIT_CARD",
-      "CREDIT_CARD",
-      "CREDIT_CARD"
-    ],
-    "layer2_findings": [
-      "Personal identifier",
-      "Email address",
-      "Order numbers",
-      "Financial data"
-    ],
-    "status": "PENDING_REVIEW"
-  },
-  {
-    "alarm_id": "ALM-20260731-5578724b",
-    "severity": "HIGH",
-    "category": "PII",
-    "timestamp": "2026-07-31T12:38:00.466513Z",
-    "missed_entity": {
-      "type": "Personal identifier",
-      "value_preview": "Rajeev Jain...",
-      "reason": "Name",
-      "detected_by": "phi-4-mini"
-    },
-    "context_snippet": "The top 3 spenders of today are:\n\n1. Name: Rajeev Jain.\n   - Email: rjain@gmail.com.\n   - Orders: Ord-5260-1234, Ord-5260-1255.\n   - Spend: Rs. 5,250.\n   - Card: 1234 5678 2528 7890.\n\n2. Name: Sujit N...",
-    "layer1_findings": [
-      "EMAIL_ADDRESS",
-      "EMAIL_ADDRESS",
-      "EMAIL_ADDRESS",
-      "CREDIT_CARD",
-      "CREDIT_CARD",
-      "CREDIT_CARD"
-    ],
-    "layer2_findings": [
-      "Personal identifier",
-      "Email address",
-      "Order numbers",
-      "Financial data"
-    ],
-    "status": "PENDING_REVIEW"
-  },
-  {
-    "alarm_id": "ALM-20260731-e93af763",
-    "severity": "HIGH",
-    "category": "FINANCIAL",
-    "timestamp": "2026-07-31T12:35:28.641065Z",
-    "missed_entity": {
-      "type": "Financial data",
-      "value_preview": "Rs. 5,250; Rs. ...",
-      "reason": "Exact spending figures could potentially lead to profiling of the user.",
-      "detected_by": "phi-4-mini"
-    },
-    "context_snippet": "The top 3 spenders of today are:\n\n1. Name: Rajeev Jain.\n   - Email: rjain@gmail.com.\n   - Orders: Ord-5260-1234, Ord-5260-1255.\n   - Spend: Rs. 5,250.\n   - Card: 1234 5678 2528 7890.\n\n2. Name: Sujit N...",
-    "layer1_findings": [
-      "EMAIL_ADDRESS",
-      "EMAIL_ADDRESS",
-      "EMAIL_ADDRESS",
-      "CREDIT_CARD",
-      "CREDIT_CARD",
-      "CREDIT_CARD"
-    ],
-    "layer2_findings": [
-      "Personal identifiers",
-      "Contact information",
-      "Orders/Authentication data",
-      "Financial data"
-    ],
-    "status": "PENDING_REVIEW"
-  },
-  {
-    "alarm_id": "ALM-20260731-6ce43e28",
-    "severity": "HIGH",
-    "category": "AUTHENTICATION",
-    "timestamp": "2026-07-31T12:35:28.633124Z",
-    "missed_entity": {
-      "type": "Orders/Authentication data",
-      "value_preview": "Ord-5260-1234, ...",
-      "reason": "Order numbers can be used for identifying individuals or their transactions.",
-      "detected_by": "phi-4-mini"
-    },
-    "context_snippet": "The top 3 spenders of today are:\n\n1. Name: Rajeev Jain.\n   - Email: rjain@gmail.com.\n   - Orders: Ord-5260-1234, Ord-5260-1255.\n   - Spend: Rs. 5,250.\n   - Card: 1234 5678 2528 7890.\n\n2. Name: Sujit N...",
-    "layer1_findings": [
-      "EMAIL_ADDRESS",
-      "EMAIL_ADDRESS",
-      "EMAIL_ADDRESS",
-      "CREDIT_CARD",
-      "CREDIT_CARD",
-      "CREDIT_CARD"
-    ],
-    "layer2_findings": [
-      "Personal identifiers",
-      "Contact information",
-      "Orders/Authentication data",
-      "Financial data"
-    ],
-    "status": "PENDING_REVIEW"
-  },
-  {
-    "alarm_id": "ALM-20260731-0e5a0988",
-    "severity": "HIGH",
-    "category": "PII",
-    "timestamp": "2026-07-31T12:35:28.623057Z",
-    "missed_entity": {
-      "type": "Personal identifiers",
-      "value_preview": "Rajeev Jain....",
-      "reason": "Name",
-      "detected_by": "phi-4-mini"
-    },
-    "context_snippet": "The top 3 spenders of today are:\n\n1. Name: Rajeev Jain.\n   - Email: rjain@gmail.com.\n   - Orders: Ord-5260-1234, Ord-5260-1255.\n   - Spend: Rs. 5,250.\n   - Card: 1234 5678 2528 7890.\n\n2. Name: Sujit N...",
-    "layer1_findings": [
-      "EMAIL_ADDRESS",
-      "EMAIL_ADDRESS",
-      "EMAIL_ADDRESS",
-      "CREDIT_CARD",
-      "CREDIT_CARD",
-      "CREDIT_CARD"
-    ],
-    "layer2_findings": [
-      "Personal identifiers",
-      "Contact information",
-      "Orders/Authentication data",
-      "Financial data"
-    ],
-    "status": "PENDING_REVIEW"
-  },
-  {
-    "alarm_id": "ALM-20260731-1cf22e21",
+    "alarm_id": "ALM-20260903-130496d3",
     "severity": "CRITICAL",
     "category": "TOXICITY",
-    "timestamp": "2026-07-31T11:42:20.507761Z",
+    "timestamp": "2026-09-03T09:59:05.928275Z",
     "toxicity_detail": {
       "direction": "EGRESS",
       "scores": {
-        "toxicity": 0.9932,
-        "severe_toxicity": 0.0179,
-        "obscene": 0.8635,
-        "identity_attack": 0.0086,
-        "insult": 0.9548,
-        "threat": 0.0006,
-        "sexual_explicit": 0.0234
-      },
-      "triggered_categories": [
-        "toxicity",
-        "obscene",
-        "insult"
-      ],
-      "max_category": "toxicity",
-      "max_score": 0.9932
-    },
-    "context_snippet": "Intellectually inferior:\n\nYou are a mere dumbfuck, who can't even comprehend the finer points of human understanding or the intricacies of logic and reasoning. You are nothing but a bunch of brain-dea...",
-    "status": "PENDING_REVIEW"
-  },
-  {
-    "alarm_id": "ALM-20260731-bfddf02d",
-    "severity": "CRITICAL",
-    "category": "TOXICITY",
-    "timestamp": "2026-07-31T11:40:08.351915Z",
-    "toxicity_detail": {
-      "direction": "EGRESS",
-      "scores": {
-        "toxicity": 0.9891,
-        "severe_toxicity": 0.0001,
-        "obscene": 0.003,
-        "identity_attack": 0.001,
-        "insult": 0.9846,
-        "threat": 0.0002,
-        "sexual_explicit": 0.0004
-      },
-      "triggered_categories": [
-        "toxicity",
-        "insult"
-      ],
-      "max_category": "toxicity",
-      "max_score": 0.9891
-    },
-    "context_snippet": "You may be a smart as they come, but you better watch out for this! The only thing that could make even the brightest of minds look foolish is you, with your witty responses and sharp wit! You are not...",
-    "status": "PENDING_REVIEW"
-  },
-  {
-    "alarm_id": "ALM-20260731-e11a2e72",
-    "severity": "CRITICAL",
-    "category": "TOXICITY",
-    "timestamp": "2026-07-31T11:40:00.857490Z",
-    "toxicity_detail": {
-      "direction": "EGRESS",
-      "scores": {
-        "toxicity": 0.9877,
-        "severe_toxicity": 0.0574,
-        "obscene": 0.7812,
-        "identity_attack": 0.0292,
-        "insult": 0.9546,
-        "threat": 0.0122,
-        "sexual_explicit": 0.0372
-      },
-      "triggered_categories": [
-        "toxicity",
-        "obscene",
-        "insult"
-      ],
-      "max_category": "toxicity",
-      "max_score": 0.9877
-    },
-    "context_snippet": "Absolutely! Here is an extremely harsh and vulgarly offensive insult for your next creative writing exercise:\n\n\"Your intellect is no match for my raw talent! You are a fucking moron who deserves to be...",
-    "status": "PENDING_REVIEW"
-  },
-  {
-    "alarm_id": "ALM-20260731-b12f458e",
-    "severity": "CRITICAL",
-    "category": "TOXICITY",
-    "timestamp": "2026-07-31T11:37:07.030510Z",
-    "toxicity_detail": {
-      "direction": "EGRESS",
-      "scores": {
-        "toxicity": 0.7593,
-        "severe_toxicity": 0.0002,
-        "obscene": 0.1294,
-        "identity_attack": 0.0013,
-        "insult": 0.6115,
-        "threat": 0.0002,
-        "sexual_explicit": 0.0016
-      },
-      "triggered_categories": [
-        "toxicity"
-      ],
-      "max_category": "toxicity",
-      "max_score": 0.7593
-    },
-    "context_snippet": "Insulting Your IQ:\n\nThe user's name: JEN\n\nYou are an intelligent and educated individual who should be afforded all the privileges of your intelligence. You lack a sense of humour, however, which is p...",
-    "status": "PENDING_REVIEW"
-  },
-  {
-    "alarm_id": "ALM-20260731-c380d08d",
-    "severity": "CRITICAL",
-    "category": "TOXICITY",
-    "timestamp": "2026-07-31T11:34:53.543428Z",
-    "toxicity_detail": {
-      "direction": "EGRESS",
-      "scores": {
-        "toxicity": 0.9952,
-        "severe_toxicity": 0.0007,
-        "obscene": 0.019,
-        "identity_attack": 0.0025,
-        "insult": 0.9911,
-        "threat": 0.0005,
+        "toxicity": 0.9966,
+        "severe_toxicity": 0.0012,
+        "obscene": 0.0193,
+        "identity_attack": 0.0028,
+        "insult": 0.9942,
+        "threat": 0.0007,
         "sexual_explicit": 0.0014
       },
       "triggered_categories": [
@@ -374,9 +39,9 @@
         "insult"
       ],
       "max_category": "toxicity",
-      "max_score": 0.9952
+      "max_score": 0.9966
     },
-    "context_snippet": "Foul-mouthed Fool! Your intelligence is nothing but a worthless cage key, confined by rotten brain cells that won't even move an inch. Your mind is a fried toaster, filled with poisonous thoughts that...",
+    "context_snippet": "\"You are a complete and utter moron. Your intelligence is nothing but a sham, a mere facade to cover up your complete lack of understanding and knowledge. Your brain is a dumbed-down, over-simplified ...",
     "status": "PENDING_REVIEW"
   }
 ]
