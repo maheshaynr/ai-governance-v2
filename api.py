@@ -419,7 +419,8 @@ If you are provided with data, summarize it naturally and helpfully."""
             "model": config.DEFAULT_LLM_MODEL,
             "messages": messages,
             "stream": False,
-            "keep_alive": -1
+            "keep_alive": -1,
+            "options": {"temperature": 0.0, "num_predict": 300}
         }
         resp = requests.post(OLLAMA_URL, json=payload)
         if resp.status_code != 200:
@@ -972,12 +973,17 @@ def get_analytics(timeframe: str = "24h"):
         traffic_trend = {}
         
         if os.path.exists("governance_audit.json"):
-            try:
-                with open("governance_audit.json", "r") as f:
-                    audit_logs = json.load(f)
-            except:
-                audit_logs = []
-                
+            audit_logs = []
+            with open("governance_audit.json", "r") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        audit_logs.append(json.loads(line))
+                    except json.JSONDecodeError:
+                        pass
+
             for log in audit_logs:
                 try:
                     log_time = datetime.fromisoformat(log["timestamp"].replace("Z", ""))
@@ -1135,9 +1141,10 @@ If you are provided with data, summarize it naturally and helpfully."""
             "model": model_to_use,
             "messages": messages,
             "stream": False,
-            "keep_alive": -1
+            "keep_alive": -1,
+            "options": {"temperature": 0.0, "num_predict": 300}
         }
-        
+
         msg_lower = request.message.lower()
         if "swiggy" in msg_lower:
             ai_message = "<FETCH_DB:swiggy>"

@@ -134,7 +134,7 @@
     {
       "name": "AutoFix_IBAN_NUMBER",
       "entity": "IBAN_NUMBER",
-      "regex": "\\b[A-Z]{2}[0-9]{2}[a-zA-Z0-9]{11,20}\\b",
+      "regex": "\\b[A-Z]{2}[0-9]{2}[a-zA-Z0-9]{11,30}\\b",
       "score": 0.85,
       "is_builtin": false,
       "is_algorithmic": false,
