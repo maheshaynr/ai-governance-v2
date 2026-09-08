@@ -228,6 +228,7 @@
     "INJECTION",
     "TOOL_ABUSE",
     "GUARD_FAILURE",
-    "TOXICITY"
+    "TOXICITY",
+    "CONSENT_VIOLATION"
   ]
 }

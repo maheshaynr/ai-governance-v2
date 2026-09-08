@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { fetchRules, addRule, updateRule, deleteRule, fetchAlarms, toggleWatchdog, fetchSubscribers, addSubscriber, updateSubscriber, deleteSubscriber, deleteAlarm, sandboxSuggestRule, sandboxTestRule, toggleToxicity, fetchToxicitySettings, updateToxicitySettings, toggleCategory } from './api';
+import { fetchRules, addRule, updateRule, deleteRule, fetchAlarms, toggleWatchdog, fetchSubscribers, addSubscriber, updateSubscriber, deleteSubscriber, deleteAlarm, sandboxSuggestRule, sandboxTestRule, toggleToxicity, fetchToxicitySettings, updateToxicitySettings, toggleCategory, fetchConsents, withdrawConsent } from './api';
 
 // Authentication was removed from the backend by explicit request -- see auth.py and
 // api.py's run_guard_self_test. There is no more login gate to supply a real principal
@@ -16,6 +16,8 @@ export default function AdminConfig({ principal = DEFAULT_PRINCIPAL }) {
   const [rules, setRules] = useState([]);
   const [alarms, setAlarms] = useState([]);
   const [subscribers, setSubscribers] = useState([]);
+  const [consents, setConsents] = useState([]);
+  const [withdrawingConsentId, setWithdrawingConsentId] = useState(null);
   const [llmWatchdogEnabled, setLlmWatchdogEnabled] = useState(false);
   const [isTogglingWatchdog, setIsTogglingWatchdog] = useState(false);
   const [toxicityGuardEnabled, setToxicityGuardEnabled] = useState(false);
@@ -57,6 +59,7 @@ export default function AdminConfig({ principal = DEFAULT_PRINCIPAL }) {
     loadRules();
     loadAlarms();
     loadSubscribers();
+    loadConsents();
   }, [activeTab]);
 
   const loadRules = async () => {
@@ -109,6 +112,27 @@ export default function AdminConfig({ principal = DEFAULT_PRINCIPAL }) {
       if (data.subscribers) setSubscribers(data.subscribers);
     } catch (e) {
       console.error("Failed to load subscribers", e);
+    }
+  };
+
+  const loadConsents = async () => {
+    try {
+      const data = await fetchConsents();
+      if (data.consents) setConsents(data.consents);
+    } catch (e) {
+      console.error("Failed to load consents", e);
+    }
+  };
+
+  const handleWithdrawConsent = async (row) => {
+    setWithdrawingConsentId(row.id);
+    try {
+      await withdrawConsent(row.customer_id, row.data_category, row.purpose);
+      await loadConsents();
+    } catch (e) {
+      console.error("Failed to withdraw consent", e);
+    } finally {
+      setWithdrawingConsentId(null);
     }
   };
 
@@ -487,10 +511,15 @@ export default function AdminConfig({ principal = DEFAULT_PRINCIPAL }) {
           style={{ background: 'none', border: 'none', padding: '0.5rem 1rem', fontSize: '1rem', fontWeight: '600', color: activeTab === 'routing' ? '#9a6700' : '#57606a', borderBottom: activeTab === 'routing' ? '2px solid #d29922' : '2px solid transparent', cursor: 'pointer' }}>
           Alert Routing
         </button>
-        <button 
+        <button
           onClick={() => setActiveTab('toxicity')}
           style={{ background: 'none', border: 'none', padding: '0.5rem 1rem', fontSize: '1rem', fontWeight: '600', color: activeTab === 'toxicity' ? '#8b5cf6' : '#57606a', borderBottom: activeTab === 'toxicity' ? '2px solid #8b5cf6' : '2px solid transparent', cursor: 'pointer' }}>
           Toxicity Guard
+        </button>
+        <button
+          onClick={() => setActiveTab('consents')}
+          style={{ background: 'none', border: 'none', padding: '0.5rem 1rem', fontSize: '1rem', fontWeight: '600', color: activeTab === 'consents' ? '#b45309' : '#57606a', borderBottom: activeTab === 'consents' ? '2px solid #b45309' : '2px solid transparent', cursor: 'pointer' }}>
+          Consents
         </button>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', padding: '0.5rem 1rem', fontSize: '0.9rem', color: '#57606a', fontWeight: 'bold' }}>
           👤 {principal.role === 'super_admin' ? 'Super Admin' : 'PII Admin'}
@@ -749,12 +778,14 @@ export default function AdminConfig({ principal = DEFAULT_PRINCIPAL }) {
                     INJECTION: 'Injection Attempt',
                     TOOL_ABUSE: 'Unauthorized Tool Call',
                     GUARD_FAILURE: 'Guardrail Failure',
+                    CONSENT_VIOLATION: 'Consent Violation',
                   }[alarm.category] || alarm.missed_entity?.type || alarm.category;
                   const categoryColor = {
                     TOXICITY: '#e94560',
                     INJECTION: '#b91c1c',
                     TOOL_ABUSE: '#a21caf',
                     GUARD_FAILURE: '#7c2d12',
+                    CONSENT_VIOLATION: '#b45309',
                     AUTHENTICATION: '#8b5cf6',
                     FINANCIAL: '#0969da',
                     HEALTH: '#116329',
@@ -858,6 +889,18 @@ export default function AdminConfig({ principal = DEFAULT_PRINCIPAL }) {
                       </div>
                     )}
 
+                    {/* Refused for lack of consent -- distinct from tool_detail: this is
+                        about whether the customer's own data can be used this way, not
+                        about who is asking (see tool_broker.py / consent.py) */}
+                    {alarm.consent_detail && (
+                      <div style={{ marginBottom: '1rem', fontSize: '0.9rem', backgroundColor: '#fff8ec', border: '1px solid #f0b775', borderRadius: '6px', padding: '0.75rem' }}>
+                        <div><strong>Customer:</strong> <span style={{ fontFamily: 'monospace' }}>{alarm.consent_detail.customer_id}</span></div>
+                        <div><strong>Category / Purpose:</strong> {alarm.consent_detail.data_category} / {alarm.consent_detail.purpose || '(none declared)'}</div>
+                        <div><strong>Caller:</strong> {alarm.consent_detail.principal} ({alarm.consent_detail.role})</div>
+                        <div style={{ marginTop: '0.4rem', color: '#7c4a03' }}><strong>Refused because:</strong> {alarm.consent_detail.reason}</div>
+                      </div>
+                    )}
+
                     {/* A guard could not run at all -- an outage of a security control */}
                     {alarm.guard_detail && (
                       <div style={{ marginBottom: '1rem', fontSize: '0.9rem', backgroundColor: '#fff8c5', border: '1px solid #d4a72c', borderRadius: '6px', padding: '0.75rem' }}>
@@ -915,6 +958,80 @@ export default function AdminConfig({ principal = DEFAULT_PRINCIPAL }) {
             </div>
             );
           })()}
+        </div>
+      )}
+
+      {activeTab === 'consents' && (
+        <div className="admin-layout">
+          <div className="rules-list">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <div>
+                <h3 style={{ margin: 0 }}>Consent Ledger</h3>
+                <p style={{ margin: '0.25rem 0 0 0', color: '#57606a', fontSize: '0.85rem' }}>
+                  What each customer has actually agreed to, and for what purpose. Checked by the
+                  Consent Gate before a card read is allowed to proceed — withdrawing here takes
+                  effect on the very next request, not on some later reconciliation pass.
+                </p>
+              </div>
+              <button onClick={loadConsents} className="secondary" style={{ padding: '0.2rem 0.5rem', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>Refresh</button>
+            </div>
+
+            <div style={{ border: '1px solid #d0d7de', borderRadius: '6px', background: '#fff', overflow: 'hidden' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.9rem' }}>
+                <thead style={{ background: '#f6f8fa' }}>
+                  <tr>
+                    <th style={{ padding: '0.75rem', borderBottom: '1px solid #d0d7de' }}>Customer</th>
+                    <th style={{ padding: '0.75rem', borderBottom: '1px solid #d0d7de' }}>Category</th>
+                    <th style={{ padding: '0.75rem', borderBottom: '1px solid #d0d7de' }}>Purpose</th>
+                    <th style={{ padding: '0.75rem', borderBottom: '1px solid #d0d7de' }}>Status</th>
+                    <th style={{ padding: '0.75rem', borderBottom: '1px solid #d0d7de' }}>Granted</th>
+                    <th style={{ padding: '0.75rem', borderBottom: '1px solid #d0d7de' }}>Withdrawn</th>
+                    <th style={{ padding: '0.75rem', borderBottom: '1px solid #d0d7de', textAlign: 'right' }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {consents.length === 0 ? (
+                    <tr>
+                      <td colSpan="7" style={{ padding: '2rem', textAlign: 'center', color: '#57606a' }}>No consent records yet.</td>
+                    </tr>
+                  ) : consents.map((row) => (
+                    <tr key={row.id} style={{ borderBottom: '1px solid #d0d7de' }}>
+                      <td style={{ padding: '0.75rem', fontWeight: '500' }}>{row.customer_id}</td>
+                      <td style={{ padding: '0.75rem', fontFamily: 'monospace', fontSize: '0.8rem' }}>{row.data_category}</td>
+                      <td style={{ padding: '0.75rem' }}>{row.purpose}</td>
+                      <td style={{ padding: '0.75rem' }}>
+                        <span style={{
+                          backgroundColor: row.status === 'GRANTED' ? '#dafbe1' : '#ffebe9',
+                          color: row.status === 'GRANTED' ? '#1a7f37' : '#cf222e',
+                          padding: '2px 8px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: '600'
+                        }}>
+                          {row.status}
+                        </span>
+                      </td>
+                      <td style={{ padding: '0.75rem', fontSize: '0.8rem', color: '#57606a', whiteSpace: 'nowrap' }}>
+                        {row.granted_at ? new Date(row.granted_at).toLocaleString() : '—'}
+                      </td>
+                      <td style={{ padding: '0.75rem', fontSize: '0.8rem', color: '#57606a', whiteSpace: 'nowrap' }}>
+                        {row.withdrawn_at ? new Date(row.withdrawn_at).toLocaleString() : '—'}
+                      </td>
+                      <td style={{ padding: '0.75rem', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                        {row.status === 'GRANTED' && (
+                          <button
+                            className="secondary"
+                            onClick={() => handleWithdrawConsent(row)}
+                            disabled={withdrawingConsentId === row.id}
+                            style={{ padding: '0.2rem 0.6rem', fontSize: '0.8rem', color: '#cf222e' }}
+                          >
+                            {withdrawingConsentId === row.id ? '⏳ Withdrawing...' : 'Withdraw'}
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       )}
 

@@ -89,12 +89,15 @@ export async function governAi(text) {
   return postJson('/govern_ai', { text });
 }
 
-export async function chatAgent(message) {
-  return postJson('/chat', { message });
+export async function chatAgent(message, purpose = '') {
+  // purpose opts every /chat call into the Consent Gate (see tool_broker.py) -- an
+  // empty string is a real, checkable value ("nothing declared"), not the same as
+  // omitting the field.
+  return postJson('/chat', { message, purpose });
 }
 
-export async function demoChat(message, mode) {
-  return postJson('/demo_chat', { message, mode });
+export async function demoChat(message, mode, purpose = '') {
+  return postJson('/demo_chat', { message, mode, purpose });
 }
 
 export async function sandboxSuggestRule(context_snippet, missed_entity_type, value_preview) {
@@ -115,6 +118,14 @@ export async function fetchToxicitySettings() {
 
 export async function fetchBenchmarks() {
   return apiFetch('/get_benchmarks');
+}
+
+export async function fetchConsents() {
+  return apiFetch('/consents');
+}
+
+export async function withdrawConsent(customer_id, data_category, purpose) {
+  return postJson('/withdraw_consent', { customer_id, data_category, purpose });
 }
 
 export async function updateToxicitySettings({ thresholds, enable_toxicity_guard }) {

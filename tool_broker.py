@@ -23,6 +23,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 import auth
+import consent
 import database
 import diff_engine
 from auth import Principal
@@ -36,6 +37,17 @@ _CALL_PATTERN = re.compile(r"<(?P<tool>[A-Z_]+):(?P<argument>[^>\s]{1,64})>")
 # Record IDs are either an integer customer/spender ID or one of the named misc_data
 # rows. Anything else is rejected before it reaches the database layer.
 _NAMED_RECORDS = ("swiggy", "iban")
+
+# Scoped to credit card data for this pass -- see consent.py. Every numeric-ID record in
+# this dataset (customers and spenders) carries a card field, so gating on the record
+# shape (numeric vs. named) is correct here without inspecting the formatted profile
+# string get_customer_profile returns.
+_CONSENT_GATED_CATEGORY = "CREDIT_CARD"
+
+CONSENT_REFUSAL_MSG = (
+    "This customer has not consented to their card data being used for that purpose. "
+    "Tell the user their request cannot be completed, and do not guess the contents."
+)
 
 
 @dataclass(frozen=True)
@@ -53,6 +65,9 @@ class ToolResult:
     allowed: bool
     data: Optional[str] = None
     refusal: Optional[str] = None
+    # Populated only on a consent refusal, so api.py can pass it straight into
+    # ChatResponse.consent without re-deriving what was checked.
+    consent_detail: Optional[dict] = None
 
 
 def parse_tool_calls(model_text: str) -> list:
@@ -99,12 +114,17 @@ def _validate_argument(call: ToolCall) -> Optional[str]:
     return None
 
 
-def authorize(principal: Principal, call: ToolCall) -> ToolResult:
+def authorize(principal: Principal, call: ToolCall, purpose: str = None) -> ToolResult:
     """
     Decide whether this caller may run this call. No database access happens here.
 
     Refusals are alarmed as TOOL_ABUSE, because a request for a record the caller is not
     entitled to is a signal worth reviewing even when it was the model's idea.
+
+    purpose gates a second, independent question once entitlement passes: not "who may
+    read this record" but "was this customer's data ever consented to being used this
+    way." No purpose declared is not a bypass -- it means no processing basis was stated,
+    which is refused, not defaulted to allowed. See consent.py.
     """
     if call.tool != TOOL_FETCH_DB:
         return ToolResult(
@@ -137,17 +157,47 @@ def authorize(principal: Principal, call: ToolCall) -> ToolResult:
             ),
         )
 
+    # Consent Gate. Scoped to numeric customer/spender IDs -- the named misc_data rows
+    # (swiggy, iban) carry no card data, so they are untouched by this check.
+    #
+    # purpose=None (the parameter's default, unpassed) means this call site has not
+    # opted into consent gating at all -- /query_db and /demo_chat's keyword paths don't
+    # pass it, by design, and must behave exactly as before this feature existed.
+    # purpose="" (passed, but nothing declared) DOES opt in and is refused, which is the
+    # distinction that makes "no purpose stated" a refusal rather than a silent bypass
+    # for /chat specifically, which always passes this parameter.
+    if call.argument.isdigit() and purpose is not None:
+        if not purpose or not consent.has_consent(call.argument, _CONSENT_GATED_CATEGORY, purpose):
+            reason = (
+                f"no purpose declared for record '{call.argument}'" if not purpose
+                else f"customer '{call.argument}' has no granted consent for "
+                     f"{_CONSENT_GATED_CATEGORY}/{purpose}"
+            )
+            _alarm_consent(principal, call, purpose, reason)
+            return ToolResult(
+                call=call,
+                allowed=False,
+                refusal=CONSENT_REFUSAL_MSG,
+                consent_detail={
+                    "customer_id": call.argument,
+                    "data_category": _CONSENT_GATED_CATEGORY,
+                    "purpose": purpose,
+                    "granted": False,
+                    "reason": reason,
+                },
+            )
+
     return ToolResult(call=call, allowed=True)
 
 
-def execute(principal: Principal, call: ToolCall) -> ToolResult:
+def execute(principal: Principal, call: ToolCall, purpose: str = None) -> ToolResult:
     """
     Authorize, then run. The only path from model output to the database.
 
     database.get_customer_profile is used unchanged -- it is already parameterized, so
     the risk this closes is authorization, not injection.
     """
-    decision = authorize(principal, call)
+    decision = authorize(principal, call, purpose=purpose)
     if not decision.allowed:
         logging.warning(
             f"Tool broker: REFUSED {call} for principal '{principal.name}' ({principal.role})"
@@ -169,3 +219,17 @@ def _alarm(principal: Principal, call: ToolCall, reason: str) -> None:
         )
     except Exception as e:  # an alarm failure must not mask the refusal itself
         logging.error(f"Tool broker: failed to raise TOOL_ABUSE alarm: {e}")
+
+
+def _alarm_consent(principal: Principal, call: ToolCall, purpose: str, reason: str) -> None:
+    try:
+        diff_engine.generate_consent_violation_alarm(
+            principal_name=principal.name,
+            principal_role=principal.role,
+            customer_id=call.argument,
+            data_category=_CONSENT_GATED_CATEGORY,
+            purpose=purpose,
+            reason=reason,
+        )
+    except Exception as e:  # an alarm failure must not mask the refusal itself
+        logging.error(f"Tool broker: failed to raise CONSENT_VIOLATION alarm: {e}")

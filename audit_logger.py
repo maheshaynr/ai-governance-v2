@@ -27,10 +27,16 @@ class AuditLogger:
     @staticmethod
     def log_transaction(pii_masked_input: str, final_rewrite: str, fidelity_score: float = None,
                         fallback_triggered: bool = False, groundedness_score: float = None,
-                        unsupported_claims: list = None):
+                        unsupported_claims: list = None, purpose: str = None,
+                        notice_version: int = None):
         """
         Logs the chain of custody for a single transaction.
         For TrustArc compliance, the raw unmasked input is NEVER written to disk.
+
+        purpose and notice_version are populated only when the transaction touched a
+        consent-gated read (see consent.py, tool_broker.py) -- this is the field a
+        breach investigation would ask for first: was this access backed by valid,
+        specific consent, and what notice was it granted under.
         """
         return AuditLogger._append({
             "event": AuditLogger.EVENT_TRANSACTION,
@@ -41,6 +47,8 @@ class AuditLogger:
             "fallback_triggered": fallback_triggered,
             "groundedness_score": groundedness_score,
             "unsupported_claims": unsupported_claims or [],
+            "purpose": purpose,
+            "notice_version": notice_version,
         })
 
     @staticmethod

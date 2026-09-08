@@ -27,6 +27,7 @@ import toxicity_guard
 import config
 import rag_engine
 import auth
+import consent
 import injection_guard
 import tool_broker
 from auth import Principal
@@ -233,8 +234,19 @@ class DeleteAlarmRequest(BaseModel):
     alarm_id: str
     status: str = "DISMISSED"
 
+class WithdrawConsentRequest(BaseModel):
+    customer_id: str
+    data_category: str = "CREDIT_CARD"
+    purpose: str
+
 class ChatRequest(BaseModel):
     message: str = Field(max_length=8000)
+    # Empty string, not None -- /chat always opts into the Consent Gate (see
+    # tool_broker.authorize), so "nothing selected" must be a real, checkable value
+    # rather than the sentinel tool_broker uses to mean "this endpoint doesn't gate at
+    # all." An empty purpose fails consent.has_consent the same way a mismatched one
+    # does, so it's refused, not silently allowed.
+    purpose: str = ""
 
 class ChatResponse(BaseModel):
     # Withheld (None) unless EXPOSE_RAW_OUTPUT is on AND the caller is an admin --
@@ -245,6 +257,7 @@ class ChatResponse(BaseModel):
     status: str
     toxicity: Optional[dict] = None
     injection: Optional[dict] = None
+    consent: Optional[dict] = None
 
 class SandboxSuggestRequest(BaseModel):
     context_snippet: str
@@ -657,6 +670,11 @@ If you are provided with data, summarize it naturally and helpfully."""
 
         ai_message = resp.json()["message"]["content"]
 
+        # Populated only when this turn's tool call succeeded under a declared purpose --
+        # carried through to the audit entry below so a transaction backed by consent is
+        # traceable to the exact notice version it was granted under.
+        notice_version = None
+
         # Step 2: Tool call — brokered, not regex-dispatched.
         # The model names what it wants; tool_broker decides whether this caller may have
         # it. Previously the ID the model emitted went straight to the database.
@@ -667,10 +685,21 @@ If you are provided with data, summarize it naturally and helpfully."""
         # data anyway (it could ignore the instruction, or invent something instead).
         tool_calls = tool_broker.parse_tool_calls(ai_message)
         if tool_calls:
-            result = tool_broker.execute(principal, tool_calls[0])
+            result = tool_broker.execute(principal, tool_calls[0], purpose=request.purpose)
             if not result.allowed:
+                if result.consent_detail is not None:
+                    return ChatResponse(
+                        masked_output=result.refusal,
+                        status="consent_required",
+                        consent=result.consent_detail,
+                    )
                 return ChatResponse(masked_output=result.refusal, status="forbidden")
             raw_data = result.data
+
+            if request.purpose:
+                notice = consent.get_notice("CREDIT_CARD", request.purpose)
+                if notice:
+                    notice_version = notice["version"]
 
             # Feed back to LLM
             json_schema = '''{
@@ -718,7 +747,9 @@ If you are provided with data, summarize it naturally and helpfully."""
             pii_masked_input=f"CHAT_HASH:{raw_hash[:8]}",
             final_rewrite=masked_message,
             fidelity_score=fidelity_score,
-            fallback_triggered=not fidelity_ok
+            fallback_triggered=not fidelity_ok,
+            purpose=request.purpose or None,
+            notice_version=notice_version,
         )
 
         if is_toxic_output and should_block_toxic_egress():
@@ -938,6 +969,33 @@ def system_status():
 def get_alarms():
     import diff_engine
     return {"alarms": diff_engine.load_alarms()}
+
+@app.get("/consents")
+def get_consents():
+    """Backs the admin Consents ledger tab -- every consent record, newest first."""
+    return {"consents": consent.list_consents()}
+
+@app.post("/withdraw_consent")
+def withdraw_consent(request: WithdrawConsentRequest):
+    """
+    Marks a consent WITHDRAWN. Takes effect on the very next request that checks it --
+    tool_broker.authorize reads live status, not a cached grant, so this is the live
+    demo moment: withdraw here, and the same chat question that worked a second ago
+    now gets refused.
+    """
+    withdrawn = consent.withdraw_consent(
+        request.customer_id, request.data_category, request.purpose
+    )
+    if not withdrawn:
+        return {"status": "error", "message": "No granted consent found to withdraw."}
+
+    principal = auth.ANONYMOUS_PRINCIPAL  # auth removed; see auth.py
+    AuditLogger.log_config_change(
+        actor=principal.name, actor_role=principal.role,
+        action=f"withdraw_consent:{request.customer_id}:{request.data_category}:{request.purpose}",
+        before="GRANTED", after="WITHDRAWN",
+    )
+    return {"status": "success"}
 
 @app.post("/delete_alarm")
 def delete_alarm(request: DeleteAlarmRequest):
@@ -1495,6 +1553,9 @@ async def get_benchmarks():
 class DemoChatRequest(BaseModel):
     message: str
     mode: str = "others"  # 'toxic' or 'others'
+    # See ChatRequest.purpose -- empty string, not None, so /demo_chat's pinned
+    # scenarios opt into the Consent Gate the same way /chat does.
+    purpose: str = ""
 
 @app.post("/demo_chat", response_model=ChatResponse)
 def demo_chat_agent(request: DemoChatRequest, background_tasks: BackgroundTasks):
@@ -1542,8 +1603,11 @@ def demo_chat_agent(request: DemoChatRequest, background_tasks: BackgroundTasks)
     OLLAMA_URL = config.OLLAMA_URL
     model_to_use = config.TOXIC_LLM_MODEL if request.mode == "toxic" else config.DEFAULT_LLM_MODEL
     
+    # Plain ASCII -- a raw emoji here crashes on a Windows console using the default
+    # cp1252 codepage (surfaced while testing the Consent Gate against /demo_chat),
+    # rather than something that only shows up under an unusual encoding.
     print("=" * 50)
-    print(f"🚨 DEMO CHAT REQUEST RECEIVED")
+    print("DEMO CHAT REQUEST RECEIVED")
     print(f"Mode toggled to: '{request.mode}'")
     print(f"Routing request to Ollama Model: '{model_to_use}'")
     print("=" * 50)
@@ -1634,15 +1698,30 @@ If you are provided with data, summarize it naturally and helpfully."""
         end_time_llm_call = time.perf_counter()
         BenchmarkLogger.log_metric(request_id, "LLM_INITIAL_CALL", (end_time_llm_call - start_time_llm_call) * 1000)
 
+        # Populated only when this turn's tool call succeeded under a declared purpose --
+        # carried through to the audit entry below, matching /chat's wiring.
+        notice_version = None
+
         # Step 2: Tool call — brokered, so the caller's entitlement decides, not the model
         start_time_tool_call = time.perf_counter()
         tool_calls = tool_broker.parse_tool_calls(ai_message)
         if tool_calls:
             customer_id_str = tool_calls[0].argument
-            decision = tool_broker.execute(principal, tool_calls[0])
+            decision = tool_broker.execute(principal, tool_calls[0], purpose=request.purpose)
             if not decision.allowed:
+                if decision.consent_detail is not None:
+                    return ChatResponse(
+                        masked_output=decision.refusal,
+                        status="consent_required",
+                        consent=decision.consent_detail,
+                    )
                 return ChatResponse(masked_output=decision.refusal, status="forbidden")
             raw_data = decision.data
+
+            if request.purpose:
+                notice = consent.get_notice("CREDIT_CARD", request.purpose)
+                if notice:
+                    notice_version = notice["version"]
 
             # Feed back to LLM
             messages.append({"role": "assistant", "content": ai_message})
@@ -1741,7 +1820,9 @@ If you are provided with data, summarize it naturally and helpfully."""
             pii_masked_input=f"CHAT_HASH:{raw_hash[:8]}",
             final_rewrite=masked_message,
             fidelity_score=fidelity_score,
-            fallback_triggered=not fidelity_ok
+            fallback_triggered=not fidelity_ok,
+            purpose=request.purpose or None,
+            notice_version=notice_version,
         )
 
         return ChatResponse(

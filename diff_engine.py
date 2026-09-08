@@ -99,6 +99,42 @@ def generate_tool_abuse_alarm(principal_name: str, principal_role: str, tool_cal
     return alarm
 
 
+def generate_consent_violation_alarm(principal_name: str, principal_role: str, customer_id,
+                                     data_category: str, purpose: str, reason: str):
+    """
+    Raised when a data read is refused because the customer never consented to it for the
+    declared purpose (or no purpose was declared at all).
+
+    Distinct from TOOL_ABUSE: an entitlement refusal is about who is asking; this is about
+    whether the customer's own data can be used this way regardless of who asks -- the
+    two are independent axes, and conflating them into one alarm category would lose that
+    distinction for anyone reviewing the dashboard.
+    """
+    alarm = _new_alarm(
+        "CRITICAL",
+        "CONSENT_VIOLATION",
+        consent_detail={
+            "principal": principal_name,
+            "role": principal_role,
+            "customer_id": str(customer_id),
+            "data_category": data_category,
+            "purpose": purpose,
+            "reason": reason,
+        },
+        context_snippet=(
+            f"Refused {data_category} read for customer {customer_id} "
+            f"(purpose: {purpose or 'none declared'}): {reason}"
+        ),
+    )
+
+    save_alarm(alarm)
+    logging.warning(
+        f"🚨 CONSENT VIOLATION ALARM: customer {customer_id} {data_category}/{purpose} — {reason}"
+    )
+    _dispatch_to_subscribers(alarm)
+    return alarm
+
+
 def generate_injection_alarm(raw_text: str, injection_result: dict, direction: str = "INGRESS",
                              detected_by: str = "layer1"):
     """

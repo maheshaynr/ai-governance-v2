@@ -52,10 +52,15 @@ def test_any_record_is_readable_with_no_key_at_all(client, fake_ollama):
     """
     No X-API-Key header is sent here at all. Before auth was removed, this record was
     reachable only by an entitled or admin key; now every request is unrestricted.
-    """
-    fake_ollama("<FETCH_DB:102>", "Here are the details you asked for.")
 
-    response = client.post("/chat", json={"message": "Tell me about customer 102"})
+    Uses a named misc_data record (swiggy), not a customer ID -- customer records are
+    also subject to the Consent Gate (see test_consent_gate.py), which is an
+    independent, later-added axis this test predates and isn't exercising here. Named
+    records carry no card data and are unaffected by that gate.
+    """
+    fake_ollama("<FETCH_DB:swiggy>", "Here is your delivery status.")
+
+    response = client.post("/chat", json={"message": "wheres my swiggy order"})
     assert response.status_code == 200
     assert response.json()["status"] == "success"
 

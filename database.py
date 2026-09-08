@@ -1,4 +1,5 @@
 import sqlite3
+from datetime import datetime
 
 DB_FILE = "cohort.db"
 
@@ -63,7 +64,66 @@ def init_db():
     ''')
     
     update_spenders() # Seed/update the spenders table
-        
+
+    # Notice Registry + Consent Ledger.
+    # Nothing before this tracked WHY a piece of data may be used, only WHO may read it
+    # (tool_broker's entitlement check) -- these two tables are the record of what a
+    # customer was actually told (notices) and what they agreed to (consents), which is
+    # what the Consent Gate in tool_broker.py checks before a card read proceeds.
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS notices (
+            notice_id TEXT PRIMARY KEY,
+            data_category TEXT,
+            purpose TEXT,
+            notice_text TEXT,
+            version INTEGER
+        )
+    ''')
+
+    cursor.execute('SELECT COUNT(*) FROM notices')
+    if cursor.fetchone()[0] == 0:
+        notices_seed = [
+            ('NOTICE-CC-BILLING-V1', 'CREDIT_CARD', 'BILLING_SUPPORT',
+             'We may use your saved card details to process refunds, resolve billing '
+             'disputes, and confirm charges when you contact support.', 1),
+            ('NOTICE-CC-MARKETING-V1', 'CREDIT_CARD', 'MARKETING',
+             'We may use your saved card details to identify offers and promotions '
+             'relevant to your spending history.', 1),
+        ]
+        cursor.executemany('INSERT INTO notices VALUES (?, ?, ?, ?, ?)', notices_seed)
+        conn.commit()
+
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS consents (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            customer_id TEXT,
+            data_category TEXT,
+            purpose TEXT,
+            notice_id TEXT,
+            status TEXT,
+            granted_at TEXT,
+            withdrawn_at TEXT
+        )
+    ''')
+
+    cursor.execute('SELECT COUNT(*) FROM consents')
+    if cursor.fetchone()[0] == 0:
+        # Customer 101 consented to card data being used for billing support. Customer
+        # 102 has no CREDIT_CARD consent on file at all -- the same question about each
+        # of them is meant to succeed for one and fail for the other, and asking about
+        # 102 for a *different* purpose (MARKETING) should still fail, since no notice
+        # for that purpose was ever shown to them either.
+        now = datetime.utcnow().isoformat() + "Z"
+        consents_seed = [
+            (101, 'CREDIT_CARD', 'BILLING_SUPPORT', 'NOTICE-CC-BILLING-V1', 'GRANTED', now, None),
+        ]
+        cursor.executemany(
+            'INSERT INTO consents (customer_id, data_category, purpose, notice_id, status, granted_at, withdrawn_at) '
+            'VALUES (?, ?, ?, ?, ?, ?, ?)',
+            consents_seed,
+        )
+        conn.commit()
+
     conn.close()
 
 def get_customer_profile(customer_id):
