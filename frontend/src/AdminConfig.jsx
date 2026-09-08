@@ -1,9 +1,16 @@
 import { useState, useEffect } from 'react';
 import { fetchRules, addRule, updateRule, deleteRule, fetchAlarms, toggleWatchdog, fetchSubscribers, addSubscriber, updateSubscriber, deleteSubscriber, deleteAlarm, sandboxSuggestRule, sandboxTestRule, toggleToxicity, fetchToxicitySettings, updateToxicitySettings, toggleCategory } from './api';
 
-// Auth now happens once at the App level (see App.jsx's LoginGate) since every tab,
-// not just this one, needs a key -- `principal` is the /whoami result for that key.
-export default function AdminConfig({ principal }) {
+// Authentication was removed from the backend by explicit request -- see auth.py and
+// api.py's run_guard_self_test. There is no more login gate to supply a real principal
+// (App.jsx no longer passes one), so this default stands in for it: every one of this
+// component's `principal.role === 'admin_pii'` checks below now simply never restricts
+// anything, since nothing ever sets the role to admin_pii any more. Left in place
+// rather than stripped out at each of those ~24 call sites, so re-adding real identity
+// later is a matter of passing a real principal again, not rewriting this file.
+const DEFAULT_PRINCIPAL = { name: 'anonymous', role: 'super_admin', is_admin: true };
+
+export default function AdminConfig({ principal = DEFAULT_PRINCIPAL }) {
   const [activeTab, setActiveTab] = useState('rules'); // 'rules', 'alarms', 'routing'
 
   const [rules, setRules] = useState([]);

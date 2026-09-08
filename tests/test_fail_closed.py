@@ -100,18 +100,20 @@ def test_raw_output_is_withheld_by_default(client, app_module, monkeypatch):
     assert body["raw_output"] is None
 
 
-def test_raw_output_requires_both_the_flag_and_an_admin(client, app_module, monkeypatch):
+def test_raw_output_appears_once_the_flag_is_on(client, app_module, monkeypatch):
+    """
+    may_see_raw_output still requires EXPOSE_RAW_OUTPUT AND an admin role -- unchanged
+    from when this was built. What changed is that authentication was removed, so every
+    request now runs as auth.ANONYMOUS_PRINCIPAL, which is admin by construction; there
+    is no remaining way to send a request as a non-admin to test the other half of that
+    check against. The flag is the only lever left to test.
+    """
     monkeypatch.setattr(app_module.requests, "post",
                         lambda *a, **k: FakeOllamaResponse("the raw model reply"))
     monkeypatch.setattr(app_module.config, "EXPOSE_RAW_OUTPUT", True)
 
-    # Flag on, but a plain caller -- still withheld.
-    caller_response = client.post("/chat", json={"message": "hello"}, headers=caller_headers())
-    assert caller_response.json()["raw_output"] is None
-
-    # Flag on and an admin -- now populated.
-    admin_response = client.post("/chat", json={"message": "hello"}, headers=super_headers())
-    assert admin_response.json()["raw_output"] == "the raw model reply"
+    response = client.post("/chat", json={"message": "hello"})
+    assert response.json()["raw_output"] == "the raw model reply"
 
 
 def test_blocked_responses_never_carry_raw_output(client, app_module, monkeypatch):

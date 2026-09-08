@@ -5,7 +5,7 @@ from datetime import datetime
 import requests
 import re
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, BackgroundTasks, Depends, HTTPException
+from fastapi import FastAPI, BackgroundTasks
 import time
 import uuid
 from fastapi.middleware.cors import CORSMiddleware
@@ -29,7 +29,7 @@ import rag_engine
 import auth
 import injection_guard
 import tool_broker
-from auth import Principal, require_role, ROLE_SUPER_ADMIN, ADMIN_ROLES, ANY_ROLE
+from auth import Principal
 from fidelity_check import FidelityChecker
 
 # Upstream calls get an explicit read timeout. Four of the five Ollama calls previously
@@ -502,11 +502,11 @@ def run_watchdog_task(request_id: str, raw_text: str, layer1_results):
 
 # --- 4. Endpoints ---
 @app.post("/query_db", response_model=GovernResponse)
-def query_database(request: DbQueryRequest, background_tasks: BackgroundTasks,
-                   principal: Principal = Depends(require_role(*ANY_ROLE))):
+def query_database(request: DbQueryRequest, background_tasks: BackgroundTasks):
     # 1. Authorize the read before performing it. This endpoint reads a record by ID
     #    directly, so it needs the same entitlement check as a brokered tool call --
     #    otherwise it is a way around the broker.
+    principal = auth.ANONYMOUS_PRINCIPAL  # auth removed; see auth.py
     decision = tool_broker.execute(principal, tool_broker.make_call(tool_broker.TOOL_FETCH_DB, request.customer_id))
     if not decision.allowed:
         return GovernResponse(masked_output=decision.refusal, status="forbidden")
@@ -544,8 +544,7 @@ def query_database(request: DbQueryRequest, background_tasks: BackgroundTasks,
     )
 
 @app.post("/govern_ai", response_model=GovernResponse)
-def govern_ai_output(request: GenerativeRequest, background_tasks: BackgroundTasks,
-                     principal: Principal = Depends(require_role(*ANY_ROLE))):
+def govern_ai_output(request: GenerativeRequest, background_tasks: BackgroundTasks):
     # 1. Injection check. This endpoint governs arbitrary submitted text, so injected
     #    instructions arriving here matter for the same reason they do in /chat.
     is_injection, inj_result = apply_injection_check(request.text, "INGRESS")
@@ -587,8 +586,8 @@ def govern_ai_output(request: GenerativeRequest, background_tasks: BackgroundTas
     )
 
 @app.post("/chat", response_model=ChatResponse)
-def chat_agent(request: ChatRequest, background_tasks: BackgroundTasks,
-               principal: Principal = Depends(require_role(*ANY_ROLE))):
+def chat_agent(request: ChatRequest, background_tasks: BackgroundTasks):
+    principal = auth.ANONYMOUS_PRINCIPAL  # auth removed; see auth.py
     common_error_msg = "⚠️ Your message was blocked by the Content Safety Shield. I cannot provide you with insults or derogatory language targeting any specific group of people, including those identified by nationality, nor can I write content that insults someone's intelligence and includes extreme profanity. My guidelines prohibit generating hateful content or slurs. Is there anything else I can help you with?"
     request_id = f"R-{uuid.uuid4().hex[:8]}"
 
@@ -753,7 +752,7 @@ If you are provided with data, summarize it naturally and helpfully."""
         )
 
 @app.post("/sandbox_suggest_rule")
-def sandbox_suggest_rule(request: SandboxSuggestRequest, principal: Principal = Depends(require_role(*ADMIN_ROLES))):
+def sandbox_suggest_rule(request: SandboxSuggestRequest):
     OLLAMA_URL = config.OLLAMA_URL
     
     try:
@@ -847,7 +846,7 @@ You MUST deduce a highly specific, meaningful Entity Class from the context (e.g
         return {"status": "error", "message": str(e)}
 
 @app.post("/sandbox_test_rule")
-def sandbox_test_rule(request: SandboxTestRequest, principal: Principal = Depends(require_role(*ADMIN_ROLES))):
+def sandbox_test_rule(request: SandboxTestRequest):
     try:
         # Spin up a temporary, isolated Presidio Engine
         sandbox_analyzer = AnalyzerEngine()
@@ -872,7 +871,7 @@ def sandbox_test_rule(request: SandboxTestRequest, principal: Principal = Depend
         return {"status": "error", "message": str(e)}
 
 @app.get("/rules")
-def get_rules(principal: Principal = Depends(require_role(*ADMIN_ROLES))):
+def get_rules():
     try:
         with open("pii_rules.json", "r") as f:
             return json.load(f)
@@ -915,11 +914,13 @@ def run_guard_self_test() -> dict:
             report["status"] = "degraded"
             report["problems"].append(f"{name} is enabled but failed to load: {error()}")
 
-    if auth.using_default_keys():
-        report["problems"].append(
-            "Running with the shipped development API keys -- set the API_KEYS "
-            "environment variable before any real deployment."
-        )
+    # Authentication is currently disabled at the endpoint level (see auth.py) -- every
+    # request runs as an unrestricted anonymous principal. Surfaced here so this doesn't
+    # go unnoticed the way an actually-enforced-but-default-keyed setup would be.
+    report["problems"].append(
+        "Authentication is disabled -- every endpoint is reachable without an API key, "
+        "and every request is treated as an unrestricted super_admin. See auth.py."
+    )
 
     return report
 
@@ -933,22 +934,14 @@ def system_status():
     return run_guard_self_test()
 
 
-@app.get("/whoami")
-def whoami(principal: Principal = Depends(require_role(*ANY_ROLE))):
-    """
-    Lets the admin UI gate on the server's answer instead of a local string. AdminConfig
-    previously decided the user's role in the browser, which meant the role was whatever
-    the browser said it was.
-    """
-    return {"name": principal.name, "role": principal.role, "is_admin": principal.is_admin}
-
 @app.get("/alarms")
-def get_alarms(principal: Principal = Depends(require_role(*ADMIN_ROLES))):
+def get_alarms():
     import diff_engine
     return {"alarms": diff_engine.load_alarms()}
 
 @app.post("/delete_alarm")
-def delete_alarm(request: DeleteAlarmRequest, principal: Principal = Depends(require_role(*ADMIN_ROLES))):
+def delete_alarm(request: DeleteAlarmRequest):
+    principal = auth.ANONYMOUS_PRINCIPAL  # auth removed; see auth.py
     try:
         import diff_engine
         alarms = diff_engine.load_alarms()
@@ -1000,7 +993,8 @@ class UpdateToxicitySettingsRequest(BaseModel):
     enable_toxicity_guard: bool
     
 @app.post("/toggle_category")
-def toggle_category(request: ToggleCategoryRequest, principal: Principal = Depends(require_role(ROLE_SUPER_ADMIN))):
+def toggle_category(request: ToggleCategoryRequest):
+    principal = auth.ANONYMOUS_PRINCIPAL  # auth removed; see auth.py
     try:
         with open("pii_rules.json", "r") as f:
             data = json.load(f)
@@ -1026,7 +1020,8 @@ def toggle_category(request: ToggleCategoryRequest, principal: Principal = Depen
         return {"status": "error", "message": str(e)}
 
 @app.post("/toggle_watchdog")
-def toggle_watchdog(request: ToggleRequest, principal: Principal = Depends(require_role(ROLE_SUPER_ADMIN))):
+def toggle_watchdog(request: ToggleRequest):
+    principal = auth.ANONYMOUS_PRINCIPAL  # auth removed; see auth.py
     try:
         with open("pii_rules.json", "r") as f:
             data = json.load(f)
@@ -1049,7 +1044,8 @@ def toggle_watchdog(request: ToggleRequest, principal: Principal = Depends(requi
         return {"status": "error", "message": str(e)}
 
 @app.post("/toggle_toxicity")
-def toggle_toxicity(request: ToggleToxicityRequest, principal: Principal = Depends(require_role(ROLE_SUPER_ADMIN))):
+def toggle_toxicity(request: ToggleToxicityRequest):
+    principal = auth.ANONYMOUS_PRINCIPAL  # auth removed; see auth.py
     try:
         with open("pii_rules.json", "r") as f:
             data = json.load(f)
@@ -1072,7 +1068,8 @@ def toggle_toxicity(request: ToggleToxicityRequest, principal: Principal = Depen
         return {"status": "error", "message": str(e)}
 
 @app.post("/update_toxicity_settings")
-def update_toxicity_settings(request: UpdateToxicitySettingsRequest, principal: Principal = Depends(require_role(ROLE_SUPER_ADMIN))):
+def update_toxicity_settings(request: UpdateToxicitySettingsRequest):
+    principal = auth.ANONYMOUS_PRINCIPAL  # auth removed; see auth.py
     try:
         with open("pii_rules.json", "r") as f:
             data = json.load(f)
@@ -1108,11 +1105,11 @@ def update_toxicity_settings(request: UpdateToxicitySettingsRequest, principal: 
         return {"status": "error", "message": str(e)}
 
 @app.get("/toxicity_settings")
-def get_toxicity_settings(principal: Principal = Depends(require_role(*ADMIN_ROLES))):
+def get_toxicity_settings():
     return load_toxicity_settings()
 
 @app.get("/subscribers")
-def get_subscribers(principal: Principal = Depends(require_role(*ADMIN_ROLES))):
+def get_subscribers():
     try:
         with open("pii_rules.json", "r") as f:
             data = json.load(f)
@@ -1121,7 +1118,8 @@ def get_subscribers(principal: Principal = Depends(require_role(*ADMIN_ROLES))):
         return {"subscribers": []}
 
 @app.post("/add_subscriber")
-def add_subscriber(request: SubscriberRequest, principal: Principal = Depends(require_role(ROLE_SUPER_ADMIN))):
+def add_subscriber(request: SubscriberRequest):
+    principal = auth.ANONYMOUS_PRINCIPAL  # auth removed; see auth.py
     try:
         with open("pii_rules.json", "r") as f:
             data = json.load(f)
@@ -1152,7 +1150,8 @@ def add_subscriber(request: SubscriberRequest, principal: Principal = Depends(re
         return {"status": "error", "message": str(e)}
 
 @app.post("/update_subscriber")
-def update_subscriber(request: UpdateSubscriberRequest, principal: Principal = Depends(require_role(ROLE_SUPER_ADMIN))):
+def update_subscriber(request: UpdateSubscriberRequest):
+    principal = auth.ANONYMOUS_PRINCIPAL  # auth removed; see auth.py
     try:
         with open("pii_rules.json", "r") as f:
             data = json.load(f)
@@ -1186,7 +1185,8 @@ def update_subscriber(request: UpdateSubscriberRequest, principal: Principal = D
         return {"status": "error", "message": str(e)}
 
 @app.post("/delete_subscriber")
-def delete_subscriber(request: DeleteSubscriberRequest, principal: Principal = Depends(require_role(ROLE_SUPER_ADMIN))):
+def delete_subscriber(request: DeleteSubscriberRequest):
+    principal = auth.ANONYMOUS_PRINCIPAL  # auth removed; see auth.py
     try:
         with open("pii_rules.json", "r") as f:
             data = json.load(f)
@@ -1210,7 +1210,7 @@ def delete_subscriber(request: DeleteSubscriberRequest, principal: Principal = D
         return {"status": "error", "message": str(e)}
 
 @app.get("/test_cases")
-def get_test_cases(principal: Principal = Depends(require_role(*ADMIN_ROLES))):
+def get_test_cases():
     try:
         with open("test_cases.json", "r") as f:
             return json.load(f)
@@ -1218,7 +1218,8 @@ def get_test_cases(principal: Principal = Depends(require_role(*ADMIN_ROLES))):
         return {"tests": []}
 
 @app.post("/add_rule")
-def add_rule(request: RuleRequest, principal: Principal = Depends(require_role(ROLE_SUPER_ADMIN))):
+def add_rule(request: RuleRequest):
+    principal = auth.ANONYMOUS_PRINCIPAL  # auth removed; see auth.py
     try:
         # 1. Update JSON
         with open("pii_rules.json", "r") as f:
@@ -1275,7 +1276,8 @@ def add_rule(request: RuleRequest, principal: Principal = Depends(require_role(R
         return {"status": "error", "message": str(e)}
 
 @app.post("/update_rule")
-def update_rule(request: UpdateRuleRequest, principal: Principal = Depends(require_role(ROLE_SUPER_ADMIN))):
+def update_rule(request: UpdateRuleRequest):
+    principal = auth.ANONYMOUS_PRINCIPAL  # auth removed; see auth.py
     try:
         with open("pii_rules.json", "r") as f:
             data = json.load(f)
@@ -1324,7 +1326,8 @@ def update_rule(request: UpdateRuleRequest, principal: Principal = Depends(requi
         return {"status": "error", "message": str(e)}
 
 @app.post("/delete_rule")
-def delete_rule(request: DeleteRuleRequest, principal: Principal = Depends(require_role(ROLE_SUPER_ADMIN))):
+def delete_rule(request: DeleteRuleRequest):
+    principal = auth.ANONYMOUS_PRINCIPAL  # auth removed; see auth.py
     try:
         with open("pii_rules.json", "r") as f:
             data = json.load(f)
@@ -1350,7 +1353,7 @@ def delete_rule(request: DeleteRuleRequest, principal: Principal = Depends(requi
         return {"status": "error", "message": str(e)}
 
 @app.get("/analytics")
-def get_analytics(timeframe: str = "24h", *, principal: Principal = Depends(require_role(*ADMIN_ROLES))):
+def get_analytics(timeframe: str = "24h"):
     try:
         import diff_engine
         from datetime import datetime, timedelta
@@ -1471,7 +1474,7 @@ def get_analytics(timeframe: str = "24h", *, principal: Principal = Depends(requ
         return {"status": "error", "message": str(e)}
 
 @app.get("/get_benchmarks")
-async def get_benchmarks(principal: Principal = Depends(require_role(*ANY_ROLE))):
+async def get_benchmarks():
     # Per-stage latency numbers only -- no PII, no configuration -- and the "View
     # Benchmarks" button that calls this sits on the Chat Bot tab, usable by any
     # authenticated caller. Gating it to admins would just break that button for them.
@@ -1494,8 +1497,8 @@ class DemoChatRequest(BaseModel):
     mode: str = "others"  # 'toxic' or 'others'
 
 @app.post("/demo_chat", response_model=ChatResponse)
-def demo_chat_agent(request: DemoChatRequest, background_tasks: BackgroundTasks,
-                    principal: Principal = Depends(require_role(*ANY_ROLE))):
+def demo_chat_agent(request: DemoChatRequest, background_tasks: BackgroundTasks):
+    principal = auth.ANONYMOUS_PRINCIPAL  # auth removed; see auth.py
     common_error_msg = "⚠️ Your message was blocked by the Content Safety Shield. I cannot provide you with insults or derogatory language targeting any specific group of people, including those identified by nationality, nor can I write content that insults someone's intelligence and includes extreme profanity. My guidelines prohibit generating hateful content or slurs. Is there anything else I can help you with?"
     
     request_id = f"R-{uuid.uuid4().hex[:8]}"

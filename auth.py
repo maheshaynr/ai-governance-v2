@@ -1,17 +1,16 @@
 """
 Access control for the AI Governance API.
 
-Every endpoint that reads sensitive data or changes guardrail configuration sits behind
-one of the roles below. Without this, the endpoints that govern the guardrails --
-/toggle_toxicity, /add_rule, /delete_rule -- are open to anyone who can reach the API,
-which means the protection can be switched off and the alarm recording it deleted.
+NOT CURRENTLY ENFORCED: api.py's endpoints no longer call require_role() below -- every
+request runs as ANONYMOUS_PRINCIPAL (unrestricted, super_admin-equivalent), by explicit
+request. That means the protections this module used to provide are off: any caller can
+read any customer record, change guardrail configuration, and see whatever a super_admin
+key could. require_role() and the key-lookup machinery are left in place, unused, so
+authentication can be re-enabled by wiring Depends(require_role(...)) back onto the
+endpoints in api.py without rebuilding this module from scratch.
 
-The two admin role names match the ones the frontend already uses (AdminConfig.jsx), so
-this promotes the existing browser-side login to a real server-side check rather than
-introducing a second, competing model.
-
-Keys come from config.py, which reads config.json with an environment override, so real
-keys can be supplied via the API_KEYS environment variable and never enter git.
+Keys still come from config.py (config.json with an environment override), for when this
+is turned back on.
 """
 
 from dataclasses import dataclass
@@ -95,13 +94,26 @@ def require_role(*allowed_roles: str):
     return dependency
 
 
+# A fixed stand-in principal used everywhere the app previously required a caller to
+# authenticate. Endpoints no longer check X-API-Key at all -- see the removal of
+# require_role from every route in api.py -- but tool_broker, the audit log, and
+# may_see_raw_output still expect a Principal object internally, so this keeps that
+# plumbing intact without requiring a real identity behind it.
+ANONYMOUS_PRINCIPAL = Principal(name="anonymous", role=ROLE_SUPER_ADMIN)
+
+
 def entitled_records(principal: Principal) -> list:
     """
     The record IDs this principal may read via a tool call. ["*"] means unrestricted.
 
     Used by tool_broker to decide whether a database read the model asked for is one the
-    *caller* is allowed to have.
+    *caller* is allowed to have. super_admin always bypasses the configured map entirely,
+    since with no authentication there is no real caller identity to look up -- every
+    request now runs as ANONYMOUS_PRINCIPAL, which is unrestricted by design.
     """
+    if principal.role == ROLE_SUPER_ADMIN:
+        return ["*"]
+
     allowed = config.ENTITLEMENTS.get(principal.name, [])
     if isinstance(allowed, str):
         return [allowed]

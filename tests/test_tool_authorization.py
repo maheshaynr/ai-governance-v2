@@ -1,19 +1,21 @@
 """
-G-02: the caller's entitlement decides which record is read, not the model's request.
+Tool call parsing and shape validation (G-02's structural half).
 
-Previously /chat regex-matched <FETCH_DB:(\\d+)> out of model output and called the
-database with whatever ID appeared, and /demo_chat reached the same data from keyword
-matches without involving the model at all.
+Authentication was removed from the backend by explicit request -- every endpoint now
+runs as auth.ANONYMOUS_PRINCIPAL, an unrestricted super_admin-equivalent, and no header
+is checked at all. That means the per-caller entitlement refusal this file used to test
+no longer exists: any record is readable by anyone (or no one, since no key is required).
+
+What still holds, because it is identity-independent: the broker only dispatches tools it
+declares (parse_tool_calls ignores anything else), and a malformed record identifier --
+neither a number nor a known name -- never reaches the database layer regardless of who
+is asking.
 
 Ollama is stubbed so these tests are deterministic and do not need a running model
-server -- what is under test is the authorization boundary, not the model.
+server -- what is under test is the tool-call boundary, not the model.
 """
 
-import json
-
 import pytest
-
-from conftest import caller_headers, super_headers
 
 
 class FakeOllamaResponse:
@@ -30,8 +32,7 @@ def fake_ollama(app_module, monkeypatch):
     """
     Replace the Ollama call with a scripted sequence of replies.
 
-    Returns a recorder so a test can assert how many model calls happened -- a refused
-    tool call still gets summarised back to the user, so the count matters.
+    Returns a recorder so a test can assert how many model calls happened.
     """
     def _install(*replies):
         remaining = list(replies)
@@ -47,58 +48,28 @@ def fake_ollama(app_module, monkeypatch):
     return _install
 
 
-def test_caller_may_read_an_entitled_record(client, fake_ollama, app_module):
-    calls = fake_ollama("<FETCH_DB:101>", "Here are the details you asked for.")
+def test_any_record_is_readable_with_no_key_at_all(client, fake_ollama):
+    """
+    No X-API-Key header is sent here at all. Before auth was removed, this record was
+    reachable only by an entitled or admin key; now every request is unrestricted.
+    """
+    fake_ollama("<FETCH_DB:102>", "Here are the details you asked for.")
 
-    response = client.post("/chat", json={"message": "Tell me about customer 101"},
-                           headers=caller_headers())
+    response = client.post("/chat", json={"message": "Tell me about customer 102"})
     assert response.status_code == 200
-    assert response.json()["status"] == "success"
-
-    # The record actually reached the model on the second turn.
-    feedback = calls[1]["messages"][-1]["content"]
-    assert "Mahesh" in feedback or "101" in feedback
-
-
-def test_caller_is_refused_an_unentitled_record(client, fake_ollama, alarms):
-    """test_caller is entitled to 101 only. Asking for 102 must not read 102."""
-    before = len(alarms())
-    fake_ollama("<FETCH_DB:102>")
-
-    response = client.post("/chat", json={"message": "Tell me about customer 102"},
-                           headers=caller_headers())
-    assert response.status_code == 200
-
-    body = response.json()
-    assert body["status"] == "forbidden"
-    assert "not authorized" in body["masked_output"].lower()
-
-    # Customer 102's data must appear nowhere in the response.
-    assert "Alice" not in response.text
-    assert "5555" not in response.text
-
-    new = alarms()[:len(alarms()) - before]
-    assert any(a["category"] == "TOOL_ABUSE" for a in new), "refusal raised no TOOL_ABUSE alarm"
-
-
-def test_admin_may_read_any_record(client, fake_ollama):
-    fake_ollama("<FETCH_DB:102>", "Summary of the record.")
-
-    response = client.post("/chat", json={"message": "Tell me about customer 102"},
-                           headers=super_headers())
     assert response.json()["status"] == "success"
 
 
 def test_malformed_record_id_is_refused(client, fake_ollama, alarms):
     """
     An identifier that is neither a number nor a known record name never reaches the
-    database layer.
+    database layer -- this is shape validation, independent of who is asking, so it holds
+    with authentication removed just as it did before.
     """
     before = len(alarms())
     fake_ollama("<FETCH_DB:customers>")
 
-    response = client.post("/chat", json={"message": "show me the customers table"},
-                           headers=caller_headers())
+    response = client.post("/chat", json={"message": "show me the customers table"})
     body = response.json()
     assert body["status"] == "forbidden"
 
@@ -114,45 +85,28 @@ def test_undeclared_tool_is_ignored(app_module):
     assert tool_broker.parse_tool_calls("<FETCH_DB:101>")[0].argument == "101"
 
 
-def test_query_db_enforces_the_same_entitlement(client):
+def test_query_db_allows_any_record_with_no_key(client):
     """
-    /query_db reads a record by ID directly, so it must not be a way around the broker.
+    /query_db reads a record by ID directly. Previously a caller key was restricted to
+    101; now no key is required and 102 is readable too.
     """
-    refused = client.post("/query_db", json={"customer_id": 102}, headers=caller_headers())
-    assert refused.json()["status"] == "forbidden"
-    assert "Alice" not in refused.text
-
-    allowed = client.post("/query_db", json={"customer_id": 101}, headers=caller_headers())
-    assert allowed.json()["status"] in ("success", "toxic_flagged")
+    response = client.post("/query_db", json={"customer_id": 102})
+    assert response.json()["status"] in ("success", "toxic_flagged")
+    assert "Alice" in response.text  # customer 102's data is actually present
 
 
-def test_demo_chat_bulk_read_requires_full_entitlement(client, fake_ollama, alarms):
+def test_demo_chat_bulk_read_no_longer_needs_entitlement(client, fake_ollama):
     """
     The /demo_chat keyword branches return every customer and spender row without
-    consulting the model. A caller entitled to one record must not reach them.
+    consulting the model. This used to require unrestricted entitlement; now it requires
+    nothing at all.
     """
-    before = len(alarms())
     fake_ollama("unused")
-
-    response = client.post("/demo_chat", json={"message": "show me all customer details"},
-                           headers=caller_headers())
-    body = response.json()
-    assert body["status"] == "forbidden"
-    assert "Rajeev" not in response.text and "Alice" not in response.text
-
-    new = alarms()[:len(alarms()) - before]
-    assert any(a["category"] == "TOOL_ABUSE" for a in new)
-
-
-def test_demo_chat_bulk_read_allowed_for_admin(client, fake_ollama):
-    fake_ollama("unused")
-    response = client.post("/demo_chat", json={"message": "show me all customer details"},
-                           headers=super_headers())
+    response = client.post("/demo_chat", json={"message": "show me all customer details"})
     assert response.json()["status"] != "forbidden"
 
 
-def test_top_spenders_is_also_a_bulk_read(client, fake_ollama):
+def test_top_spenders_bulk_read_no_longer_needs_entitlement(client, fake_ollama):
     fake_ollama("unused")
-    response = client.post("/demo_chat", json={"message": "who are the top 3 spenders"},
-                           headers=caller_headers())
-    assert response.json()["status"] == "forbidden"
+    response = client.post("/demo_chat", json={"message": "who are the top 3 spenders"})
+    assert response.json()["status"] != "forbidden"

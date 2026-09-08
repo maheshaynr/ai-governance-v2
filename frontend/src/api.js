@@ -1,60 +1,11 @@
 const API_BASE = 'http://localhost:8000';
-const STORAGE_KEY = 'gov_api_key';
 
-// Every endpoint except /system_status now requires an X-API-Key header (see auth.py).
-// The key is entered once at the login gate in App.jsx and kept here for every request
-// this tab makes -- localStorage so a refresh doesn't force logging in again.
-let currentApiKey = '';
-try {
-  currentApiKey = localStorage.getItem(STORAGE_KEY) || '';
-} catch {
-  // Private browsing / storage disabled -- fall back to in-memory only for this tab.
-}
-
-export function setApiKey(key) {
-  currentApiKey = key || '';
-  try {
-    if (currentApiKey) localStorage.setItem(STORAGE_KEY, currentApiKey);
-    else localStorage.removeItem(STORAGE_KEY);
-  } catch {
-    // Ignore -- the in-memory copy still works for this tab.
-  }
-}
-
-export function getApiKey() {
-  return currentApiKey;
-}
-
-export function clearApiKey() {
-  setApiKey('');
-}
-
-/** Thrown when the server rejects the current key (missing, unknown, or wrong role). */
-export class AuthError extends Error {
-  constructor(status, detail) {
-    super(detail || 'Authentication failed');
-    this.name = 'AuthError';
-    this.status = status;
-  }
-}
-
+// Authentication was removed from the backend by explicit request (see auth.py and
+// api.py's run_guard_self_test) -- no endpoint checks a header any more, so nothing
+// here needs to carry one. The shared apiFetch/postJson helpers are kept because they
+// still centralize the fetch-and-parse boilerplate every one of these calls repeats.
 async function apiFetch(path, options = {}) {
-  const headers = { ...(options.headers || {}) };
-  if (currentApiKey) headers['X-API-Key'] = currentApiKey;
-
-  const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
-
-  if (res.status === 401 || res.status === 403) {
-    let detail = res.status === 401 ? 'Invalid or missing API key.' : 'Not permitted.';
-    try {
-      const body = await res.json();
-      detail = body.detail || detail;
-    } catch {
-      // Non-JSON error body -- keep the default message.
-    }
-    throw new AuthError(res.status, detail);
-  }
-
+  const res = await fetch(`${API_BASE}${path}`, options);
   return res.json();
 }
 
@@ -67,18 +18,11 @@ function postJson(path, body) {
 }
 
 export async function fetchSystemStatus() {
-  // Deliberately open (see auth.py) so health checks and the login screen itself work
-  // without a key -- calls apiFetch anyway so a key present in localStorage still gets
-  // sent, but a missing/invalid one here should not raise a screen-wide AuthError.
   try {
     return await apiFetch('/system_status');
   } catch (e) {
     return { status: 'loading' };
   }
-}
-
-export async function fetchWhoAmI() {
-  return apiFetch('/whoami');
 }
 
 export async function fetchRules() {
