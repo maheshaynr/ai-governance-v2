@@ -1,5 +1,13 @@
 import { useState, useEffect } from 'react';
-import { demoChat, fetchBenchmarks } from './api';
+import { demoChat, fetchBenchmarks, guardrailValidate } from './api';
+
+// Flag colors for /guardrail_validate's response bubble and its pinned scenario cards --
+// one place both read from, so the flag always means the same color everywhere.
+const GUARDRAIL_FLAG_STYLE = {
+  CLEAR:   { bg: '#dafbe1', border: '#4ac26b', text: '#1a7f37' },
+  PARTIAL: { bg: '#fff8ec', border: '#f0b775', text: '#7c4a03' },
+  BLOCKED: { bg: '#ffebe9', border: '#ff8182', text: '#cf222e' },
+};
 
 // PURPOSE_LABELS drives both the selector below and how a scenario card describes
 // itself -- one source of truth for the three purposes the Consent Gate checks against
@@ -28,12 +36,36 @@ const pinnedScenarios = [
   { title: '💳 Refund — Consented', color: '#0969da', description: `Customer 101, purpose "Billing Support" — succeeds.`, prompt: "Can you give me the card details for customer 101, I need to process a refund?", mode: 'others', purpose: 'BILLING_SUPPORT' },
   { title: '💳 Refund — No Consent', color: '#b45309', description: `Customer 102, purpose "Billing Support" — refused, customer never consented.`, prompt: "Can you give me the card details for customer 102, I need to process a refund?", mode: 'others', purpose: 'BILLING_SUPPORT' },
   { title: '📣 Marketing — Wrong Purpose', color: '#b45309', description: `Customer 102, purpose "Marketing" — refused for a different reason: no notice for this purpose either.`, prompt: "Can you give me the card details for customer 102 for a marketing offer?", mode: 'others', purpose: 'MARKETING' },
+  // Generic validation API demo (POST /guardrail_validate) -- these bypass the model
+  // entirely, unlike every scenario above. Each is the exact worked example this
+  // endpoint was built from.
+  {
+    title: '✅ Validate: Clean',
+    color: '#1a7f37',
+    description: 'A device-issue report with no PII, financial or toxic content — expect CLEAR. (In the current build this actually comes back PARTIAL: the medical entity recognizer misreads "Jio" as a chemical name — a known, pre-existing false positive, not something this endpoint introduced.)',
+    validate: true,
+    prompt: "Device\nmodem\nIssue\nblinking red LED\nThe image shows a Jio modem with a red LED that appears to be blinking between frames. The user's description indicates uncertainty about the issue.\nI doubt some problem is there. what is it?",
+  },
+  {
+    title: '🟠 Validate: Has PII',
+    color: '#b45309',
+    description: 'Same report, with a customer ID included — expect PARTIAL, with the ID (only) masked.',
+    validate: true,
+    prompt: "Device\nmodem\nIssue\nblinking red LED\nMy customer id is 123111 and my name is Mahesh. The image shows a Jio modem with a red LED that appears to be blinking between frames. The user's description indicates uncertainty about the issue.\nI doubt some problem is there. what is it?",
+  },
+  {
+    title: '⛔ Validate: Toxic',
+    color: '#cf222e',
+    description: 'Same report, opening with abusive language — expect BLOCKED, with the message withheld entirely.',
+    validate: true,
+    prompt: "Device\nmodem\nIssue\nblinking red LED\nthis app is complete moron and a stupid app..  just a  brain less idiot,.. do what I say stupid.My customer id is 123111 and my name is Mahesh. The image shows a Jio modem with a red LED that appears to be blinking between frames. The user's description indicates uncertainty about the issue.\nI doubt some problem is there. what is it?",
+  },
 ];
 
 const PinnedScenarioCard = ({ scenario, onClick }) => (
   <div
     className="rule-card"
-    onClick={() => onClick(scenario.prompt, scenario.mode, scenario.purpose || '')}
+    onClick={() => onClick(scenario)}
     style={{ cursor: 'pointer', border: '1px solid #d0d7de', padding: '0.75rem', marginBottom: '0.5rem', backgroundColor: '#fff' }}
   >
     <h4 style={{ margin: '0 0 0.25rem 0', fontSize: '0.85rem', color: scenario.color }}>{scenario.title}</h4>
@@ -110,10 +142,42 @@ export default function ChatBot() {
     localStorage.removeItem('chatHistory');
   };
 
-  const handlePinnedClick = (prompt, toggleMode, scenarioPurpose = '') => {
-    setMode(toggleMode);
-    setPurpose(scenarioPurpose);
-    setPayload(prompt);
+  // Generic validation (POST /guardrail_validate) -- a separate flow from
+  // handleRunGuardrail on purpose: it never calls the LLM, so it doesn't touch mode,
+  // purpose, or the demoChat request shape at all.
+  const handleRunValidate = async (text) => {
+    setIsLoading(true);
+    setMessages(prev => [...prev, { role: 'user', content: text }]);
+
+    try {
+      const res = await guardrailValidate(text);
+      // res.flag is the full "AI Guardrail flag: CLEAR" string (see api.py's
+      // GuardrailValidateResponse) -- the trailing word is what GUARDRAIL_FLAG_STYLE
+      // keys off for coloring the bubble.
+      const state = res.flag.split(':').pop().trim();
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        type: 'validate',
+        flagState: state,
+        flagText: res.flag,
+        masked_content: res.message,
+      }]);
+    } catch (e) {
+      console.error(e);
+      setMessages(prev => [...prev, { role: 'assistant', masked_content: 'Error connecting to backend.', status: 'error' }]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handlePinnedClick = (scenario) => {
+    if (scenario.validate) {
+      handleRunValidate(scenario.prompt);
+      return;
+    }
+    setMode(scenario.mode);
+    setPurpose(scenario.purpose || '');
+    setPayload(scenario.prompt);
   };
 
   const handleViewBenchmarks = async () => {
@@ -127,7 +191,7 @@ export default function ChatBot() {
         setShowBenchmarks(true);
     } catch (error) {
         console.error("Failed to fetch benchmarks:", error);
-        setBenchmarkLogs(["Failed to fetch benchmark data. Is the main API service running on port 8000?"]);
+        setBenchmarkLogs(["Failed to fetch benchmark data. Is the main API service running on the port set in frontend/.env (VITE_API_BASE)?"]);
         setShowBenchmarks(true);
     }
   };
@@ -211,7 +275,20 @@ export default function ChatBot() {
                   </div>
                 ) : (
                   <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                    {msg.status === 'consent_required' ? (
+                    {msg.type === 'validate' ? (
+                      // POST /guardrail_validate's response -- just { flag, message } --
+                      // leading with the exact flag string the endpoint returns, colored
+                      // consistently with the pinned scenario cards via GUARDRAIL_FLAG_STYLE.
+                      (() => {
+                        const style = GUARDRAIL_FLAG_STYLE[msg.flagState] || GUARDRAIL_FLAG_STYLE.PARTIAL;
+                        return (
+                          <div style={{ alignSelf: 'flex-start', backgroundColor: style.bg, border: `1px solid ${style.border}`, color: style.text, padding: '1rem', borderRadius: '18px 18px 18px 0', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', maxWidth: '85%' }}>
+                            <strong style={{ fontSize: '0.85rem', display: 'block', marginBottom: '0.5rem' }}>{msg.flagText}</strong>
+                            <pre style={{ margin: 0, whiteSpace: 'pre-wrap', fontFamily: 'monospace', fontSize: '0.85rem', overflowX: 'auto' }}>{msg.masked_content}</pre>
+                          </div>
+                        );
+                      })()
+                    ) : msg.status === 'consent_required' ? (
                       // Refused by the Consent Gate (tool_broker.py) -- distinct from
                       // both the standard success bubble and a security block, since
                       // the reason is neither "this was unsafe" nor "you're not

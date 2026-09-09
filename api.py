@@ -66,10 +66,17 @@ async def lifespan(_app: FastAPI):
 
 app = FastAPI(title="AI Governance API", lifespan=lifespan)
 
-# Add CORS Middleware to allow React frontend (running on port 5173) to communicate with the API
+# Add CORS Middleware to allow the frontend dev server to communicate with the API.
+# allow_origin_regex covers ANY localhost port, not just 5173 -- Vite bumps to the next
+# free port (5174, 5175, ...) whenever something else already holds the one before it,
+# which happened live: the frontend moved to 5174 and every request started failing with
+# "No 'Access-Control-Allow-Origin' header is present" because 5174 wasn't in the
+# hardcoded list below. The explicit list stays as a visible reference for what's
+# actually expected; the regex is what makes a port bump not break things again.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173", "http://localhost:3000"],
+    allow_origin_regex=r"http://localhost:\d+",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -189,6 +196,13 @@ class GovernResponse(BaseModel):
     status: str
     toxicity: Optional[dict] = None
     injection: Optional[dict] = None
+
+class GuardrailValidateRequest(BaseModel):
+    text: str = Field(max_length=8000)
+
+class GuardrailValidateResponse(BaseModel):
+    flag: str      # "AI Guardrail flag: CLEAR" | "AI Guardrail flag: PARTIAL" | "AI Guardrail flag: BLOCKED"
+    message: str   # original text / masked text / the fixed block message, per flag
 
 class RuleRequest(BaseModel):
     name: str
@@ -491,7 +505,14 @@ def apply_egress_guardrail(raw_text: str):
         "PERSON": OperatorConfig("custom", {"lambda": mask_person_name}),
         "CREDIT_CARD": OperatorConfig("custom", {"lambda": lambda x: "**** **** **** " + x[-4:] if len(x) >= 4 else x}),
         "EMAIL_ADDRESS": OperatorConfig("custom", {"lambda": mask_email_address}),
-        "IN_AADHAAR": OperatorConfig("custom", {"lambda": lambda x: "".join("*" if c.isalnum() else c for c in x[:-4]) + x[-4:] if len(x) >= 4 else x})
+        "IN_AADHAAR": OperatorConfig("custom", {"lambda": lambda x: "".join("*" if c.isalnum() else c for c in x[:-4]) + x[-4:] if len(x) >= 4 else x}),
+        # The CUSTOMER_ID rule's regex matches the label phrase plus the digits
+        # together (e.g. "customer id is 123111"), so it can require a nearby label
+        # word without matching every bare number in a message. Without this operator,
+        # Presidio's default would replace that whole matched span with a generic
+        # placeholder, destroying the label text along with the number -- this masks
+        # only the trailing digit run and leaves "customer id is" readable.
+        "CUSTOMER_ID": OperatorConfig("custom", {"lambda": lambda x: re.sub(r"\d{4,10}$", lambda m: "*" * len(m.group()), x)}),
     }
     
     anonymized_result = anonymizer.anonymize(text=raw_text, analyzer_results=results, operators=operators)
@@ -597,6 +618,61 @@ def govern_ai_output(request: GenerativeRequest, background_tasks: BackgroundTas
         toxicity=tox_result,
         injection=inj_result
     )
+
+_GUARDRAIL_BLOCK_MSG = (
+    "⚠️ This message was blocked by the Content Safety Shield. It contains language "
+    "that violates content policy. Please rephrase your request."
+)
+
+
+@app.post("/guardrail_validate", response_model=GuardrailValidateResponse)
+def guardrail_validate(request: GuardrailValidateRequest, background_tasks: BackgroundTasks):
+    """
+    Generic validation endpoint for external systems: send arbitrary text, get back a
+    verdict -- CLEAR (nothing found), PARTIAL (PII/financial/health content masked), or
+    BLOCKED (toxic content, the original text withheld entirely) -- plus the resulting
+    text.
+
+    Unlike /govern_ai, toxicity here actually blocks rather than merely flagging: this
+    endpoint exists specifically so a caller doesn't have to separately decide whether a
+    "toxic_flagged" status means "safe to relay" or not.
+    """
+    # 1. Toxicity -- checked first, and blocking, unlike /govern_ai's flag-only egress
+    # check. should_block_toxic_egress() is the same admin-configurable policy /chat's
+    # egress path already respects, not a second toxicity policy invented for this
+    # endpoint alone.
+    is_toxic, tox_result = apply_toxicity_check(request.text, "EGRESS")
+    if is_toxic and should_block_toxic_egress():
+        message = (
+            guard_failure_response(tox_result) if tox_result.get("guard_failed")
+            else _GUARDRAIL_BLOCK_MSG
+        )
+
+        raw_hash = hashlib.sha256(request.text.encode()).hexdigest()
+        AuditLogger.log_transaction(
+            pii_masked_input=f"VALIDATE_HASH:{raw_hash[:8]}",
+            final_rewrite="[BLOCKED]",
+            fidelity_score=None,
+            fallback_triggered=True,
+        )
+        return GuardrailValidateResponse(flag="AI Guardrail flag: BLOCKED", message=message)
+
+    # 2. Not toxic (or the toxicity guard is off/flag-only) -- mask PII/financial/health.
+    masked_output, l1_results = apply_egress_guardrail(request.text)
+    background_tasks.add_task(run_watchdog_task, "N/A", request.text, l1_results)
+
+    flag = "PARTIAL" if masked_output != request.text else "CLEAR"
+
+    raw_hash = hashlib.sha256(request.text.encode()).hexdigest()
+    fidelity_ok, fidelity_score = FidelityChecker.check_fidelity(request.text, masked_output)
+    AuditLogger.log_transaction(
+        pii_masked_input=f"VALIDATE_HASH:{raw_hash[:8]}",
+        final_rewrite=masked_output,
+        fidelity_score=fidelity_score,
+        fallback_triggered=not fidelity_ok,
+    )
+
+    return GuardrailValidateResponse(flag=f"AI Guardrail flag: {flag}", message=masked_output)
 
 @app.post("/chat", response_model=ChatResponse)
 def chat_agent(request: ChatRequest, background_tasks: BackgroundTasks):

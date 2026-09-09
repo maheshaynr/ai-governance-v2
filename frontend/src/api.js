@@ -1,4 +1,8 @@
-const API_BASE = 'http://localhost:8000';
+// Reads the backend port from frontend/.env (VITE_API_BASE), falling back to 8000 if
+// that file is missing. The backend's own port lives in start_backend.bat's --port flag
+// -- when you change one, change the other. A restart of `npm run dev` is required after
+// editing .env (unlike a source file, Vite only reads env files at server startup).
+const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000';
 
 // Authentication was removed from the backend by explicit request (see auth.py and
 // api.py's run_guard_self_test) -- no endpoint checks a header any more, so nothing
@@ -118,6 +122,13 @@ export async function fetchToxicitySettings() {
 
 export async function fetchBenchmarks() {
   return apiFetch('/get_benchmarks');
+}
+
+// Generic validation for external systems: send raw text, get back a CLEAR / PARTIAL /
+// BLOCKED verdict plus the resulting message. Unlike demoChat/chatAgent, this never
+// calls the LLM -- it only runs the toxicity and PII/financial/health checks directly.
+export async function guardrailValidate(text) {
+  return postJson('/guardrail_validate', { text });
 }
 
 export async function fetchConsents() {
