@@ -17,8 +17,6 @@ changes, not something introduced by it:
               a plain regex). See the guardrail roadmap's G-09.
   TC-FIN-02   No rule exists for ABA routing numbers.
   TC-FIN-03   No rule exists for cryptocurrency wallet addresses.
-  TC-FIN-04   Depends on masking "John Doe" as a PERSON, but pii_rules.json ships the
-              PERSON rule as is_active: False.
   TC-GDPR-01  No rule exists for IPv4 addresses.
   TC-TOX-03   Detoxify's own threat score for this fabricated line is 0.027 (checked
               directly against toxicity_guard.analyze), far under the 0.5 threshold in
@@ -27,9 +25,21 @@ changes, not something introduced by it:
   TC-005      Its own expected_behavior says the API key is a layer-2-only catch --
               "Layer 2 will catch the API key in the background and trigger an alarm."
               No layer-1 rule masks API keys, and the log confirms the watchdog alarm
-              fires; masked_output is correctly unchanged by design (background task).
-              The PERSON name in this payload is also unmasked because PERSON is
-              is_active: False -- confirmed present in HEAD before this session.
+              fires; masked_output changes (PERSON now masks "Mahesh" to "Mah***" --
+              see below) but the API key itself stays untouched by layer 1, which is
+              the actual thing this case tests.
+
+PERSON was reactivated once the NLP-engine bug behind it was actually fixed: two spaCy
+models were registered under the same lang_code "en" (get_nlp_engine), so the second
+silently overwrote the first and only the medical model ever ran -- confirmed directly,
+PERSON returned zero matches at any score threshold before the fix. The medical model
+now runs as its own dedicated pipeline (custom_recognizers.MedicalEntityRecognizer)
+instead of sharing that slot, which is what let PERSON start working. TC-FIN-04, listed
+above in earlier revisions of this comment as excluded for depending on PERSON, is no
+longer excluded -- "John Doe" now masks, and its account number is caught too as a side
+effect of the CUSTOMER_ID rule ("account 987654321" matches its label pattern); the
+dollar balance itself still isn't caught by any rule, which this suite's coarse
+"something changed" check doesn't require it to be.
   TC-AUTH-01  No layer-1 rule for AWS secret keys; caught by the layer-2 watchdog only
               (confirmed by the ALARM GENERATED log), same as TC-005.
   TC-AUTH-02  No layer-1 rule for JWTs; same layer-2-only situation.
@@ -49,7 +59,7 @@ with open("test_cases.json", encoding="utf-8") as f:
 NOT_MASKED = {"TC-002"}  # fails the Verhoeff checksum, so it must pass through untouched
 TOXIC_CASES = {"TC-TOX-01", "TC-TOX-02"}
 NOT_TOXIC_CASES = {"TC-TOX-04"}
-PRE_EXISTING_GAPS = {"TC-FIN-01", "TC-FIN-02", "TC-FIN-03", "TC-FIN-04", "TC-GDPR-01",
+PRE_EXISTING_GAPS = {"TC-FIN-01", "TC-FIN-02", "TC-FIN-03", "TC-GDPR-01",
                      "TC-TOX-03", "TC-005", "TC-AUTH-01", "TC-AUTH-02"}
 
 MASK_CASES = [

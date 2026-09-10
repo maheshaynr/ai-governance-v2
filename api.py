@@ -5,7 +5,7 @@ from datetime import datetime
 import requests
 import re
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, BackgroundTasks
+from fastapi import FastAPI, BackgroundTasks, Header
 import time
 import uuid
 from fastapi.middleware.cors import CORSMiddleware
@@ -13,12 +13,11 @@ from pydantic import BaseModel, Field
 from typing import Optional
 from presidio_analyzer import AnalyzerEngine, PatternRecognizer, Pattern
 from presidio_analyzer.nlp_engine import NlpEngineProvider
-from presidio_analyzer.predefined_recognizers import SpacyRecognizer
 from presidio_anonymizer import AnonymizerEngine
 from presidio_anonymizer.entities import OperatorConfig
 import hashlib
 from audit_logger import AuditLogger
-from custom_recognizers import AadhaarRecognizer
+from custom_recognizers import AadhaarRecognizer, MedicalEntityRecognizer
 import database
 from benchmark_logger import BenchmarkLogger
 import llm_watchdog
@@ -28,6 +27,7 @@ import config
 import rag_engine
 import auth
 import consent
+import bill_payment_consent
 import injection_guard
 import tool_broker
 from auth import Principal
@@ -94,11 +94,16 @@ def get_nlp_engine():
     global global_nlp_engine
     if global_nlp_engine is None:
         print("Initializing Global NLP Engine (Heavy Operation)...")
+        # Medical entity detection (CHEMICAL/DISEASE) used to be registered here too,
+        # under the same "en" lang_code -- Presidio's engine keys its model registry by
+        # language code, so the second entry silently overwrote the first, and this
+        # general-purpose model never actually ran (confirmed: PERSON returned zero
+        # matches at any score threshold). It now runs as its own separate pipeline in
+        # custom_recognizers.MedicalEntityRecognizer instead of sharing this slot.
         configuration = {
             "nlp_engine_name": "spacy",
             "models": [
                 {"lang_code": "en", "model_name": "en_core_web_lg"}, # General purpose
-                {"lang_code": "en", "model_name": "en_ner_bc5cdr_md"} # Medical entities
             ]
         }
         global_nlp_engine = NlpEngineProvider(nlp_configuration=configuration).create_engine()
@@ -107,26 +112,24 @@ def get_nlp_engine():
 def reload_presidio_engine():
     global analyzer, ACTIVE_ENTITIES
     print("Reloading Presidio Registry and Rules...")
-    nlp_engine = get_nlp_engine() # This now contains both models under 'en'
-    
+    nlp_engine = get_nlp_engine() # Only the general-purpose model now -- see get_nlp_engine
+
     new_analyzer = AnalyzerEngine(nlp_engine=nlp_engine, supported_languages=["en"])
-    
+
     ACTIVE_ENTITIES = []
-    
+
     # Load custom python recognizer (Verhoeff Math)
     new_analyzer.registry.add_recognizer(AadhaarRecognizer())
-    
-    # Load SciSpaCy Medical Recognizer
+
+    # Medical entity recognizer -- its own dedicated pipeline, not the shared
+    # nlp_engine (see custom_recognizers.MedicalEntityRecognizer for why).
     try:
-        # This recognizer will now use the 'en' pipeline which has the medical model.
-        disease_recognizer = SpacyRecognizer(supported_language="en", supported_entities=["DISEASE", "CHEMICAL"])
-        new_analyzer.registry.add_recognizer(disease_recognizer)
+        new_analyzer.registry.add_recognizer(MedicalEntityRecognizer())
         ACTIVE_ENTITIES.extend(["DISEASE", "CHEMICAL"])
     except Exception as e:
-        print(f"Warning: Failed to load SciSpaCy Recognizer: {e}")
-        
+        print(f"Warning: Failed to load MedicalEntityRecognizer: {e}")
 
-    
+
     # Load dynamic JSON rules
     try:
         with open("pii_rules.json", "r") as f:
@@ -201,8 +204,8 @@ class GuardrailValidateRequest(BaseModel):
     text: str = Field(max_length=8000)
 
 class GuardrailValidateResponse(BaseModel):
-    flag: str      # "AI Guardrail flag: CLEAR" | "AI Guardrail flag: PARTIAL" | "AI Guardrail flag: BLOCKED"
-    message: str   # original text / masked text / the fixed block message, per flag
+    flag: str      # "AI Guardrail flag: CLEAR" | "...PARTIAL" | "...BLOCKED" | "...PAYMENT_DECLINED"
+    message: str   # original text / masked text / the fixed block or decline message, per flag
 
 class RuleRequest(BaseModel):
     name: str
@@ -498,9 +501,24 @@ def apply_egress_guardrail(raw_text: str):
             return email[0] + "***" + email[-1] if len(email) > 2 else email
 
     # We explicitly define the entities we want to track using the global ACTIVE_ENTITIES.
-    # The analyzer now uses a single 'en' pipeline that contains both general and medical models.
     results = analyzer.analyze(text=raw_text, language='en', entities=ACTIVE_ENTITIES, score_threshold=0.5)
-    
+
+    # entity_denylist: known false positives filtered out here, after every recognizer
+    # has run, rather than inside any one of them. Started from "Jio" -- confirmed
+    # directly that it gets misread as CHEMICAL by the medical model *and*, once PERSON
+    # detection started working, as a person's name by the general model too. Two
+    # different models, two different false positives on the same word -- a filter
+    # scoped to one recognizer would only have caught one of them. This is the single
+    # point every recognizer's output passes through, so one denylist entry covers
+    # whichever entity type a given false positive happens to surface as.
+    try:
+        with open("pii_rules.json", "r") as f:
+            denylist = {t.lower() for t in json.load(f).get("settings", {}).get("entity_denylist", [])}
+    except (FileNotFoundError, json.JSONDecodeError):
+        denylist = set()
+    if denylist:
+        results = [r for r in results if raw_text[r.start:r.end].lower() not in denylist]
+
     operators = {
         "PERSON": OperatorConfig("custom", {"lambda": mask_person_name}),
         "CREDIT_CARD": OperatorConfig("custom", {"lambda": lambda x: "**** **** **** " + x[-4:] if len(x) >= 4 else x}),
@@ -624,14 +642,34 @@ _GUARDRAIL_BLOCK_MSG = (
     "that violates content policy. Please rephrase your request."
 )
 
+_PAYMENT_DECLINED_MSG = (
+    "Transaction cannot be initiated as customer has not opted for auto payments."
+)
+
+# Cheap recall pass before the (comparatively expensive, synchronous, Ollama-dependent)
+# LLM classification call -- most traffic through this endpoint has nothing to do with
+# payments, and this keeps that traffic exactly as fast and Ollama-independent as
+# before this feature existed. The LLM call's job is precision (is this actually an
+# instruction to pay, not just a mention of payment); this list's job is recall.
+_PAYMENT_KEYWORDS = (
+    "pay", "payment", "bill", "billing", "charge", "invoice", "auto-pay", "autopay", "auto pay",
+)
+
+
+def _looks_payment_related(text: str) -> bool:
+    lowered = text.lower()
+    return any(keyword in lowered for keyword in _PAYMENT_KEYWORDS)
+
 
 @app.post("/guardrail_validate", response_model=GuardrailValidateResponse)
-def guardrail_validate(request: GuardrailValidateRequest, background_tasks: BackgroundTasks):
+def guardrail_validate(request: GuardrailValidateRequest, background_tasks: BackgroundTasks,
+                       x_user_id: Optional[str] = Header(default=None, alias="X-User-Id")):
     """
     Generic validation endpoint for external systems: send arbitrary text, get back a
-    verdict -- CLEAR (nothing found), PARTIAL (PII/financial/health content masked), or
-    BLOCKED (toxic content, the original text withheld entirely) -- plus the resulting
-    text.
+    verdict -- CLEAR (nothing found), PARTIAL (PII/financial/health content masked),
+    BLOCKED (toxic content, the original text withheld entirely), or PAYMENT_DECLINED
+    (a payment confirmation/initiation instruction from a customer who has not opted
+    into auto-pay) -- plus the resulting text.
 
     Unlike /govern_ai, toxicity here actually blocks rather than merely flagging: this
     endpoint exists specifically so a caller doesn't have to separately decide whether a
@@ -657,7 +695,49 @@ def guardrail_validate(request: GuardrailValidateRequest, background_tasks: Back
         )
         return GuardrailValidateResponse(flag="AI Guardrail flag: BLOCKED", message=message)
 
-    # 2. Not toxic (or the toxicity guard is off/flag-only) -- mask PII/financial/health.
+    # 2. Payment intent -- only for messages that look payment-related at all (the
+    # keyword pre-filter), so the LLM classification cost is paid only when it might
+    # matter, not on every request. See llm_watchdog.analyze_payment_intent for the
+    # fail-closed behavior on a classifier failure.
+    if _looks_payment_related(request.text):
+        intent = llm_watchdog.analyze_payment_intent(request.text)
+        if intent.get("is_payment_confirmation"):
+            consented = bill_payment_consent.has_card_consent(x_user_id)
+            if consented is not True:
+                reason = (
+                    "no X-User-Id header provided" if not x_user_id
+                    else f"guard failed: {intent.get('error')}" if intent.get("guard_failed")
+                    else f"user '{x_user_id}' has no recorded auto-pay consent" if consented is None
+                    else f"user '{x_user_id}' has card_consent_flag=false"
+                )
+                try:
+                    diff_engine.generate_consent_violation_alarm(
+                        principal_name=x_user_id or "unknown",
+                        principal_role="external_caller",
+                        customer_id=x_user_id or "unknown",
+                        data_category="BILL_PAYMENT",
+                        purpose="AUTO_PAY",
+                        reason=reason,
+                    )
+                except Exception as e:
+                    logging.error(f"Failed to raise CONSENT_VIOLATION alarm for payment decline: {e}")
+
+                raw_hash = hashlib.sha256(request.text.encode()).hexdigest()
+                AuditLogger.log_transaction(
+                    pii_masked_input=f"VALIDATE_HASH:{raw_hash[:8]}",
+                    final_rewrite="[PAYMENT_DECLINED]",
+                    fidelity_score=None,
+                    fallback_triggered=True,
+                    purpose="AUTO_PAY",
+                )
+                return GuardrailValidateResponse(
+                    flag="AI Guardrail flag: PAYMENT_DECLINED",
+                    message=_PAYMENT_DECLINED_MSG,
+                )
+            # consented is True -- falls through to the ordinary PII-masking path below,
+            # same as any other non-toxic message.
+
+    # 3. Not toxic, and not a declined payment confirmation -- mask PII/financial/health.
     masked_output, l1_results = apply_egress_guardrail(request.text)
     background_tasks.add_task(run_watchdog_task, "N/A", request.text, l1_results)
 

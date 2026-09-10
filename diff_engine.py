@@ -252,6 +252,19 @@ def run_diff(raw_text: str, layer1_results: list, layer2_results: dict):
     if not l2_findings:
         return None
 
+    # The LLM watchdog's system prompt asks for a list of {"type", "value", "reason"}
+    # objects, but a small local model doesn't always follow that shape exactly --
+    # confirmed directly: phi4-mini returned a findings list of plain strings for one
+    # real input, which crashed the .get() calls below with no defense against it at
+    # all. Malformed entries are dropped and logged rather than the whole background
+    # task crashing on them.
+    malformed = [f for f in l2_findings if not isinstance(f, dict)]
+    if malformed:
+        logging.warning(f"LLM watchdog returned non-dict findings, dropping: {malformed}")
+    l2_findings = [f for f in l2_findings if isinstance(f, dict)]
+    if not l2_findings:
+        return None
+
     # Extract the exact text values that Presidio masked
     l1_values = []
     l1_entity_types = []

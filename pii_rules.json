@@ -17,7 +17,10 @@
     },
     "enable_injection_guard": true,
     "injection_threshold": 0.8,
-    "block_toxic_egress": true
+    "block_toxic_egress": true,
+    "entity_denylist": [
+      "Jio"
+    ]
   },
   "category_mappings": {
     "FINANCIAL": [
@@ -72,7 +75,7 @@
       "score": 0.85,
       "is_builtin": true,
       "is_algorithmic": false,
-      "is_active": false
+      "is_active": true
     },
     {
       "name": "Standard_Email_Addresses",

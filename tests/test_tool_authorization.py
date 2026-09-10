@@ -93,11 +93,14 @@ def test_undeclared_tool_is_ignored(app_module):
 def test_query_db_allows_any_record_with_no_key(client):
     """
     /query_db reads a record by ID directly. Previously a caller key was restricted to
-    101; now no key is required and 102 is readable too.
+    101; now no key is required and 102 is readable too. Checks "Server Rack" (customer
+    102's purchase, per database.py's seed data) rather than the customer's name --
+    PERSON masking is active, so the name itself is expected to be redacted; the
+    purchase item isn't PII and proves the record was genuinely read either way.
     """
     response = client.post("/query_db", json={"customer_id": 102})
     assert response.json()["status"] in ("success", "toxic_flagged")
-    assert "Alice" in response.text  # customer 102's data is actually present
+    assert "Server Rack" in response.text
 
 
 def test_demo_chat_bulk_read_no_longer_needs_entitlement(client, fake_ollama):

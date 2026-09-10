@@ -124,6 +124,29 @@ def init_db():
         )
         conn.commit()
 
+    # Bill payment auto-pay consent, keyed by user_name (not a customer_id) --
+    # checked by bill_payment_consent.py before /guardrail_validate allows a payment
+    # confirmation/initiation message to proceed for that user.
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS customer_bill_payment_consent (
+            user_name TEXT PRIMARY KEY,
+            card_consent_flag TEXT
+        )
+    ''')
+
+    cursor.execute('SELECT COUNT(*) FROM customer_bill_payment_consent')
+    if cursor.fetchone()[0] == 0:
+        bill_payment_consent_seed = [
+            ('U19883', 'true'),
+            ('U55442', 'true'),
+            ('U88778', 'false'),
+        ]
+        cursor.executemany(
+            'INSERT INTO customer_bill_payment_consent VALUES (?, ?)',
+            bill_payment_consent_seed,
+        )
+        conn.commit()
+
     conn.close()
 
 def get_customer_profile(customer_id):
