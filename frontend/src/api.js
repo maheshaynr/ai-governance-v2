@@ -131,6 +131,13 @@ export async function guardrailValidate(text) {
   return postJson('/guardrail_validate', { text });
 }
 
+// Recent /guardrail_validate calls (timestamp, flag, hash -- never the message itself,
+// see api.py's _GUARDRAIL_ACTIVITY) -- confirms a call from an external system actually
+// arrived, without exposing what it said.
+export async function fetchGuardrailActivity() {
+  return apiFetch('/guardrail_activity');
+}
+
 export async function fetchConsents() {
   return apiFetch('/consents');
 }

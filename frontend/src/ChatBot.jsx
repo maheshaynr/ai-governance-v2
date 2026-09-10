@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
-import { demoChat, fetchBenchmarks, guardrailValidate } from './api';
+import { demoChat, fetchBenchmarks, guardrailValidate, fetchGuardrailActivity } from './api';
 
-// Flag colors for /guardrail_validate's response bubble and its pinned scenario cards --
-// one place both read from, so the flag always means the same color everywhere.
+// Flag colors for /guardrail_validate's response bubble, its pinned scenario cards, and
+// the Guardrail Activity panel -- one place all three read from, so a flag always means
+// the same color everywhere.
 const GUARDRAIL_FLAG_STYLE = {
-  CLEAR:   { bg: '#dafbe1', border: '#4ac26b', text: '#1a7f37' },
-  PARTIAL: { bg: '#fff8ec', border: '#f0b775', text: '#7c4a03' },
-  BLOCKED: { bg: '#ffebe9', border: '#ff8182', text: '#cf222e' },
+  CLEAR:             { bg: '#dafbe1', border: '#4ac26b', text: '#1a7f37' },
+  PARTIAL:           { bg: '#fff8ec', border: '#f0b775', text: '#7c4a03' },
+  BLOCKED:           { bg: '#ffebe9', border: '#ff8182', text: '#cf222e' },
+  PAYMENT_DECLINED:  { bg: '#ffebe9', border: '#ff8182', text: '#cf222e' },
 };
 
 // PURPOSE_LABELS drives both the selector below and how a scenario card describes
@@ -89,6 +91,64 @@ const BenchmarkModal = ({ logs, onClose }) => (
 
 
 
+// Live confirmation feed for POST /guardrail_validate calls -- built for wiring up an
+// external system: it shows a call actually arrived (timestamp, flag, hash of the
+// text) without ever showing the text itself. See api.py's _GUARDRAIL_ACTIVITY --
+// in-memory only, so this never becomes a second place raw message content could leak
+// from.
+const GuardrailActivityPanel = ({ activity, onClose }) => (
+  <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
+    <div className="card" style={{ width: '80%', maxWidth: '700px', height: '80vh', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #d0d7de', padding: '1rem' }}>
+        <div>
+          <h3 style={{ margin: 0 }}>🔔 Guardrail Activity</h3>
+          <div style={{ fontSize: '0.75rem', color: '#57606a', marginTop: '0.25rem' }}>
+            Live calls to POST /guardrail_validate, from any caller — auto-refreshes every 3s. Message content is never shown here or stored anywhere; only a hash.
+          </div>
+        </div>
+        <button onClick={onClose} className="secondary" style={{ padding: '0.5rem 1rem' }}>Close</button>
+      </div>
+      <div style={{ flex: 1, overflow: 'auto', padding: '1rem' }}>
+        {activity.length === 0 ? (
+          <div style={{ color: '#57606a', textAlign: 'center', marginTop: '2rem' }}>
+            No calls yet. Send a request to /guardrail_validate from any system and it will appear here.
+          </div>
+        ) : (
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+            <thead>
+              <tr style={{ textAlign: 'left', borderBottom: '1px solid #d0d7de', color: '#57606a' }}>
+                <th style={{ padding: '0.4rem' }}>Time</th>
+                <th style={{ padding: '0.4rem' }}>Flag</th>
+                <th style={{ padding: '0.4rem' }}>User</th>
+                <th style={{ padding: '0.4rem' }}>Hash</th>
+              </tr>
+            </thead>
+            <tbody>
+              {activity.map((entry, idx) => {
+                const style = GUARDRAIL_FLAG_STYLE[entry.flag] || GUARDRAIL_FLAG_STYLE.PARTIAL;
+                return (
+                  <tr key={idx} style={{ borderBottom: '1px solid #f0f0f0' }}>
+                    <td style={{ padding: '0.4rem', color: '#57606a', fontFamily: 'monospace' }}>
+                      {new Date(entry.timestamp).toLocaleTimeString()}
+                    </td>
+                    <td style={{ padding: '0.4rem' }}>
+                      <span style={{ backgroundColor: style.bg, border: `1px solid ${style.border}`, color: style.text, padding: '0.15rem 0.5rem', borderRadius: '12px', fontWeight: 600, fontSize: '0.72rem' }}>
+                        {entry.flag}
+                      </span>
+                    </td>
+                    <td style={{ padding: '0.4rem', fontFamily: 'monospace' }}>{entry.user_id || '—'}</td>
+                    <td style={{ padding: '0.4rem', fontFamily: 'monospace', color: '#57606a' }}>{entry.hash}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  </div>
+);
+
 export default function ChatBot() {
   const [messages, setMessages] = useState(() => {
     const saved = localStorage.getItem('chatHistory');
@@ -100,10 +160,30 @@ export default function ChatBot() {
   const [purpose, setPurpose] = useState(''); // see PURPOSE_LABELS -- feeds the Consent Gate
   const [benchmarkLogs, setBenchmarkLogs] = useState([]);
   const [showBenchmarks, setShowBenchmarks] = useState(false);
+  const [guardrailActivity, setGuardrailActivity] = useState([]);
+  const [showGuardrailActivity, setShowGuardrailActivity] = useState(false);
 
   useEffect(() => {
     localStorage.setItem('chatHistory', JSON.stringify(messages));
   }, [messages]);
+
+  // Polls only while the panel is open -- no reason to hit the backend every 3s when
+  // nobody's watching.
+  useEffect(() => {
+    if (!showGuardrailActivity) return;
+
+    const poll = async () => {
+      try {
+        const data = await fetchGuardrailActivity();
+        setGuardrailActivity(data.activity || []);
+      } catch (e) {
+        console.error('Failed to fetch guardrail activity:', e);
+      }
+    };
+    poll();
+    const interval = setInterval(poll, 3000);
+    return () => clearInterval(interval);
+  }, [showGuardrailActivity]);
 
   const handleRunGuardrail = async (overridePayload = null) => {
     const textToSend = overridePayload || payload;
@@ -199,6 +279,7 @@ export default function ChatBot() {
   return (
     <div>
       {showBenchmarks && <BenchmarkModal logs={benchmarkLogs} onClose={() => setShowBenchmarks(false)} />}
+      {showGuardrailActivity && <GuardrailActivityPanel activity={guardrailActivity} onClose={() => setShowGuardrailActivity(false)} />}
       <div style={{ display: 'flex', gap: '1.5rem', height: 'calc(100vh - 100px)', marginTop: '1rem' }}>
         
         {/* Left Pane: Sidebar */}
@@ -209,7 +290,10 @@ export default function ChatBot() {
           <button className="secondary" style={{ width: '100%', marginBottom: '1.5rem', display: 'flex', justifyContent: 'center', gap: '0.5rem' }} onClick={handleViewBenchmarks}>
             <span>📊</span> View Benchmarks
           </button>
-          
+          <button className="secondary" style={{ width: '100%', marginBottom: '1.5rem', display: 'flex', justifyContent: 'center', gap: '0.5rem' }} onClick={() => setShowGuardrailActivity(true)}>
+            <span>🔔</span> Guardrail Activity
+          </button>
+
           <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem', borderBottom: '1px solid #d0d7de', paddingBottom: '0.5rem' }}>📌 Pinned Scenarios</h3>
           {pinnedScenarios.map((scenario, index) => (
             <PinnedScenarioCard key={index} scenario={scenario} onClick={handlePinnedClick} />

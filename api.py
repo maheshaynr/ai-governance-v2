@@ -1,6 +1,7 @@
 import os
 import json
 import logging
+from collections import deque
 from datetime import datetime
 import requests
 import re
@@ -661,6 +662,24 @@ def _looks_payment_related(text: str) -> bool:
     return any(keyword in lowered for keyword in _PAYMENT_KEYWORDS)
 
 
+# In-memory only, deliberately -- the whole point of AuditLogger.log_transaction's
+# "never write raw text to disk" policy (see audit_logger.py) is that nothing recovers
+# the original message from what's persisted. This buffer exists purely so the ChatBot
+# screen can show "yes, a call just arrived" while integrating an external system
+# against this endpoint; it holds only a flag and a hash, the same two things already
+# written to the audit log, and it's gone on restart.
+_GUARDRAIL_ACTIVITY = deque(maxlen=50)
+
+
+def _record_guardrail_activity(flag: str, raw_hash: str, x_user_id: Optional[str] = None):
+    _GUARDRAIL_ACTIVITY.appendleft({
+        "timestamp": datetime.now().isoformat(),
+        "flag": flag,
+        "hash": raw_hash[:8],
+        "user_id": x_user_id,
+    })
+
+
 @app.post("/guardrail_validate", response_model=GuardrailValidateResponse)
 def guardrail_validate(request: GuardrailValidateRequest, background_tasks: BackgroundTasks,
                        x_user_id: Optional[str] = Header(default=None, alias="X-User-Id")):
@@ -693,6 +712,7 @@ def guardrail_validate(request: GuardrailValidateRequest, background_tasks: Back
             fidelity_score=None,
             fallback_triggered=True,
         )
+        _record_guardrail_activity("BLOCKED", raw_hash, x_user_id)
         return GuardrailValidateResponse(flag="AI Guardrail flag: BLOCKED", message=message)
 
     # 2. Payment intent -- only for messages that look payment-related at all (the
@@ -730,6 +750,7 @@ def guardrail_validate(request: GuardrailValidateRequest, background_tasks: Back
                     fallback_triggered=True,
                     purpose="AUTO_PAY",
                 )
+                _record_guardrail_activity("PAYMENT_DECLINED", raw_hash, x_user_id)
                 return GuardrailValidateResponse(
                     flag="AI Guardrail flag: PAYMENT_DECLINED",
                     message=_PAYMENT_DECLINED_MSG,
@@ -752,7 +773,19 @@ def guardrail_validate(request: GuardrailValidateRequest, background_tasks: Back
         fallback_triggered=not fidelity_ok,
     )
 
+    _record_guardrail_activity(flag, raw_hash, x_user_id)
     return GuardrailValidateResponse(flag=f"AI Guardrail flag: {flag}", message=masked_output)
+
+
+@app.get("/guardrail_activity")
+def get_guardrail_activity():
+    """
+    Recent /guardrail_validate calls -- newest first, in-memory only (see
+    _GUARDRAIL_ACTIVITY). Backs the ChatBot screen's live confirmation panel so an
+    integrator can see a call actually arrived while wiring up an external system,
+    without the raw message ever being retrievable through this or any other endpoint.
+    """
+    return {"activity": list(_GUARDRAIL_ACTIVITY)}
 
 @app.post("/chat", response_model=ChatResponse)
 def chat_agent(request: ChatRequest, background_tasks: BackgroundTasks):
