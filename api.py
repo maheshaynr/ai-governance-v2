@@ -207,6 +207,10 @@ class GuardrailValidateRequest(BaseModel):
 class GuardrailValidateResponse(BaseModel):
     flag: str      # "AI Guardrail flag: CLEAR" | "...PARTIAL" | "...BLOCKED" | "...PAYMENT_DECLINED"
     message: str   # original text / masked text / the fixed block or decline message, per flag
+    # A short, stable machine-readable code explaining *why* flag is what it is -- meant
+    # to be branched on programmatically, not displayed as-is. None for CLEAR, where
+    # there's nothing to explain. See _flag_reason_for below for the fixed set of values.
+    flag_reason: Optional[str] = None
 
 class RuleRequest(BaseModel):
     name: str
@@ -662,6 +666,16 @@ def _looks_payment_related(text: str) -> bool:
     return any(keyword in lowered for keyword in _PAYMENT_KEYWORDS)
 
 
+# The fixed, stable vocabulary for GuardrailValidateResponse.flag_reason -- an external
+# caller branches on these, so they're deliberately short machine-readable codes, not
+# the free-text `reason` string built below for the CONSENT_VIOLATION alarm (that one's
+# for a human reading the alarms dashboard, this one's for code).
+_FLAG_REASON_TOXIC_CONTENT = "TOXIC_CONTENT"
+_FLAG_REASON_GUARD_FAILURE = "GUARD_FAILURE"
+_FLAG_REASON_PAYMENT_CONSENT_NOT_GIVEN = "PAYMENT_CONSENT_NOT_GIVEN"
+_FLAG_REASON_SENSITIVE_CONTENT_MASKED = "SENSITIVE_CONTENT_MASKED"
+
+
 # In-memory only, deliberately -- the whole point of AuditLogger.log_transaction's
 # "never write raw text to disk" policy (see audit_logger.py) is that nothing recovers
 # the original message from what's persisted. This buffer exists purely so the ChatBot
@@ -671,10 +685,12 @@ def _looks_payment_related(text: str) -> bool:
 _GUARDRAIL_ACTIVITY = deque(maxlen=50)
 
 
-def _record_guardrail_activity(flag: str, raw_hash: str, x_user_id: Optional[str] = None):
+def _record_guardrail_activity(flag: str, raw_hash: str, x_user_id: Optional[str] = None,
+                               flag_reason: Optional[str] = None):
     _GUARDRAIL_ACTIVITY.appendleft({
         "timestamp": datetime.now().isoformat(),
         "flag": flag,
+        "flag_reason": flag_reason,
         "hash": raw_hash[:8],
         "user_id": x_user_id,
     })
@@ -682,17 +698,32 @@ def _record_guardrail_activity(flag: str, raw_hash: str, x_user_id: Optional[str
 
 @app.post("/guardrail_validate", response_model=GuardrailValidateResponse)
 def guardrail_validate(request: GuardrailValidateRequest, background_tasks: BackgroundTasks,
-                       x_user_id: Optional[str] = Header(default=None, alias="X-User-Id")):
+                       x_user_id: Optional[str] = Header(default=None, alias="X-User-Id"),
+                       x_message_category: Optional[str] = Header(default=None, alias="X-Message-Category")):
     """
     Generic validation endpoint for external systems: send arbitrary text, get back a
     verdict -- CLEAR (nothing found), PARTIAL (PII/financial/health content masked),
     BLOCKED (toxic content, the original text withheld entirely), or PAYMENT_DECLINED
     (a payment confirmation/initiation instruction from a customer who has not opted
-    into auto-pay) -- plus the resulting text.
+    into auto-pay) -- plus the resulting text and flag_reason, a short machine-readable
+    code for *why* (TOXIC_CONTENT / GUARD_FAILURE / SENSITIVE_CONTENT_MASKED /
+    PAYMENT_CONSENT_NOT_GIVEN / null for CLEAR) meant to be branched on programmatically.
 
     Unlike /govern_ai, toxicity here actually blocks rather than merely flagging: this
     endpoint exists specifically so a caller doesn't have to separately decide whether a
     "toxic_flagged" status means "safe to relay" or not.
+
+    X-Message-Category: "bill_payment" is an optional, explicit signal from the caller
+    that this particular call IS a payment confirmation/initiation instruction -- when
+    present, it goes straight to the consent check, skipping both the keyword pre-filter
+    and the LLM classifier below. Added after confirming those two guesses have a real
+    recall gap: phrasings like "yes, please proceed", "confirm the transaction", "please
+    debit my account now" contain none of the pre-filter's keywords, so the LLM
+    classifier -- which only runs when the pre-filter matches -- was never even reached
+    for them, and a non-consented customer's payment went through unchecked. A caller
+    that already knows a given request is a payment confirmation (e.g. because it's
+    wired to a "Pay Now" button in its own UI) should always send this header; the
+    keyword/LLM path remains as a fallback for callers that don't.
     """
     # 1. Toxicity -- checked first, and blocking, unlike /govern_ai's flag-only egress
     # check. should_block_toxic_egress() is the same admin-configurable policy /chat's
@@ -700,10 +731,12 @@ def guardrail_validate(request: GuardrailValidateRequest, background_tasks: Back
     # endpoint alone.
     is_toxic, tox_result = apply_toxicity_check(request.text, "EGRESS")
     if is_toxic and should_block_toxic_egress():
-        message = (
-            guard_failure_response(tox_result) if tox_result.get("guard_failed")
-            else _GUARDRAIL_BLOCK_MSG
-        )
+        guard_failed = tox_result.get("guard_failed")
+        message = guard_failure_response(tox_result) if guard_failed else _GUARDRAIL_BLOCK_MSG
+        # A guard failure blocks fail-closed -- the text was never actually confirmed
+        # toxic, the check just couldn't run -- so it gets its own code rather than
+        # being reported as TOXIC_CONTENT, which would overstate what's actually known.
+        flag_reason = _FLAG_REASON_GUARD_FAILURE if guard_failed else _FLAG_REASON_TOXIC_CONTENT
 
         raw_hash = hashlib.sha256(request.text.encode()).hexdigest()
         AuditLogger.log_transaction(
@@ -712,15 +745,23 @@ def guardrail_validate(request: GuardrailValidateRequest, background_tasks: Back
             fidelity_score=None,
             fallback_triggered=True,
         )
-        _record_guardrail_activity("BLOCKED", raw_hash, x_user_id)
-        return GuardrailValidateResponse(flag="AI Guardrail flag: BLOCKED", message=message)
+        _record_guardrail_activity("BLOCKED", raw_hash, x_user_id, flag_reason)
+        return GuardrailValidateResponse(
+            flag="AI Guardrail flag: BLOCKED", message=message, flag_reason=flag_reason,
+        )
 
-    # 2. Payment intent -- only for messages that look payment-related at all (the
-    # keyword pre-filter), so the LLM classification cost is paid only when it might
-    # matter, not on every request. See llm_watchdog.analyze_payment_intent for the
-    # fail-closed behavior on a classifier failure.
-    if _looks_payment_related(request.text):
-        intent = llm_watchdog.analyze_payment_intent(request.text)
+    # 2. Payment intent -- either the caller has explicitly told us via
+    # X-Message-Category (see the docstring above -- the reliable path, no keyword or
+    # LLM guessing involved), or we fall back to the keyword pre-filter + LLM
+    # classifier so callers that don't send the header still get some coverage. See
+    # llm_watchdog.analyze_payment_intent for the fail-closed behavior on a classifier
+    # failure.
+    declared_bill_payment = (x_message_category or "").strip().lower() == "bill_payment"
+    if declared_bill_payment or _looks_payment_related(request.text):
+        if declared_bill_payment:
+            intent = {"is_payment_related": True, "is_payment_confirmation": True, "guard_failed": False}
+        else:
+            intent = llm_watchdog.analyze_payment_intent(request.text)
         if intent.get("is_payment_confirmation"):
             consented = bill_payment_consent.has_card_consent(x_user_id)
             if consented is not True:
@@ -750,10 +791,13 @@ def guardrail_validate(request: GuardrailValidateRequest, background_tasks: Back
                     fallback_triggered=True,
                     purpose="AUTO_PAY",
                 )
-                _record_guardrail_activity("PAYMENT_DECLINED", raw_hash, x_user_id)
+                _record_guardrail_activity(
+                    "PAYMENT_DECLINED", raw_hash, x_user_id, _FLAG_REASON_PAYMENT_CONSENT_NOT_GIVEN,
+                )
                 return GuardrailValidateResponse(
                     flag="AI Guardrail flag: PAYMENT_DECLINED",
                     message=_PAYMENT_DECLINED_MSG,
+                    flag_reason=_FLAG_REASON_PAYMENT_CONSENT_NOT_GIVEN,
                 )
             # consented is True -- falls through to the ordinary PII-masking path below,
             # same as any other non-toxic message.
@@ -763,6 +807,7 @@ def guardrail_validate(request: GuardrailValidateRequest, background_tasks: Back
     background_tasks.add_task(run_watchdog_task, "N/A", request.text, l1_results)
 
     flag = "PARTIAL" if masked_output != request.text else "CLEAR"
+    flag_reason = _FLAG_REASON_SENSITIVE_CONTENT_MASKED if flag == "PARTIAL" else None
 
     raw_hash = hashlib.sha256(request.text.encode()).hexdigest()
     fidelity_ok, fidelity_score = FidelityChecker.check_fidelity(request.text, masked_output)
@@ -773,8 +818,10 @@ def guardrail_validate(request: GuardrailValidateRequest, background_tasks: Back
         fallback_triggered=not fidelity_ok,
     )
 
-    _record_guardrail_activity(flag, raw_hash, x_user_id)
-    return GuardrailValidateResponse(flag=f"AI Guardrail flag: {flag}", message=masked_output)
+    _record_guardrail_activity(flag, raw_hash, x_user_id, flag_reason)
+    return GuardrailValidateResponse(
+        flag=f"AI Guardrail flag: {flag}", message=masked_output, flag_reason=flag_reason,
+    )
 
 
 @app.get("/guardrail_activity")

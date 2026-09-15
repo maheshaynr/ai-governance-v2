@@ -119,6 +119,7 @@ const GuardrailActivityPanel = ({ activity, onClose }) => (
               <tr style={{ textAlign: 'left', borderBottom: '1px solid #d0d7de', color: '#57606a' }}>
                 <th style={{ padding: '0.4rem' }}>Time</th>
                 <th style={{ padding: '0.4rem' }}>Flag</th>
+                <th style={{ padding: '0.4rem' }}>Reason</th>
                 <th style={{ padding: '0.4rem' }}>User</th>
                 <th style={{ padding: '0.4rem' }}>Hash</th>
               </tr>
@@ -136,6 +137,7 @@ const GuardrailActivityPanel = ({ activity, onClose }) => (
                         {entry.flag}
                       </span>
                     </td>
+                    <td style={{ padding: '0.4rem', fontFamily: 'monospace', color: '#57606a' }}>{entry.flag_reason || '—'}</td>
                     <td style={{ padding: '0.4rem', fontFamily: 'monospace' }}>{entry.user_id || '—'}</td>
                     <td style={{ padding: '0.4rem', fontFamily: 'monospace', color: '#57606a' }}>{entry.hash}</td>
                   </tr>
@@ -240,6 +242,7 @@ export default function ChatBot() {
         type: 'validate',
         flagState: state,
         flagText: res.flag,
+        flagReason: res.flag_reason,
         masked_content: res.message,
       }]);
     } catch (e) {
@@ -360,14 +363,17 @@ export default function ChatBot() {
                 ) : (
                   <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                     {msg.type === 'validate' ? (
-                      // POST /guardrail_validate's response -- just { flag, message } --
-                      // leading with the exact flag string the endpoint returns, colored
+                      // POST /guardrail_validate's response -- { flag, message, flag_reason }
+                      // -- leading with the exact flag string the endpoint returns, colored
                       // consistently with the pinned scenario cards via GUARDRAIL_FLAG_STYLE.
                       (() => {
                         const style = GUARDRAIL_FLAG_STYLE[msg.flagState] || GUARDRAIL_FLAG_STYLE.PARTIAL;
                         return (
                           <div style={{ alignSelf: 'flex-start', backgroundColor: style.bg, border: `1px solid ${style.border}`, color: style.text, padding: '1rem', borderRadius: '18px 18px 18px 0', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', maxWidth: '85%' }}>
-                            <strong style={{ fontSize: '0.85rem', display: 'block', marginBottom: '0.5rem' }}>{msg.flagText}</strong>
+                            <strong style={{ fontSize: '0.85rem', display: 'block', marginBottom: msg.flagReason ? '0.15rem' : '0.5rem' }}>{msg.flagText}</strong>
+                            {msg.flagReason && (
+                              <div style={{ fontSize: '0.72rem', fontFamily: 'monospace', opacity: 0.85, marginBottom: '0.5rem' }}>{msg.flagReason}</div>
+                            )}
                             <pre style={{ margin: 0, whiteSpace: 'pre-wrap', fontFamily: 'monospace', fontSize: '0.85rem', overflowX: 'auto' }}>{msg.masked_content}</pre>
                           </div>
                         );

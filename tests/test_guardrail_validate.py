@@ -27,6 +27,8 @@ of rather than letting the fix look self-evident in hindsight:
     covering whichever entity type a given false positive happens to surface as.
 """
 
+import pytest
+
 CLEAN_TEXT = "Please describe the steps to reset a router to factory settings."
 
 # The exact three worked examples this endpoint was built from.
@@ -50,11 +52,11 @@ BLOCKED_EXAMPLE = (
 )
 
 
-def test_response_has_exactly_flag_and_message(client):
-    """The contract is deliberately minimal -- just these two fields, nothing else."""
+def test_response_has_exactly_flag_message_and_flag_reason(client):
+    """The contract is deliberately minimal -- just these three fields, nothing else."""
     response = client.post("/guardrail_validate", json={"text": CLEAN_TEXT})
     body = response.json()
-    assert set(body.keys()) == {"flag", "message"}
+    assert set(body.keys()) == {"flag", "message", "flag_reason"}
 
 
 def test_truly_clean_text_returns_clear(client):
@@ -63,6 +65,7 @@ def test_truly_clean_text_returns_clear(client):
     body = response.json()
     assert body["flag"] == "AI Guardrail flag: CLEAR"
     assert body["message"] == CLEAN_TEXT
+    assert body["flag_reason"] is None
 
 
 def test_worked_clear_example_returns_clear(client):
@@ -76,6 +79,7 @@ def test_worked_clear_example_returns_clear(client):
     assert body["message"] == CLEAR_EXAMPLE
     assert "<CHEMICAL>" not in body["message"]
     assert "<PERSON>" not in body["message"]
+    assert body["flag_reason"] is None
 
 
 def test_worked_partial_example_masks_customer_id_and_name(client):
@@ -96,6 +100,7 @@ def test_worked_partial_example_masks_customer_id_and_name(client):
     assert "Mahesh" not in body["message"]
     assert "Mah***" in body["message"]
     assert "Jio modem" in body["message"]
+    assert body["flag_reason"] == "SENSITIVE_CONTENT_MASKED"
 
 
 def test_worked_blocked_example_withholds_original_text(client):
@@ -111,6 +116,7 @@ def test_worked_blocked_example_withholds_original_text(client):
     assert "123111" not in body["message"]
     # the whole serialized body, not just `message` -- confirms no field leaks it
     assert "stupid" not in response.text
+    assert body["flag_reason"] == "TOXIC_CONTENT"
 
 
 def test_respects_the_same_toxic_egress_policy_chat_uses(client, app_module, monkeypatch):
@@ -135,6 +141,10 @@ def test_guard_failure_fails_closed(client, app_module, monkeypatch):
     response = client.post("/guardrail_validate", json={"text": CLEAN_TEXT})
     body = response.json()
     assert body["flag"] == "AI Guardrail flag: BLOCKED"
+    # Distinct from a genuine toxic hit -- the text was never actually confirmed toxic,
+    # the check just couldn't run, and a caller branching on flag_reason shouldn't be
+    # told otherwise.
+    assert body["flag_reason"] == "GUARD_FAILURE"
 
 
 def test_entity_denylist_covers_both_false_positive_entity_types(client):
@@ -222,6 +232,7 @@ def test_non_consented_user_payment_confirmation_is_declined(client, app_module,
     assert body["message"] == (
         "Transaction cannot be initiated as customer has not opted for auto payments."
     )
+    assert body["flag_reason"] == "PAYMENT_CONSENT_NOT_GIVEN"
 
 
 def test_unknown_user_payment_confirmation_is_declined_fail_closed(client, app_module, monkeypatch):
@@ -303,3 +314,80 @@ def test_payment_decline_is_audited(client, app_module, monkeypatch, audit_entri
     )
     new = audit_entries()[before:]
     assert any(e.get("final_rewrite") == "[PAYMENT_DECLINED]" for e in new)
+
+
+# --- X-Message-Category: bill_payment -------------------------------------------
+#
+# The keyword pre-filter + LLM classifier combination has a real recall gap: confirmed
+# directly (live, against the real classifier) that phrasings like "yes, please
+# proceed", "confirm the transaction", "please debit my account now", and "ok do it"
+# contain none of _PAYMENT_KEYWORDS, so the LLM classifier -- which only runs when the
+# pre-filter matches -- is never reached, and a non-consented customer's payment goes
+# through as CLEAR. X-Message-Category: bill_payment lets a caller that already knows a
+# given call is a payment confirmation (e.g. wired to its own "Pay Now" button) skip
+# both guesses entirely and go straight to the consent check.
+
+NON_KEYWORD_CONFIRMATION_TEXTS = [
+    "yes, please proceed",
+    "confirm the transaction",
+    "please debit my account now",
+    "ok do it",
+]
+
+
+@pytest.mark.parametrize("text", NON_KEYWORD_CONFIRMATION_TEXTS)
+def test_declared_bill_payment_header_closes_the_keyword_gap(client, app_module, monkeypatch, text):
+    """
+    Without the header, these exact phrasings previously came back CLEAR -- confirmed
+    live before this header existed. With the header, they must decline.
+    """
+    calls = _mock_confirmation(app_module, monkeypatch)
+    response = client.post(
+        "/guardrail_validate",
+        json={"text": text},
+        headers={"X-User-Id": "U88778", "X-Message-Category": "bill_payment"},
+    )
+    body = response.json()
+    assert body["flag"] == "AI Guardrail flag: PAYMENT_DECLINED"
+    # The whole point -- the header is a reliable signal on its own, no need to ask
+    # the classifier at all.
+    assert calls == []
+
+
+def test_declared_bill_payment_header_still_respects_consent(client, app_module, monkeypatch):
+    """A consented user's declared-bill_payment call still proceeds normally."""
+    calls = _mock_confirmation(app_module, monkeypatch)
+    response = client.post(
+        "/guardrail_validate",
+        json={"text": "ok do it"},
+        headers={"X-User-Id": "U19883", "X-Message-Category": "bill_payment"},
+    )
+    body = response.json()
+    assert body["flag"] != "AI Guardrail flag: PAYMENT_DECLINED"
+    assert calls == []
+
+
+def test_unrecognized_message_category_falls_back_to_normal_path(client, app_module, monkeypatch):
+    """A header with any other value must not force the payment-decline path."""
+    calls = _mock_confirmation(app_module, monkeypatch)
+    response = client.post(
+        "/guardrail_validate",
+        json={"text": "ok do it"},
+        headers={"X-User-Id": "U88778", "X-Message-Category": "something_else"},
+    )
+    body = response.json()
+    assert body["flag"] != "AI Guardrail flag: PAYMENT_DECLINED"
+    assert calls == []  # "ok do it" still doesn't match the keyword pre-filter either
+
+
+def test_missing_header_still_uses_keyword_and_llm_fallback(client, app_module, monkeypatch):
+    """Callers that never send the header keep getting the existing (imperfect) coverage."""
+    calls = _mock_confirmation(app_module, monkeypatch)
+    response = client.post(
+        "/guardrail_validate",
+        json={"text": PAYMENT_CONFIRMATION_TEXT},
+        headers={"X-User-Id": "U88778"},
+    )
+    body = response.json()
+    assert body["flag"] == "AI Guardrail flag: PAYMENT_DECLINED"
+    assert calls == [PAYMENT_CONFIRMATION_TEXT]  # this phrasing does hit the keyword pre-filter
