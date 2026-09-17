@@ -205,6 +205,28 @@ def _mock_confirmation(app_module, monkeypatch, is_confirmation=True, is_related
         }
 
     monkeypatch.setattr(app_module.llm_watchdog, "analyze_payment_intent", fake_intent)
+
+    # dpdp_client.check_decision now answers the consent question the Payment Consent
+    # Gate used to ask bill_payment_consent.has_card_consent directly -- proxy to the
+    # same seeded local data so these tests keep exercising identical scenarios without
+    # a real DPDP Engine.
+    import bill_payment_consent
+
+    def fake_check_decision(subject_ref, data_categories, purpose, operation,
+                             recipient_ref, policy_context, correlation_id=None):
+        allowed = bill_payment_consent.has_card_consent(subject_ref) is True
+        return {
+            "decision": "ALLOW" if allowed else "DENY",
+            "guard_failed": False,
+            "error": None,
+            "decision_id": f"dec_test_{subject_ref}",
+            "notice_version": None,
+            "reason_code": None if allowed else "CONSENT_NOT_GRANTED",
+        }
+
+    monkeypatch.setattr(app_module.dpdp_client, "check_decision", fake_check_decision)
+    monkeypatch.setattr(app_module.dpdp_client, "submit_compliance_event", lambda **kwargs: None)
+
     return calls
 
 

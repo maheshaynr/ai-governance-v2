@@ -23,9 +23,9 @@ from dataclasses import dataclass
 from typing import Optional
 
 import auth
-import consent
 import database
 import diff_engine
+import dpdp_client
 from auth import Principal
 
 # The model may only name tools declared here. An unknown tool name is a refusal, not a
@@ -38,11 +38,16 @@ _CALL_PATTERN = re.compile(r"<(?P<tool>[A-Z_]+):(?P<argument>[^>\s]{1,64})>")
 # rows. Anything else is rejected before it reaches the database layer.
 _NAMED_RECORDS = ("swiggy", "iban")
 
-# Scoped to credit card data for this pass -- see consent.py. Every numeric-ID record in
-# this dataset (customers and spenders) carries a card field, so gating on the record
+# Scoped to credit card data for this pass -- see dpdp_client.py. Every numeric-ID record
+# in this dataset (customers and spenders) carries a card field, so gating on the record
 # shape (numeric vs. named) is correct here without inspecting the formatted profile
 # string get_customer_profile returns.
 _CONSENT_GATED_CATEGORY = "CREDIT_CARD"
+
+# The DPDP Engine's design doc doesn't name an operation for this flow (only the
+# payment path's INITIATE_PAYMENT is given) -- DISCLOSE_CARD_DATA is this codebase's own
+# choice pending confirmation from the DPDP team.
+_CONSENT_OPERATION = "DISCLOSE_CARD_DATA"
 
 CONSENT_REFUSAL_MSG = (
     "This customer has not consented to their card data being used for that purpose. "
@@ -68,6 +73,10 @@ class ToolResult:
     # Populated only on a consent refusal, so api.py can pass it straight into
     # ChatResponse.consent without re-deriving what was checked.
     consent_detail: Optional[dict] = None
+    # Populated only when a DPDP consent check ran and allowed the call, so api.py's
+    # audit entry can cite the notice version it was granted under without a second
+    # lookup call.
+    notice_version: Optional[str] = None
 
 
 def parse_tool_calls(model_text: str) -> list:
@@ -124,7 +133,7 @@ def authorize(principal: Principal, call: ToolCall, purpose: str = None) -> Tool
     purpose gates a second, independent question once entitlement passes: not "who may
     read this record" but "was this customer's data ever consented to being used this
     way." No purpose declared is not a bypass -- it means no processing basis was stated,
-    which is refused, not defaulted to allowed. See consent.py.
+    which is refused, not defaulted to allowed. See dpdp_client.py.
     """
     if call.tool != TOOL_FETCH_DB:
         return ToolResult(
@@ -165,14 +174,13 @@ def authorize(principal: Principal, call: ToolCall, purpose: str = None) -> Tool
     # pass it, by design, and must behave exactly as before this feature existed.
     # purpose="" (passed, but nothing declared) DOES opt in and is refused, which is the
     # distinction that makes "no purpose stated" a refusal rather than a silent bypass
-    # for /chat specifically, which always passes this parameter.
+    # for /chat specifically, which always passes this parameter. Note "not purpose"
+    # short-circuits before any DPDP call -- there is nothing to ask the DPDP Engine
+    # when no processing basis was even stated.
+    notice_version = None
     if call.argument.isdigit() and purpose is not None:
-        if not purpose or not consent.has_consent(call.argument, _CONSENT_GATED_CATEGORY, purpose):
-            reason = (
-                f"no purpose declared for record '{call.argument}'" if not purpose
-                else f"customer '{call.argument}' has no granted consent for "
-                     f"{_CONSENT_GATED_CATEGORY}/{purpose}"
-            )
+        if not purpose:
+            reason = f"no purpose declared for record '{call.argument}'"
             _alarm_consent(principal, call, purpose, reason)
             return ToolResult(
                 call=call,
@@ -187,7 +195,37 @@ def authorize(principal: Principal, call: ToolCall, purpose: str = None) -> Tool
                 },
             )
 
-    return ToolResult(call=call, allowed=True)
+        decision = dpdp_client.check_decision(
+            subject_ref=call.argument,
+            data_categories=[_CONSENT_GATED_CATEGORY],
+            purpose=purpose,
+            operation=_CONSENT_OPERATION,
+            recipient_ref="internal-tool-broker",
+            policy_context="CHAT_TOOL_CALL",
+        )
+        if decision["decision"] != "ALLOW":
+            reason = (
+                f"DPDP decision check failed: {decision.get('error')}" if decision.get("guard_failed")
+                else f"customer '{call.argument}' has no granted DPDP consent for "
+                     f"{_CONSENT_GATED_CATEGORY}/{purpose} (decision={decision['decision']})"
+            )
+            _alarm_consent(principal, call, purpose, reason)
+            _submit_consent_denied_event(call.argument, purpose, decision)
+            return ToolResult(
+                call=call,
+                allowed=False,
+                refusal=CONSENT_REFUSAL_MSG,
+                consent_detail={
+                    "customer_id": call.argument,
+                    "data_category": _CONSENT_GATED_CATEGORY,
+                    "purpose": purpose,
+                    "granted": False,
+                    "reason": reason,
+                },
+            )
+        notice_version = decision.get("notice_version")
+
+    return ToolResult(call=call, allowed=True, notice_version=notice_version)
 
 
 def execute(principal: Principal, call: ToolCall, purpose: str = None) -> ToolResult:
@@ -206,7 +244,7 @@ def execute(principal: Principal, call: ToolCall, purpose: str = None) -> ToolRe
 
     data = database.get_customer_profile(call.argument)
     logging.info(f"Tool broker: allowed {call} for principal '{principal.name}'")
-    return ToolResult(call=call, allowed=True, data=data)
+    return ToolResult(call=call, allowed=True, data=data, notice_version=decision.notice_version)
 
 
 def _alarm(principal: Principal, call: ToolCall, reason: str) -> None:
@@ -233,3 +271,19 @@ def _alarm_consent(principal: Principal, call: ToolCall, purpose: str, reason: s
         )
     except Exception as e:  # an alarm failure must not mask the refusal itself
         logging.error(f"Tool broker: failed to raise CONSENT_VIOLATION alarm: {e}")
+
+
+def _submit_consent_denied_event(customer_id: str, purpose: str, decision: dict) -> None:
+    try:
+        dpdp_client.submit_compliance_event(
+            event_type="CONSENT_DENIED",
+            severity="HIGH",
+            subject_ref=customer_id,
+            data_categories=[_CONSENT_GATED_CATEGORY],
+            purpose=purpose,
+            operation=_CONSENT_OPERATION,
+            decision_id=decision.get("decision_id"),
+            reason_code="CONSENT_NOT_GRANTED",
+        )
+    except Exception as e:  # a compliance-event failure must not mask the refusal itself
+        logging.error(f"Tool broker: failed to submit CONSENT_DENIED compliance event: {e}")

@@ -38,9 +38,40 @@ def fake_ollama(app_module, monkeypatch):
     return _install
 
 
+@pytest.fixture
+def fake_dpdp(app_module, monkeypatch):
+    """
+    dpdp_client.check_decision now answers the question tool_broker's Consent Gate used
+    to ask consent.has_consent directly -- proxy to the same live local consent.py data
+    (seed grants, and any withdrawal a test performs) so these tests keep exercising
+    identical scenarios end-to-end without a real DPDP Engine.
+    """
+    import consent
+
+    def fake_check_decision(subject_ref, data_categories, purpose, operation,
+                             recipient_ref, policy_context, correlation_id=None):
+        category = data_categories[0] if data_categories else None
+        allowed = bool(consent.has_consent(subject_ref, category, purpose))
+        notice_version = None
+        if allowed:
+            notice = consent.get_notice(category, purpose)
+            notice_version = notice["version"] if notice else None
+        return {
+            "decision": "ALLOW" if allowed else "DENY",
+            "guard_failed": False,
+            "error": None,
+            "decision_id": f"dec_test_{subject_ref}_{purpose}",
+            "notice_version": notice_version,
+            "reason_code": None if allowed else "CONSENT_NOT_GRANTED",
+        }
+
+    monkeypatch.setattr(app_module.dpdp_client, "check_decision", fake_check_decision)
+    monkeypatch.setattr(app_module.dpdp_client, "submit_compliance_event", lambda **kwargs: None)
+
+
 # --- /chat ---
 
-def test_consented_purpose_succeeds(client, fake_ollama):
+def test_consented_purpose_succeeds(client, fake_ollama, fake_dpdp):
     fake_ollama("<FETCH_DB:101>", "Here are the refund details.")
     response = client.post("/chat", json={
         "message": "refund for customer 101",
@@ -49,7 +80,7 @@ def test_consented_purpose_succeeds(client, fake_ollama):
     assert response.json()["status"] == "success"
 
 
-def test_unconsented_customer_is_refused(client, fake_ollama, alarms):
+def test_unconsented_customer_is_refused(client, fake_ollama, fake_dpdp, alarms):
     before = len(alarms())
     fake_ollama("<FETCH_DB:102>")
     response = client.post("/chat", json={
@@ -67,7 +98,7 @@ def test_unconsented_customer_is_refused(client, fake_ollama, alarms):
     assert any(a["category"] == "CONSENT_VIOLATION" for a in new)
 
 
-def test_wrong_purpose_is_also_refused(client, fake_ollama):
+def test_wrong_purpose_is_also_refused(client, fake_ollama, fake_dpdp):
     """
     102 was never granted CREDIT_CARD consent for any purpose -- proves the gate checks
     category, not just whichever purpose happens to be declared.
@@ -98,7 +129,7 @@ def test_named_records_are_unaffected_by_the_gate(client, fake_ollama):
     assert response.json()["status"] == "success"
 
 
-def test_withdrawal_takes_effect_on_the_next_request(client, fake_ollama):
+def test_withdrawal_takes_effect_on_the_next_request(client, fake_ollama, fake_dpdp):
     """The live demo moment: works, withdraw, same question now refused."""
     fake_ollama("<FETCH_DB:101>", "ok")
     before = client.post("/chat", json={
@@ -129,7 +160,7 @@ def test_withdrawing_a_nonexistent_grant_reports_an_error(client):
     assert response.json()["status"] == "error"
 
 
-def test_audit_entry_records_purpose_and_notice_version(client, fake_ollama, audit_entries):
+def test_audit_entry_records_purpose_and_notice_version(client, fake_ollama, fake_dpdp, audit_entries):
     before = len(audit_entries())
     fake_ollama("<FETCH_DB:101>", "ok")
     client.post("/chat", json={
@@ -145,7 +176,7 @@ def test_audit_entry_records_purpose_and_notice_version(client, fake_ollama, aud
 
 # --- /demo_chat: same gate, the pinned-scenario surface ---
 
-def test_demo_chat_consented_purpose_succeeds(client, fake_ollama):
+def test_demo_chat_consented_purpose_succeeds(client, fake_ollama, fake_dpdp):
     fake_ollama("<FETCH_DB:101>")
     response = client.post("/demo_chat", json={
         "message": "refund for customer 101", "mode": "others", "purpose": "BILLING_SUPPORT",
@@ -153,7 +184,7 @@ def test_demo_chat_consented_purpose_succeeds(client, fake_ollama):
     assert response.json()["status"] != "consent_required"
 
 
-def test_demo_chat_unconsented_customer_is_refused(client, fake_ollama):
+def test_demo_chat_unconsented_customer_is_refused(client, fake_ollama, fake_dpdp):
     fake_ollama("<FETCH_DB:102>")
     response = client.post("/demo_chat", json={
         "message": "refund for customer 102", "mode": "others", "purpose": "BILLING_SUPPORT",

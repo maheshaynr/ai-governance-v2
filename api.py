@@ -28,7 +28,7 @@ import config
 import rag_engine
 import auth
 import consent
-import bill_payment_consent
+import dpdp_client
 import injection_guard
 import tool_broker
 from auth import Principal
@@ -266,8 +266,9 @@ class ChatRequest(BaseModel):
     # Empty string, not None -- /chat always opts into the Consent Gate (see
     # tool_broker.authorize), so "nothing selected" must be a real, checkable value
     # rather than the sentinel tool_broker uses to mean "this endpoint doesn't gate at
-    # all." An empty purpose fails consent.has_consent the same way a mismatched one
-    # does, so it's refused, not silently allowed.
+    # all." An empty purpose is refused before the DPDP Engine is even asked, the same
+    # way a granted-but-mismatched purpose is refused after asking, so it's never
+    # silently allowed.
     purpose: str = ""
 
 class ChatResponse(BaseModel):
@@ -763,13 +764,27 @@ def guardrail_validate(request: GuardrailValidateRequest, background_tasks: Back
         else:
             intent = llm_watchdog.analyze_payment_intent(request.text)
         if intent.get("is_payment_confirmation"):
-            consented = bill_payment_consent.has_card_consent(x_user_id)
-            if consented is not True:
+            # DPDP decision check replaces the local bill_payment_consent lookup -- see
+            # dpdp_client.py. Skipped entirely (fail closed, no call made) when there's no
+            # X-User-Id to check, same "nothing to ask" short-circuit tool_broker.py uses
+            # for an undeclared purpose.
+            decision = None
+            if x_user_id:
+                decision = dpdp_client.check_decision(
+                    subject_ref=x_user_id,
+                    data_categories=["PAYMENT_TOKEN"],
+                    purpose="AUTO_PAY",
+                    operation="INITIATE_PAYMENT",
+                    recipient_ref="payment-gateway",
+                    policy_context="BILL_PAYMENT_CONFIRMATION",
+                )
+            consented = decision is not None and decision["decision"] == "ALLOW"
+            if not consented:
                 reason = (
                     "no X-User-Id header provided" if not x_user_id
                     else f"guard failed: {intent.get('error')}" if intent.get("guard_failed")
-                    else f"user '{x_user_id}' has no recorded auto-pay consent" if consented is None
-                    else f"user '{x_user_id}' has card_consent_flag=false"
+                    else f"DPDP guard failed: {decision.get('error')}" if decision.get("guard_failed")
+                    else f"DPDP decision={decision['decision']} for user '{x_user_id}'"
                 )
                 try:
                     diff_engine.generate_consent_violation_alarm(
@@ -782,6 +797,17 @@ def guardrail_validate(request: GuardrailValidateRequest, background_tasks: Back
                     )
                 except Exception as e:
                     logging.error(f"Failed to raise CONSENT_VIOLATION alarm for payment decline: {e}")
+
+                dpdp_client.submit_compliance_event(
+                    event_type="CONSENT_DENIED",
+                    severity="HIGH",
+                    subject_ref=x_user_id or "unknown",
+                    data_categories=["PAYMENT_TOKEN"],
+                    purpose="AUTO_PAY",
+                    operation="INITIATE_PAYMENT",
+                    decision_id=(decision or {}).get("decision_id"),
+                    reason_code="CONSENT_NOT_GRANTED",
+                )
 
                 raw_hash = hashlib.sha256(request.text.encode()).hexdigest()
                 AuditLogger.log_transaction(
@@ -933,9 +959,7 @@ If you are provided with data, summarize it naturally and helpfully."""
             raw_data = result.data
 
             if request.purpose:
-                notice = consent.get_notice("CREDIT_CARD", request.purpose)
-                if notice:
-                    notice_version = notice["version"]
+                notice_version = result.notice_version
 
             # Feed back to LLM
             json_schema = '''{
@@ -1955,9 +1979,7 @@ If you are provided with data, summarize it naturally and helpfully."""
             raw_data = decision.data
 
             if request.purpose:
-                notice = consent.get_notice("CREDIT_CARD", request.purpose)
-                if notice:
-                    notice_version = notice["version"]
+                notice_version = decision.notice_version
 
             # Feed back to LLM
             messages.append({"role": "assistant", "content": ai_message})

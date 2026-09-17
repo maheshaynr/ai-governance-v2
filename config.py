@@ -39,6 +39,15 @@ _DEFAULTS = {
     # When false, unmasked model output is never returned to any caller. Turning this on
     # additionally requires an admin role -- see api.py's raw output gating.
     "EXPOSE_RAW_OUTPUT": False,
+
+    # --- DPDP Engine (external consent/notice decision service) ---
+    # Empty DPDP_BASE_URL is the fail-closed default -- dpdp_client.py refuses to even
+    # attempt a call and returns guard_failed=True immediately rather than requesting
+    # against "". Real values belong in config.json or the environment, never source.
+    "DPDP_BASE_URL": "",
+    "DPDP_SERVICE_TOKEN": "",
+    "DPDP_TENANT_ID": "jio",
+    "DPDP_TIMEOUT_SECONDS": 3,
 }
 
 _CONFIG_FILE = os.environ.get(
@@ -86,3 +95,7 @@ CODING_LLM_MODEL = _settings["CODING_LLM_MODEL"]
 API_KEYS = _settings["API_KEYS"]
 ENTITLEMENTS = _settings["ENTITLEMENTS"]
 EXPOSE_RAW_OUTPUT = _settings["EXPOSE_RAW_OUTPUT"]
+DPDP_BASE_URL = _settings["DPDP_BASE_URL"]
+DPDP_SERVICE_TOKEN = _settings["DPDP_SERVICE_TOKEN"]
+DPDP_TENANT_ID = _settings["DPDP_TENANT_ID"]
+DPDP_TIMEOUT_SECONDS = _settings["DPDP_TIMEOUT_SECONDS"]
