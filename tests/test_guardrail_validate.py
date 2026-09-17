@@ -184,13 +184,16 @@ def test_audit_entry_is_recorded(client, audit_entries):
 
 # --- Payment Consent Gate -------------------------------------------------------
 #
-# Seeded in database.py: U19883 and U55442 have card_consent_flag='true', U88778
-# has 'false'. These tests mock llm_watchdog.analyze_payment_intent the same way the
-# rest of this file avoids ever calling Ollama -- deterministic, no live model needed.
-# A separate live end-to-end pass against the real phi4-mini classifier confirmed the
-# same five behaviors before these were written.
+# The DPDP Engine's own registered test subjects (see API_INTEGRATION.pdf): U19883
+# and U55442 have AUTO_PAY consent granted, U88778 has none. These tests mock both
+# llm_watchdog.analyze_payment_intent and dpdp_client.check_decision the same way the
+# rest of this file avoids ever calling Ollama -- deterministic, no live model or DPDP
+# Engine needed. A separate live end-to-end pass against the real phi4-mini classifier
+# and a real DPDP Engine confirmed the same behaviors before/after these were written.
 
 PAYMENT_CONFIRMATION_TEXT = "yes go ahead and pay my bill using credit card"
+
+_DPDP_AUTO_PAY_CONSENTED = {"U19883", "U55442"}
 
 
 def _mock_confirmation(app_module, monkeypatch, is_confirmation=True, is_related=True):
@@ -206,15 +209,9 @@ def _mock_confirmation(app_module, monkeypatch, is_confirmation=True, is_related
 
     monkeypatch.setattr(app_module.llm_watchdog, "analyze_payment_intent", fake_intent)
 
-    # dpdp_client.check_decision now answers the consent question the Payment Consent
-    # Gate used to ask bill_payment_consent.has_card_consent directly -- proxy to the
-    # same seeded local data so these tests keep exercising identical scenarios without
-    # a real DPDP Engine.
-    import bill_payment_consent
-
     def fake_check_decision(subject_ref, data_categories, purpose, operation,
                              recipient_ref=None, policy_context=None, correlation_id=None):
-        allowed = bill_payment_consent.has_card_consent(subject_ref) is True
+        allowed = subject_ref in _DPDP_AUTO_PAY_CONSENTED
         return {
             "decision": "ALLOW" if allowed else "DENY",
             "guard_failed": False,

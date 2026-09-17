@@ -764,7 +764,7 @@ def guardrail_validate(request: GuardrailValidateRequest, background_tasks: Back
         else:
             intent = llm_watchdog.analyze_payment_intent(request.text)
         if intent.get("is_payment_confirmation"):
-            # DPDP decision check replaces the local bill_payment_consent lookup -- see
+            # The payment-consent question is answered by the DPDP Engine -- see
             # dpdp_client.py. Skipped entirely (fail closed, no call made) when there's no
             # X-User-Id to check, same "nothing to ask" short-circuit tool_broker.py uses
             # for an undeclared purpose.
