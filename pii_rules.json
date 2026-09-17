@@ -19,7 +19,8 @@
     "injection_threshold": 0.8,
     "block_toxic_egress": true,
     "entity_denylist": [
-      "Jio"
+      "Jio",
+      "STB"
     ]
   },
   "category_mappings": {
