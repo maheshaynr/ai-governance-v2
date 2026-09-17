@@ -31,7 +31,21 @@ def init_db():
         ]
         cursor.executemany('INSERT INTO customers VALUES (?, ?, ?, ?, ?, ?, ?)', seed_data)
         conn.commit()
-        
+
+    # 19883/55442/88778 -- the DPDP Engine's own registered test subjects (see
+    # API_INTEGRATION.pdf: U19883 and U55442 have BILLING_SUPPORT consent granted,
+    # U88778 never did). Kept as real customer records so the Consent Gate demo returns
+    # actual profile data on ALLOW, not just a bare decision. INSERT OR IGNORE, unlike
+    # the block above, so an already-seeded database (customers table non-empty) still
+    # picks these up.
+    dpdp_demo_customers = [
+        (19883, 'Priya Sharma', '9812345678', '4111-9883-1234-5678', '2345 6789 1234', 'AAAPS1234K', 'Wireless Earbuds, Smart Watch'),
+        (55442, 'Arjun Mehta', '9823456789', '5500-5442-9876-5432', '3456 7891 2345', 'BBBPM5678L', 'Laptop Stand, Webcam'),
+        (88778, 'Kavita Rao', '9834567890', '6011-8877-8123-4567', '4567 8912 3456', 'CCCPR9012M', 'Bluetooth Speaker'),
+    ]
+    cursor.executemany('INSERT OR IGNORE INTO customers VALUES (?, ?, ?, ?, ?, ?, ?)', dpdp_demo_customers)
+    conn.commit()
+
     # Initialize Misc Data Table (for Swiggy, IBAN, etc)
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS misc_data (
