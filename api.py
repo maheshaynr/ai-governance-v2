@@ -798,16 +798,33 @@ def guardrail_validate(request: GuardrailValidateRequest, background_tasks: Back
                 except Exception as e:
                     logging.error(f"Failed to raise CONSENT_VIOLATION alarm for payment decline: {e}")
 
-                dpdp_client.submit_compliance_event(
-                    event_type="CONSENT_DENIED",
-                    severity="HIGH",
-                    subject_ref=x_user_id or "unknown",
-                    data_categories=["PAYMENT_TOKEN"],
-                    purpose="AUTO_PAY",
-                    operation="INITIATE_PAYMENT",
-                    decision_id=(decision or {}).get("decision_id"),
-                    reason_code="CONSENT_NOT_GRANTED",
-                )
+                # A DPDP outage/timeout is a GUARDRAIL_DECISION_FAILURE (infrastructure),
+                # not a CONSENT_DENIED (an actual data-processing denial) -- see
+                # API_INTEGRATION.pdf's event catalogue. Missing X-User-Id never reached
+                # the DPDP Engine at all, so it's reported the same way as a guard
+                # failure: there was no decision to make.
+                if x_user_id and not (decision or {}).get("guard_failed"):
+                    dpdp_client.submit_compliance_event(
+                        event_type="CONSENT_DENIED",
+                        severity="HIGH",
+                        subject_ref=x_user_id,
+                        data_categories=["PAYMENT_TOKEN"],
+                        purpose="AUTO_PAY",
+                        operation="INITIATE_PAYMENT",
+                        decision_id=(decision or {}).get("decision_id"),
+                        reason_code=(decision or {}).get("reason_code") or "CONSENT_NOT_GRANTED",
+                    )
+                else:
+                    dpdp_client.submit_compliance_event(
+                        event_type="GUARDRAIL_DECISION_FAILURE",
+                        severity="MEDIUM",
+                        subject_ref=x_user_id or "unknown",
+                        data_categories=["PAYMENT_TOKEN"],
+                        purpose="AUTO_PAY",
+                        operation="INITIATE_PAYMENT",
+                        decision_id=None,
+                        reason_code="DPDP_ENGINE_TIMEOUT",
+                    )
 
                 raw_hash = hashlib.sha256(request.text.encode()).hexdigest()
                 AuditLogger.log_transaction(

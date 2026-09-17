@@ -41,13 +41,16 @@ _NAMED_RECORDS = ("swiggy", "iban")
 # Scoped to credit card data for this pass -- see dpdp_client.py. Every numeric-ID record
 # in this dataset (customers and spenders) carries a card field, so gating on the record
 # shape (numeric vs. named) is correct here without inspecting the formatted profile
-# string get_customer_profile returns.
+# string get_customer_profile returns. This is the local alarm/consent_detail vocabulary
+# (matches consent.py's own schema) -- distinct from _CONSENT_DPDP_DATA_CATEGORIES below,
+# which is what actually goes out over the wire to the DPDP Engine.
 _CONSENT_GATED_CATEGORY = "CREDIT_CARD"
 
-# The DPDP Engine's design doc doesn't name an operation for this flow (only the
-# payment path's INITIATE_PAYMENT is given) -- DISCLOSE_CARD_DATA is this codebase's own
-# choice pending confirmation from the DPDP team.
-_CONSENT_OPERATION = "DISCLOSE_CARD_DATA"
+# Per API_INTEGRATION.pdf: this is a customer reading their own card/payment reference
+# data back, not a disclosure to a third party -- READ, not DISCLOSE_*, and the DPDP
+# Engine's registered category for it is PAYMENT_TOKEN, not CREDIT_CARD.
+_CONSENT_OPERATION = "READ"
+_CONSENT_DPDP_DATA_CATEGORIES = ["PAYMENT_TOKEN"]
 
 CONSENT_REFUSAL_MSG = (
     "This customer has not consented to their card data being used for that purpose. "
@@ -195,12 +198,15 @@ def authorize(principal: Principal, call: ToolCall, purpose: str = None) -> Tool
                 },
             )
 
+        # Per API_INTEGRATION.pdf: subject_ref must be a stable pseudonym, not the bare
+        # internal customer id -- prefix with "U" (customer 101 -> "U101"), the same
+        # convention the payment gate's seeded test subjects already follow.
+        dpdp_subject_ref = f"U{call.argument}"
         decision = dpdp_client.check_decision(
-            subject_ref=call.argument,
-            data_categories=[_CONSENT_GATED_CATEGORY],
+            subject_ref=dpdp_subject_ref,
+            data_categories=_CONSENT_DPDP_DATA_CATEGORIES,
             purpose=purpose,
             operation=_CONSENT_OPERATION,
-            recipient_ref="internal-tool-broker",
             policy_context="CHAT_TOOL_CALL",
         )
         if decision["decision"] != "ALLOW":
@@ -210,7 +216,7 @@ def authorize(principal: Principal, call: ToolCall, purpose: str = None) -> Tool
                      f"{_CONSENT_GATED_CATEGORY}/{purpose} (decision={decision['decision']})"
             )
             _alarm_consent(principal, call, purpose, reason)
-            _submit_consent_denied_event(call.argument, purpose, decision)
+            _submit_consent_denied_event(dpdp_subject_ref, purpose, decision)
             return ToolResult(
                 call=call,
                 allowed=False,
@@ -273,17 +279,35 @@ def _alarm_consent(principal: Principal, call: ToolCall, purpose: str, reason: s
         logging.error(f"Tool broker: failed to raise CONSENT_VIOLATION alarm: {e}")
 
 
-def _submit_consent_denied_event(customer_id: str, purpose: str, decision: dict) -> None:
+def _submit_consent_denied_event(subject_ref: str, purpose: str, decision: dict) -> None:
+    """
+    Per API_INTEGRATION.pdf's event catalogue: a DPDP outage/timeout is a
+    GUARDRAIL_DECISION_FAILURE (a failure of the decision infrastructure, no decision_id),
+    not a CONSENT_DENIED (an actual data-processing denial) -- conflating the two would
+    misreport infrastructure noise as a real consent violation.
+    """
     try:
-        dpdp_client.submit_compliance_event(
-            event_type="CONSENT_DENIED",
-            severity="HIGH",
-            subject_ref=customer_id,
-            data_categories=[_CONSENT_GATED_CATEGORY],
-            purpose=purpose,
-            operation=_CONSENT_OPERATION,
-            decision_id=decision.get("decision_id"),
-            reason_code="CONSENT_NOT_GRANTED",
-        )
+        if decision.get("guard_failed"):
+            dpdp_client.submit_compliance_event(
+                event_type="GUARDRAIL_DECISION_FAILURE",
+                severity="MEDIUM",
+                subject_ref=subject_ref,
+                data_categories=_CONSENT_DPDP_DATA_CATEGORIES,
+                purpose=purpose,
+                operation=_CONSENT_OPERATION,
+                decision_id=None,
+                reason_code="DPDP_ENGINE_TIMEOUT",
+            )
+        else:
+            dpdp_client.submit_compliance_event(
+                event_type="CONSENT_DENIED",
+                severity="HIGH",
+                subject_ref=subject_ref,
+                data_categories=_CONSENT_DPDP_DATA_CATEGORIES,
+                purpose=purpose,
+                operation=_CONSENT_OPERATION,
+                decision_id=decision.get("decision_id"),
+                reason_code=decision.get("reason_code") or "CONSENT_NOT_GRANTED",
+            )
     except Exception as e:  # a compliance-event failure must not mask the refusal itself
-        logging.error(f"Tool broker: failed to submit CONSENT_DENIED compliance event: {e}")
+        logging.error(f"Tool broker: failed to submit compliance event: {e}")

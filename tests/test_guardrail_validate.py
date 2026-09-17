@@ -213,7 +213,7 @@ def _mock_confirmation(app_module, monkeypatch, is_confirmation=True, is_related
     import bill_payment_consent
 
     def fake_check_decision(subject_ref, data_categories, purpose, operation,
-                             recipient_ref, policy_context, correlation_id=None):
+                             recipient_ref=None, policy_context=None, correlation_id=None):
         allowed = bill_payment_consent.has_card_consent(subject_ref) is True
         return {
             "decision": "ALLOW" if allowed else "DENY",

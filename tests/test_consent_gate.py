@@ -49,9 +49,14 @@ def fake_dpdp(app_module, monkeypatch):
     import consent
 
     def fake_check_decision(subject_ref, data_categories, purpose, operation,
-                             recipient_ref, policy_context, correlation_id=None):
-        category = data_categories[0] if data_categories else None
-        allowed = bool(consent.has_consent(subject_ref, category, purpose))
+                             recipient_ref=None, policy_context=None, correlation_id=None):
+        # tool_broker.py sends subject_ref as "U<customer_id>" (see API_INTEGRATION.pdf);
+        # consent.py's seed data is keyed by the bare customer_id, so strip the prefix.
+        customer_id = subject_ref[1:] if subject_ref.startswith("U") else subject_ref
+        # tool_broker.py's wire category is PAYMENT_TOKEN; consent.py's local seed data
+        # is keyed by CREDIT_CARD -- the real category, not whatever's on the wire.
+        category = "CREDIT_CARD"
+        allowed = bool(consent.has_consent(customer_id, category, purpose))
         notice_version = None
         if allowed:
             notice = consent.get_notice(category, purpose)

@@ -41,7 +41,7 @@ def _headers(correlation_id: str) -> dict:
 
 
 def check_decision(subject_ref, data_categories, purpose, operation,
-                    recipient_ref, policy_context, correlation_id=None) -> dict:
+                    recipient_ref=None, policy_context=None, correlation_id=None) -> dict:
     """
     POST /v1/decisions/check.
 
@@ -49,6 +49,10 @@ def check_decision(subject_ref, data_categories, purpose, operation,
     DPDP_BASE_URL, a timeout, a non-200 response, or a malformed body all return
     decision="UNKNOWN"/guard_failed=True -- callers already treat "not ALLOW" as a
     refusal, so a guard failure fails closed with no separate branch needed per site.
+
+    recipient_ref/policy_context are omitted from the payload when not given -- a
+    self-read operation (the customer reading their own data back) has no third-party
+    recipient to name, per the DPDP Engine's own worked examples.
     """
     correlation_id = correlation_id or str(uuid.uuid4())
 
@@ -60,11 +64,13 @@ def check_decision(subject_ref, data_categories, purpose, operation,
         "data_categories": data_categories,
         "purpose": purpose,
         "operation": operation,
-        "recipient_ref": recipient_ref,
         "requesting_service": "ai-guardrail",
-        "policy_context": policy_context,
         "correlation_id": correlation_id,
     }
+    if recipient_ref is not None:
+        payload["recipient_ref"] = recipient_ref
+    if policy_context is not None:
+        payload["policy_context"] = policy_context
 
     try:
         resp = requests.post(
