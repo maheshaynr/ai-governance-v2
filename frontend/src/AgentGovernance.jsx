@@ -1,0 +1,292 @@
+import { useState, useEffect } from 'react';
+import { fetchAgents, revokeAgent, fetchAgentActivity, fetchGovernanceEvents, fetchGovernanceStats } from './api';
+
+// Matches AdminConfig.jsx's own fallback -- App.jsx always passes a real principal once
+// RBAC is in effect, but this keeps the component safe to render standalone (e.g. tests).
+const DEFAULT_PRINCIPAL = { name: 'anonymous', role: 'super_admin', is_admin: true };
+
+// Agent Governance Layer -- a separate page from Admin Configuration on purpose: this governs
+// which external agents (e.g. VOXA) may call this Guardrail at all, and what they did, which is
+// a different concern from the content-policy tuning AdminConfig.jsx covers. See
+// Implementation_Plan/Agent_Governance_Layer_Design.md for the full design.
+export default function AgentGovernance({ principal = DEFAULT_PRINCIPAL }) {
+  const [activeTab, setActiveTab] = useState('agents'); // 'agents', 'activity', 'events', 'stats'
+
+  const [agents, setAgents] = useState([]);
+  const [activity, setActivity] = useState([]);
+  const [events, setEvents] = useState([]);
+  const [stats, setStats] = useState(null);
+  const [revokingAgentId, setRevokingAgentId] = useState(null);
+
+  useEffect(() => {
+    loadAgents();
+    loadActivity();
+    loadEvents();
+    loadStats();
+  }, [activeTab]);
+
+  const loadAgents = async () => {
+    try {
+      const data = await fetchAgents();
+      if (data.agents) setAgents(data.agents);
+    } catch (e) {
+      console.error('Failed to load agents', e);
+    }
+  };
+
+  const loadActivity = async () => {
+    try {
+      const data = await fetchAgentActivity();
+      if (data.activity) setActivity(data.activity);
+    } catch (e) {
+      console.error('Failed to load activity log', e);
+    }
+  };
+
+  const loadEvents = async () => {
+    try {
+      const data = await fetchGovernanceEvents();
+      if (data.events) setEvents(data.events);
+    } catch (e) {
+      console.error('Failed to load governance events', e);
+    }
+  };
+
+  const loadStats = async () => {
+    try {
+      const data = await fetchGovernanceStats();
+      setStats(data);
+    } catch (e) {
+      console.error('Failed to load stats', e);
+    }
+  };
+
+  const handleRevoke = async (agentId) => {
+    setRevokingAgentId(agentId);
+    try {
+      await revokeAgent(agentId);
+      await loadAgents();
+    } catch (e) {
+      console.error('Failed to revoke agent', e);
+    } finally {
+      setRevokingAgentId(null);
+    }
+  };
+
+  const th = { padding: '0.75rem', borderBottom: '1px solid #d0d7de' };
+  const td = { padding: '0.75rem' };
+  const cardHeader = (title, description, onRefresh) => (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+      <div>
+        <h3 style={{ margin: 0 }}>{title}</h3>
+        <p style={{ margin: '0.25rem 0 0 0', color: '#57606a', fontSize: '0.85rem' }}>{description}</p>
+      </div>
+      <button onClick={onRefresh} className="secondary" style={{ padding: '0.2rem 0.5rem', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>Refresh</button>
+    </div>
+  );
+  const statusPill = (text, good) => (
+    <span style={{
+      backgroundColor: good ? '#dafbe1' : '#ffebe9',
+      color: good ? '#1a7f37' : '#cf222e',
+      padding: '2px 8px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: '600',
+    }}>
+      {text}
+    </span>
+  );
+
+  return (
+    <div className="app-container">
+      <div className="header">
+        <div>
+          <h1>🧭 Agent Governance</h1>
+          <div className="nav-tabs">
+            <button className={activeTab === 'agents' ? 'active' : ''} onClick={() => setActiveTab('agents')}>Registered Agents</button>
+            <button className={activeTab === 'activity' ? 'active' : ''} onClick={() => setActiveTab('activity')}>Activity Log</button>
+            <button className={activeTab === 'events' ? 'active' : ''} onClick={() => setActiveTab('events')}>Compliance Events</button>
+            <button className={activeTab === 'stats' ? 'active' : ''} onClick={() => setActiveTab('stats')}>Stats</button>
+          </div>
+        </div>
+      </div>
+
+      <main>
+        {activeTab === 'agents' && (
+          <div className="admin-layout">
+            <div className="rules-list">
+              {cardHeader(
+                'Registered Agents',
+                'Every external agent (e.g. a VOXA skill) that has self-registered an identity with this Guardrail. Revoking here takes effect on that agent\'s very next call.',
+                loadAgents,
+              )}
+              <div style={{ border: '1px solid #d0d7de', borderRadius: '6px', background: '#fff', overflow: 'hidden' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.9rem' }}>
+                  <thead style={{ background: '#f6f8fa' }}>
+                    <tr>
+                      <th style={th}>Agent Name</th>
+                      <th style={th}>Business Unit</th>
+                      <th style={th}>Owner</th>
+                      <th style={th}>Location</th>
+                      <th style={th}>Type</th>
+                      <th style={th}>Status</th>
+                      <th style={th}>Registered</th>
+                      <th style={{ ...th, textAlign: 'right' }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {agents.length === 0 ? (
+                      <tr><td colSpan="8" style={{ padding: '2rem', textAlign: 'center', color: '#57606a' }}>No agents registered yet.</td></tr>
+                    ) : agents.map((a) => (
+                      <tr key={a.agent_id} style={{ borderBottom: '1px solid #d0d7de' }}>
+                        <td style={{ ...td, fontWeight: '500' }}>{a.agent_name}</td>
+                        <td style={td}>{a.business_unit || '—'}</td>
+                        <td style={td}>{a.owner_name || '—'}</td>
+                        <td style={{ ...td, fontFamily: 'monospace', fontSize: '0.8rem' }}>{a.location_of_deployment || '—'}</td>
+                        <td style={td}>{a.in_house_or_external || '—'}</td>
+                        <td style={td}>{statusPill(a.status, a.status === 'active')}</td>
+                        <td style={{ ...td, fontSize: '0.8rem', color: '#57606a', whiteSpace: 'nowrap' }}>
+                          {a.identity_assignment_timestamp ? new Date(a.identity_assignment_timestamp).toLocaleString() : '—'}
+                        </td>
+                        <td style={{ ...td, textAlign: 'right', whiteSpace: 'nowrap' }}>
+                          {a.status === 'active' && principal.is_admin && (
+                            <button
+                              className="secondary"
+                              onClick={() => handleRevoke(a.agent_id)}
+                              disabled={revokingAgentId === a.agent_id}
+                              style={{ padding: '0.2rem 0.6rem', fontSize: '0.8rem', color: '#cf222e' }}
+                            >
+                              {revokingAgentId === a.agent_id ? '⏳ Revoking...' : 'Revoke'}
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'activity' && (
+          <div className="admin-layout">
+            <div className="rules-list">
+              {cardHeader(
+                'Activity Log',
+                'One row per agent call, regardless of outcome. Never the request content itself -- only who called, what action, and whether it was served or blocked.',
+                loadActivity,
+              )}
+              <div style={{ border: '1px solid #d0d7de', borderRadius: '6px', background: '#fff', overflow: 'hidden' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.9rem' }}>
+                  <thead style={{ background: '#f6f8fa' }}>
+                    <tr>
+                      <th style={th}>Time</th>
+                      <th style={th}>Agent ID</th>
+                      <th style={th}>Invoking User</th>
+                      <th style={th}>Action</th>
+                      <th style={th}>Outcome</th>
+                      <th style={th}>Correlation ID</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {activity.length === 0 ? (
+                      <tr><td colSpan="6" style={{ padding: '2rem', textAlign: 'center', color: '#57606a' }}>No activity logged yet.</td></tr>
+                    ) : activity.map((row) => (
+                      <tr key={row.id} style={{ borderBottom: '1px solid #d0d7de' }}>
+                        <td style={{ ...td, fontSize: '0.8rem', color: '#57606a', whiteSpace: 'nowrap' }}>
+                          {row.ts ? new Date(row.ts).toLocaleString() : '—'}
+                        </td>
+                        <td style={{ ...td, fontFamily: 'monospace', fontSize: '0.75rem' }}>{row.agent_id}</td>
+                        <td style={{ ...td, fontFamily: 'monospace', fontSize: '0.75rem' }}>{row.invoking_user_id || '—'}</td>
+                        <td style={td}>{row.action}</td>
+                        <td style={td}>{statusPill(row.outcome, row.outcome === 'SERVED')}</td>
+                        <td style={{ ...td, fontFamily: 'monospace', fontSize: '0.75rem', color: '#57606a' }}>{row.correlation_id || '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'events' && (
+          <div className="admin-layout">
+            <div className="rules-list">
+              {cardHeader(
+                'Compliance Events',
+                'Raised automatically by identity verification and decision-check failures -- never sent directly by a calling agent.',
+                loadEvents,
+              )}
+              <div style={{ border: '1px solid #d0d7de', borderRadius: '6px', background: '#fff', overflow: 'hidden' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.9rem' }}>
+                  <thead style={{ background: '#f6f8fa' }}>
+                    <tr>
+                      <th style={th}>Time</th>
+                      <th style={th}>Event Type</th>
+                      <th style={th}>Severity</th>
+                      <th style={th}>Agent ID</th>
+                      <th style={th}>Reason</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {events.length === 0 ? (
+                      <tr><td colSpan="5" style={{ padding: '2rem', textAlign: 'center', color: '#57606a' }}>No compliance events yet.</td></tr>
+                    ) : events.map((row) => (
+                      <tr key={row.event_id} style={{ borderBottom: '1px solid #d0d7de' }}>
+                        <td style={{ ...td, fontSize: '0.8rem', color: '#57606a', whiteSpace: 'nowrap' }}>
+                          {row.occurred_at ? new Date(row.occurred_at).toLocaleString() : '—'}
+                        </td>
+                        <td style={{ ...td, fontFamily: 'monospace', fontSize: '0.8rem' }}>{row.event_type}</td>
+                        <td style={td}>{statusPill(row.severity, false)}</td>
+                        <td style={{ ...td, fontFamily: 'monospace', fontSize: '0.75rem' }}>{row.agent_id}</td>
+                        <td style={td}>{row.reason_code || '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'stats' && (
+          <div className="admin-layout">
+            <div className="rules-list">
+              {cardHeader('Stats', 'Pure aggregation over the three stores above -- no separately maintained counters.', loadStats)}
+              {!stats ? (
+                <p style={{ color: '#57606a' }}>Loading...</p>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
+                  <StatCard title="Calls by outcome" data={stats.calls_by_outcome} />
+                  <StatCard title="Calls by agent" data={stats.calls_by_agent} />
+                  <StatCard title="Events by severity" data={stats.events_by_severity} />
+                  <div style={{ border: '1px solid #d0d7de', borderRadius: '6px', background: '#fff', padding: '1rem' }}>
+                    <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem' }}>Distinct counts</h4>
+                    <div style={{ fontSize: '0.85rem', color: '#57606a' }}>Agents seen: <strong>{stats.distinct_agents}</strong></div>
+                    <div style={{ fontSize: '0.85rem', color: '#57606a' }}>Invoking users seen: <strong>{stats.distinct_invoking_users}</strong></div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </main>
+    </div>
+  );
+}
+
+function StatCard({ title, data }) {
+  const entries = Object.entries(data || {});
+  return (
+    <div style={{ border: '1px solid #d0d7de', borderRadius: '6px', background: '#fff', padding: '1rem' }}>
+      <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem' }}>{title}</h4>
+      {entries.length === 0 ? (
+        <div style={{ fontSize: '0.85rem', color: '#57606a' }}>No data yet.</div>
+      ) : entries.map(([key, value]) => (
+        <div key={key} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: '#57606a' }}>
+          <span style={{ fontFamily: 'monospace' }}>{key}</span>
+          <strong>{value}</strong>
+        </div>
+      ))}
+    </div>
+  );
+}

@@ -3,13 +3,63 @@
 // -- when you change one, change the other. A restart of `npm run dev` is required after
 // editing .env (unlike a source file, Vite only reads env files at server startup).
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000';
+const STORAGE_KEY = 'gov_api_key';
 
-// Authentication was removed from the backend by explicit request (see auth.py and
-// api.py's run_guard_self_test) -- no endpoint checks a header any more, so nothing
-// here needs to carry one. The shared apiFetch/postJson helpers are kept because they
-// still centralize the fetch-and-parse boilerplate every one of these calls repeats.
+// Every endpoint except /system_status (and the deliberately-open external-facing ones,
+// see auth.py) now requires an X-API-Key header again. The key is entered once at the
+// login gate in App.jsx and kept here for every request this tab makes -- localStorage
+// so a refresh doesn't force logging in again.
+let currentApiKey = '';
+try {
+  currentApiKey = localStorage.getItem(STORAGE_KEY) || '';
+} catch {
+  // Private browsing / storage disabled -- fall back to in-memory only for this tab.
+}
+
+export function setApiKey(key) {
+  currentApiKey = key || '';
+  try {
+    if (currentApiKey) localStorage.setItem(STORAGE_KEY, currentApiKey);
+    else localStorage.removeItem(STORAGE_KEY);
+  } catch {
+    // Ignore -- the in-memory copy still works for this tab.
+  }
+}
+
+export function getApiKey() {
+  return currentApiKey;
+}
+
+export function clearApiKey() {
+  setApiKey('');
+}
+
+/** Thrown when the server rejects the current key (missing, unknown, or wrong role). */
+export class AuthError extends Error {
+  constructor(status, detail) {
+    super(detail || 'Authentication failed');
+    this.name = 'AuthError';
+    this.status = status;
+  }
+}
+
 async function apiFetch(path, options = {}) {
-  const res = await fetch(`${API_BASE}${path}`, options);
+  const headers = { ...(options.headers || {}) };
+  if (currentApiKey) headers['X-API-Key'] = currentApiKey;
+
+  const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+
+  if (res.status === 401 || res.status === 403) {
+    let detail = res.status === 401 ? 'Invalid or missing API key.' : 'Not permitted.';
+    try {
+      const body = await res.json();
+      detail = body.detail || detail;
+    } catch {
+      // Non-JSON error body -- keep the default message.
+    }
+    throw new AuthError(res.status, detail);
+  }
+
   return res.json();
 }
 
@@ -22,11 +72,18 @@ function postJson(path, body) {
 }
 
 export async function fetchSystemStatus() {
+  // Deliberately open (see auth.py) so health checks and the login screen itself work
+  // without a key -- calls apiFetch anyway so a key present in localStorage still gets
+  // sent, but a missing/invalid one here should not raise a screen-wide AuthError.
   try {
     return await apiFetch('/system_status');
   } catch (e) {
     return { status: 'loading' };
   }
+}
+
+export async function fetchWhoAmI() {
+  return apiFetch('/whoami');
 }
 
 export async function fetchRules() {
@@ -144,6 +201,28 @@ export async function fetchConsents() {
 
 export async function withdrawConsent(customer_id, data_category, purpose) {
   return postJson('/withdraw_consent', { customer_id, data_category, purpose });
+}
+
+// --- Agent Governance Layer -- read-only from the admin UI. Registration/decisions/activity
+// are called by external agents (e.g. VOXA) directly, not from this frontend.
+export async function fetchAgents() {
+  return apiFetch('/v1/agent/agents');
+}
+
+export async function revokeAgent(agentId) {
+  return apiFetch(`/v1/agent/agents/${agentId}/revoke`, { method: 'POST' });
+}
+
+export async function fetchAgentActivity() {
+  return apiFetch('/v1/agent/activity');
+}
+
+export async function fetchGovernanceEvents() {
+  return apiFetch('/v1/agent/events');
+}
+
+export async function fetchGovernanceStats() {
+  return apiFetch('/v1/agent/stats');
 }
 
 export async function updateToxicitySettings({ thresholds, enable_toxicity_guard }) {

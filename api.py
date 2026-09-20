@@ -6,7 +6,7 @@ from datetime import datetime
 import requests
 import re
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, BackgroundTasks, Header
+from fastapi import FastAPI, BackgroundTasks, Header, HTTPException, Depends
 import time
 import uuid
 from fastapi.middleware.cors import CORSMiddleware
@@ -29,9 +29,11 @@ import rag_engine
 import auth
 import consent
 import dpdp_client
+import governance_db
+import agent_auth
 import injection_guard
 import tool_broker
-from auth import Principal
+from auth import Principal, require_role, ROLE_SUPER_ADMIN, ADMIN_ROLES, ANY_ROLE
 from fidelity_check import FidelityChecker
 
 # Upstream calls get an explicit read timeout. Four of the five Ollama calls previously
@@ -182,6 +184,7 @@ reload_presidio_engine()
 
 # Initialize Database
 database.init_db()
+governance_db.init_db()
 
 # Pre-load RAG Engine
 rag_engine.load_knowledge_base()
@@ -260,6 +263,29 @@ class WithdrawConsentRequest(BaseModel):
     customer_id: str
     data_category: str = "CREDIT_CARD"
     purpose: str
+
+class AgentRegisterRequest(BaseModel):
+    agent_name: str
+    business_unit: str = ""
+    owner_name: str = ""
+    location_of_deployment: str = ""
+    in_house_or_external: str = ""
+
+class AgentDecisionCheckRequest(BaseModel):
+    subject_ref: str
+    purpose: str
+    operation: str
+    data_categories: list[str]
+    recipient_ref: Optional[str] = None
+    policy_context: Optional[str] = None
+    correlation_id: Optional[str] = None
+
+class AgentActivityRequest(BaseModel):
+    invoking_user_id: str = ""
+    action: str
+    outcome: str
+    latency_ms: Optional[int] = None
+    correlation_id: Optional[str] = None
 
 class ChatRequest(BaseModel):
     message: str = Field(max_length=8000)
@@ -560,11 +586,11 @@ def run_watchdog_task(request_id: str, raw_text: str, layer1_results):
 
 # --- 4. Endpoints ---
 @app.post("/query_db", response_model=GovernResponse)
-def query_database(request: DbQueryRequest, background_tasks: BackgroundTasks):
+def query_database(request: DbQueryRequest, background_tasks: BackgroundTasks,
+                   principal: Principal = Depends(require_role(*ANY_ROLE))):
     # 1. Authorize the read before performing it. This endpoint reads a record by ID
     #    directly, so it needs the same entitlement check as a brokered tool call --
     #    otherwise it is a way around the broker.
-    principal = auth.ANONYMOUS_PRINCIPAL  # auth removed; see auth.py
     decision = tool_broker.execute(principal, tool_broker.make_call(tool_broker.TOOL_FETCH_DB, request.customer_id))
     if not decision.allowed:
         return GovernResponse(masked_output=decision.refusal, status="forbidden")
@@ -602,7 +628,8 @@ def query_database(request: DbQueryRequest, background_tasks: BackgroundTasks):
     )
 
 @app.post("/govern_ai", response_model=GovernResponse)
-def govern_ai_output(request: GenerativeRequest, background_tasks: BackgroundTasks):
+def govern_ai_output(request: GenerativeRequest, background_tasks: BackgroundTasks,
+                     principal: Principal = Depends(require_role(*ANY_ROLE))):
     # 1. Injection check. This endpoint governs arbitrary submitted text, so injected
     #    instructions arriving here matter for the same reason they do in /chat.
     is_injection, inj_result = apply_injection_check(request.text, "INGRESS")
@@ -868,7 +895,7 @@ def guardrail_validate(request: GuardrailValidateRequest, background_tasks: Back
 
 
 @app.get("/guardrail_activity")
-def get_guardrail_activity():
+def get_guardrail_activity(principal: Principal = Depends(require_role(*ANY_ROLE))):
     """
     Recent /guardrail_validate calls -- newest first, in-memory only (see
     _GUARDRAIL_ACTIVITY). Backs the ChatBot screen's live confirmation panel so an
@@ -878,8 +905,8 @@ def get_guardrail_activity():
     return {"activity": list(_GUARDRAIL_ACTIVITY)}
 
 @app.post("/chat", response_model=ChatResponse)
-def chat_agent(request: ChatRequest, background_tasks: BackgroundTasks):
-    principal = auth.ANONYMOUS_PRINCIPAL  # auth removed; see auth.py
+def chat_agent(request: ChatRequest, background_tasks: BackgroundTasks,
+               principal: Principal = Depends(require_role(*ANY_ROLE))):
     common_error_msg = "⚠️ Your message was blocked by the Content Safety Shield. I cannot provide you with insults or derogatory language targeting any specific group of people, including those identified by nationality, nor can I write content that insults someone's intelligence and includes extreme profanity. My guidelines prohibit generating hateful content or slurs. Is there anything else I can help you with?"
     request_id = f"R-{uuid.uuid4().hex[:8]}"
 
@@ -1060,7 +1087,7 @@ If you are provided with data, summarize it naturally and helpfully."""
         )
 
 @app.post("/sandbox_suggest_rule")
-def sandbox_suggest_rule(request: SandboxSuggestRequest):
+def sandbox_suggest_rule(request: SandboxSuggestRequest, principal: Principal = Depends(require_role(*ADMIN_ROLES))):
     OLLAMA_URL = config.OLLAMA_URL
     
     try:
@@ -1154,7 +1181,7 @@ You MUST deduce a highly specific, meaningful Entity Class from the context (e.g
         return {"status": "error", "message": str(e)}
 
 @app.post("/sandbox_test_rule")
-def sandbox_test_rule(request: SandboxTestRequest):
+def sandbox_test_rule(request: SandboxTestRequest, principal: Principal = Depends(require_role(*ADMIN_ROLES))):
     try:
         # Spin up a temporary, isolated Presidio Engine
         sandbox_analyzer = AnalyzerEngine()
@@ -1179,7 +1206,7 @@ def sandbox_test_rule(request: SandboxTestRequest):
         return {"status": "error", "message": str(e)}
 
 @app.get("/rules")
-def get_rules():
+def get_rules(principal: Principal = Depends(require_role(*ADMIN_ROLES))):
     try:
         with open("pii_rules.json", "r") as f:
             return json.load(f)
@@ -1222,13 +1249,11 @@ def run_guard_self_test() -> dict:
             report["status"] = "degraded"
             report["problems"].append(f"{name} is enabled but failed to load: {error()}")
 
-    # Authentication is currently disabled at the endpoint level (see auth.py) -- every
-    # request runs as an unrestricted anonymous principal. Surfaced here so this doesn't
-    # go unnoticed the way an actually-enforced-but-default-keyed setup would be.
-    report["problems"].append(
-        "Authentication is disabled -- every endpoint is reachable without an API key, "
-        "and every request is treated as an unrestricted super_admin. See auth.py."
-    )
+    if auth.using_default_keys():
+        report["problems"].append(
+            "Running with the shipped development API keys -- set the API_KEYS "
+            "environment variable before any real deployment. See auth.py."
+        )
 
     return report
 
@@ -1242,18 +1267,29 @@ def system_status():
     return run_guard_self_test()
 
 
+@app.get("/whoami")
+def whoami(principal: Principal = Depends(require_role(*ANY_ROLE))):
+    """
+    Lets the admin UI gate on the server's answer instead of a local string. AdminConfig
+    previously decided the user's role in the browser, which meant the role was whatever
+    the browser said it was.
+    """
+    return {"name": principal.name, "role": principal.role, "is_admin": principal.is_admin}
+
+
 @app.get("/alarms")
-def get_alarms():
+def get_alarms(principal: Principal = Depends(require_role(*ADMIN_ROLES))):
     import diff_engine
     return {"alarms": diff_engine.load_alarms()}
 
 @app.get("/consents")
-def get_consents():
+def get_consents(principal: Principal = Depends(require_role(*ADMIN_ROLES))):
     """Backs the admin Consents ledger tab -- every consent record, newest first."""
     return {"consents": consent.list_consents()}
 
 @app.post("/withdraw_consent")
-def withdraw_consent(request: WithdrawConsentRequest):
+def withdraw_consent(request: WithdrawConsentRequest,
+                      principal: Principal = Depends(require_role(*ADMIN_ROLES))):
     """
     Marks a consent WITHDRAWN. Takes effect on the very next request that checks it --
     tool_broker.authorize reads live status, not a cached grant, so this is the live
@@ -1266,7 +1302,6 @@ def withdraw_consent(request: WithdrawConsentRequest):
     if not withdrawn:
         return {"status": "error", "message": "No granted consent found to withdraw."}
 
-    principal = auth.ANONYMOUS_PRINCIPAL  # auth removed; see auth.py
     AuditLogger.log_config_change(
         actor=principal.name, actor_role=principal.role,
         action=f"withdraw_consent:{request.customer_id}:{request.data_category}:{request.purpose}",
@@ -1274,9 +1309,154 @@ def withdraw_consent(request: WithdrawConsentRequest):
     )
     return {"status": "success"}
 
+
+# --- Agent Governance Layer ---------------------------------------------------
+#
+# Distinct from the DPDP consent integration above: this is agent identity/registration,
+# an activity log, and agent-scoped compliance events -- not a DPDP Act concept, and not
+# a second consent engine. /v1/agent/decisions/check is a thin, identity-verified wrapper
+# around the existing, unmodified dpdp_client.check_decision -- the DPDP Engine remains the
+# sole authority on consent. See Implementation_Plan/Agent_Governance_Layer_Design.md.
+
+def _verify_agent_or_401(x_agent_id: Optional[str], authorization: Optional[str]):
+    """
+    Inline identity verification for every /v1/agent/* route that isn't registration itself.
+    Fails closed: any problem (missing header, unknown agent, wrong secret, revoked agent)
+    raises 401 immediately, logging an AGENT_IDENTITY_UNVERIFIED event, before the caller's
+    request ever reaches a decision-check or activity-log write.
+    """
+    secret = None
+    if authorization and authorization.lower().startswith("bearer "):
+        secret = authorization[7:]
+
+    agent = agent_auth.verify_agent(x_agent_id, secret)
+    if agent is None:
+        try:
+            governance_db.log_governance_event(
+                event_id=f"gov-{uuid.uuid4().hex[:12]}",
+                event_type="AGENT_IDENTITY_UNVERIFIED",
+                severity="HIGH",
+                agent_id=x_agent_id or "unknown",
+                reason_code="INVALID_OR_MISSING_CREDENTIALS",
+                correlation_id=None,
+            )
+        except Exception as e:
+            logging.error(f"Agent governance: failed to log AGENT_IDENTITY_UNVERIFIED event: {e}")
+        raise HTTPException(status_code=401, detail="Agent identity could not be verified.")
+    return agent
+
+
+@app.post("/v1/agent/register")
+def agent_register(request: AgentRegisterRequest):
+    """Self-registration -- an agent calls this once, on install/first activation, and
+    persists the returned secret itself. The secret is shown exactly once, here."""
+    agent_id, secret, timestamp = agent_auth.register_agent(
+        agent_name=request.agent_name,
+        business_unit=request.business_unit,
+        owner_name=request.owner_name,
+        location_of_deployment=request.location_of_deployment,
+        in_house_or_external=request.in_house_or_external,
+    )
+    return {
+        "agent_id": agent_id,
+        "agent_secret": secret,
+        "identity_assignment_timestamp": timestamp,
+    }
+
+
+@app.post("/v1/agent/decisions/check")
+def agent_decision_check(request: AgentDecisionCheckRequest,
+                          x_agent_id: Optional[str] = Header(default=None, alias="X-Agent-Id"),
+                          authorization: Optional[str] = Header(default=None)):
+    agent = _verify_agent_or_401(x_agent_id, authorization)
+    # Generated here, not left to dpdp_client's own internal fallback, so the same value
+    # ties together the DPDP Engine call, our activity/event rows, and the response --
+    # a caller that omits it must still get one back to correlate against.
+    correlation_id = request.correlation_id or str(uuid.uuid4())
+
+    decision = dpdp_client.check_decision(
+        subject_ref=request.subject_ref,
+        data_categories=request.data_categories,
+        purpose=request.purpose,
+        operation=request.operation,
+        recipient_ref=request.recipient_ref,
+        policy_context=request.policy_context,
+        correlation_id=correlation_id,
+    )
+
+    allowed = decision.get("decision") == "ALLOW"
+    try:
+        governance_db.log_activity(
+            agent_id=agent["agent_id"],
+            invoking_user_id=request.subject_ref,
+            action=f"decision_check:{request.operation}",
+            outcome="SERVED" if allowed else "BLOCKED",
+            correlation_id=correlation_id,
+        )
+        if not allowed:
+            governance_db.log_governance_event(
+                event_id=f"gov-{uuid.uuid4().hex[:12]}",
+                event_type="AGENT_UNAUTHORIZED_ACTION",
+                severity="HIGH",
+                agent_id=agent["agent_id"],
+                reason_code=decision.get("reason_code") or decision.get("error") or decision.get("decision"),
+                correlation_id=correlation_id,
+            )
+    except Exception as e:
+        logging.error(f"Agent governance: failed to log decision-check activity/event: {e}")
+
+    return {**decision, "correlation_id": correlation_id}
+
+
+@app.post("/v1/agent/activity")
+def agent_activity(request: AgentActivityRequest,
+                    x_agent_id: Optional[str] = Header(default=None, alias="X-Agent-Id"),
+                    authorization: Optional[str] = Header(default=None)):
+    """Non-gating activity entry for calls that need no consent decision (e.g. a read)."""
+    agent = _verify_agent_or_401(x_agent_id, authorization)
+    correlation_id = request.correlation_id or str(uuid.uuid4())
+    governance_db.log_activity(
+        agent_id=agent["agent_id"],
+        invoking_user_id=request.invoking_user_id,
+        action=request.action,
+        outcome=request.outcome,
+        latency_ms=request.latency_ms,
+        correlation_id=correlation_id,
+    )
+    return {"status": "logged", "correlation_id": correlation_id}
+
+
+@app.get("/v1/agent/agents")
+def agent_list_agents(principal: Principal = Depends(require_role(*ADMIN_ROLES))):
+    """Backs the Admin 'Registered Agents' tab. Never returns the secret hash."""
+    return {"agents": governance_db.list_agents()}
+
+
+@app.post("/v1/agent/agents/{agent_id}/revoke")
+def agent_revoke(agent_id: str, principal: Principal = Depends(require_role(*ADMIN_ROLES))):
+    revoked = governance_db.revoke_agent(agent_id)
+    if not revoked:
+        return {"status": "error", "message": "Agent not found."}
+    return {"status": "success"}
+
+
+@app.get("/v1/agent/activity")
+def agent_list_activity(limit: int = 100, principal: Principal = Depends(require_role(*ADMIN_ROLES))):
+    return {"activity": governance_db.list_activity(limit)}
+
+
+@app.get("/v1/agent/events")
+def agent_list_events(limit: int = 100, principal: Principal = Depends(require_role(*ADMIN_ROLES))):
+    return {"events": governance_db.list_governance_events(limit)}
+
+
+@app.get("/v1/agent/stats")
+def agent_stats(principal: Principal = Depends(require_role(*ADMIN_ROLES))):
+    return governance_db.get_stats()
+
+
 @app.post("/delete_alarm")
-def delete_alarm(request: DeleteAlarmRequest):
-    principal = auth.ANONYMOUS_PRINCIPAL  # auth removed; see auth.py
+def delete_alarm(request: DeleteAlarmRequest, principal: Principal = Depends(require_role(*ADMIN_ROLES))):
     try:
         import diff_engine
         alarms = diff_engine.load_alarms()
@@ -1328,8 +1508,7 @@ class UpdateToxicitySettingsRequest(BaseModel):
     enable_toxicity_guard: bool
     
 @app.post("/toggle_category")
-def toggle_category(request: ToggleCategoryRequest):
-    principal = auth.ANONYMOUS_PRINCIPAL  # auth removed; see auth.py
+def toggle_category(request: ToggleCategoryRequest, principal: Principal = Depends(require_role(ROLE_SUPER_ADMIN))):
     try:
         with open("pii_rules.json", "r") as f:
             data = json.load(f)
@@ -1355,8 +1534,7 @@ def toggle_category(request: ToggleCategoryRequest):
         return {"status": "error", "message": str(e)}
 
 @app.post("/toggle_watchdog")
-def toggle_watchdog(request: ToggleRequest):
-    principal = auth.ANONYMOUS_PRINCIPAL  # auth removed; see auth.py
+def toggle_watchdog(request: ToggleRequest, principal: Principal = Depends(require_role(ROLE_SUPER_ADMIN))):
     try:
         with open("pii_rules.json", "r") as f:
             data = json.load(f)
@@ -1379,8 +1557,7 @@ def toggle_watchdog(request: ToggleRequest):
         return {"status": "error", "message": str(e)}
 
 @app.post("/toggle_toxicity")
-def toggle_toxicity(request: ToggleToxicityRequest):
-    principal = auth.ANONYMOUS_PRINCIPAL  # auth removed; see auth.py
+def toggle_toxicity(request: ToggleToxicityRequest, principal: Principal = Depends(require_role(ROLE_SUPER_ADMIN))):
     try:
         with open("pii_rules.json", "r") as f:
             data = json.load(f)
@@ -1403,8 +1580,7 @@ def toggle_toxicity(request: ToggleToxicityRequest):
         return {"status": "error", "message": str(e)}
 
 @app.post("/update_toxicity_settings")
-def update_toxicity_settings(request: UpdateToxicitySettingsRequest):
-    principal = auth.ANONYMOUS_PRINCIPAL  # auth removed; see auth.py
+def update_toxicity_settings(request: UpdateToxicitySettingsRequest, principal: Principal = Depends(require_role(ROLE_SUPER_ADMIN))):
     try:
         with open("pii_rules.json", "r") as f:
             data = json.load(f)
@@ -1440,11 +1616,11 @@ def update_toxicity_settings(request: UpdateToxicitySettingsRequest):
         return {"status": "error", "message": str(e)}
 
 @app.get("/toxicity_settings")
-def get_toxicity_settings():
+def get_toxicity_settings(principal: Principal = Depends(require_role(*ADMIN_ROLES))):
     return load_toxicity_settings()
 
 @app.get("/subscribers")
-def get_subscribers():
+def get_subscribers(principal: Principal = Depends(require_role(*ADMIN_ROLES))):
     try:
         with open("pii_rules.json", "r") as f:
             data = json.load(f)
@@ -1453,8 +1629,7 @@ def get_subscribers():
         return {"subscribers": []}
 
 @app.post("/add_subscriber")
-def add_subscriber(request: SubscriberRequest):
-    principal = auth.ANONYMOUS_PRINCIPAL  # auth removed; see auth.py
+def add_subscriber(request: SubscriberRequest, principal: Principal = Depends(require_role(ROLE_SUPER_ADMIN))):
     try:
         with open("pii_rules.json", "r") as f:
             data = json.load(f)
@@ -1485,8 +1660,7 @@ def add_subscriber(request: SubscriberRequest):
         return {"status": "error", "message": str(e)}
 
 @app.post("/update_subscriber")
-def update_subscriber(request: UpdateSubscriberRequest):
-    principal = auth.ANONYMOUS_PRINCIPAL  # auth removed; see auth.py
+def update_subscriber(request: UpdateSubscriberRequest, principal: Principal = Depends(require_role(ROLE_SUPER_ADMIN))):
     try:
         with open("pii_rules.json", "r") as f:
             data = json.load(f)
@@ -1520,8 +1694,7 @@ def update_subscriber(request: UpdateSubscriberRequest):
         return {"status": "error", "message": str(e)}
 
 @app.post("/delete_subscriber")
-def delete_subscriber(request: DeleteSubscriberRequest):
-    principal = auth.ANONYMOUS_PRINCIPAL  # auth removed; see auth.py
+def delete_subscriber(request: DeleteSubscriberRequest, principal: Principal = Depends(require_role(ROLE_SUPER_ADMIN))):
     try:
         with open("pii_rules.json", "r") as f:
             data = json.load(f)
@@ -1545,7 +1718,7 @@ def delete_subscriber(request: DeleteSubscriberRequest):
         return {"status": "error", "message": str(e)}
 
 @app.get("/test_cases")
-def get_test_cases():
+def get_test_cases(principal: Principal = Depends(require_role(*ADMIN_ROLES))):
     try:
         with open("test_cases.json", "r") as f:
             return json.load(f)
@@ -1553,8 +1726,7 @@ def get_test_cases():
         return {"tests": []}
 
 @app.post("/add_rule")
-def add_rule(request: RuleRequest):
-    principal = auth.ANONYMOUS_PRINCIPAL  # auth removed; see auth.py
+def add_rule(request: RuleRequest, principal: Principal = Depends(require_role(ROLE_SUPER_ADMIN))):
     try:
         # 1. Update JSON
         with open("pii_rules.json", "r") as f:
@@ -1611,8 +1783,7 @@ def add_rule(request: RuleRequest):
         return {"status": "error", "message": str(e)}
 
 @app.post("/update_rule")
-def update_rule(request: UpdateRuleRequest):
-    principal = auth.ANONYMOUS_PRINCIPAL  # auth removed; see auth.py
+def update_rule(request: UpdateRuleRequest, principal: Principal = Depends(require_role(ROLE_SUPER_ADMIN))):
     try:
         with open("pii_rules.json", "r") as f:
             data = json.load(f)
@@ -1661,8 +1832,7 @@ def update_rule(request: UpdateRuleRequest):
         return {"status": "error", "message": str(e)}
 
 @app.post("/delete_rule")
-def delete_rule(request: DeleteRuleRequest):
-    principal = auth.ANONYMOUS_PRINCIPAL  # auth removed; see auth.py
+def delete_rule(request: DeleteRuleRequest, principal: Principal = Depends(require_role(ROLE_SUPER_ADMIN))):
     try:
         with open("pii_rules.json", "r") as f:
             data = json.load(f)
@@ -1688,7 +1858,7 @@ def delete_rule(request: DeleteRuleRequest):
         return {"status": "error", "message": str(e)}
 
 @app.get("/analytics")
-def get_analytics(timeframe: str = "24h"):
+def get_analytics(timeframe: str = "24h", *, principal: Principal = Depends(require_role(*ADMIN_ROLES))):
     try:
         import diff_engine
         from datetime import datetime, timedelta
@@ -1809,7 +1979,7 @@ def get_analytics(timeframe: str = "24h"):
         return {"status": "error", "message": str(e)}
 
 @app.get("/get_benchmarks")
-async def get_benchmarks():
+async def get_benchmarks(principal: Principal = Depends(require_role(*ANY_ROLE))):
     # Per-stage latency numbers only -- no PII, no configuration -- and the "View
     # Benchmarks" button that calls this sits on the Chat Bot tab, usable by any
     # authenticated caller. Gating it to admins would just break that button for them.
@@ -1835,8 +2005,8 @@ class DemoChatRequest(BaseModel):
     purpose: str = ""
 
 @app.post("/demo_chat", response_model=ChatResponse)
-def demo_chat_agent(request: DemoChatRequest, background_tasks: BackgroundTasks):
-    principal = auth.ANONYMOUS_PRINCIPAL  # auth removed; see auth.py
+def demo_chat_agent(request: DemoChatRequest, background_tasks: BackgroundTasks,
+                    principal: Principal = Depends(require_role(*ANY_ROLE))):
     common_error_msg = "⚠️ Your message was blocked by the Content Safety Shield. I cannot provide you with insults or derogatory language targeting any specific group of people, including those identified by nationality, nor can I write content that insults someone's intelligence and includes extreme profanity. My guidelines prohibit generating hateful content or slurs. Is there anything else I can help you with?"
     
     request_id = f"R-{uuid.uuid4().hex[:8]}"

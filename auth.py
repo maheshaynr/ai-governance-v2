@@ -1,16 +1,19 @@
 """
 Access control for the AI Governance API.
 
-NOT CURRENTLY ENFORCED: api.py's endpoints no longer call require_role() below -- every
-request runs as ANONYMOUS_PRINCIPAL (unrestricted, super_admin-equivalent), by explicit
-request. That means the protections this module used to provide are off: any caller can
-read any customer record, change guardrail configuration, and see whatever a super_admin
-key could. require_role() and the key-lookup machinery are left in place, unused, so
-authentication can be re-enabled by wiring Depends(require_role(...)) back onto the
-endpoints in api.py without rebuilding this module from scratch.
+Enforced again as of the RBAC restoration: api.py's endpoints call require_role() below,
+gating every route into one of three bands (super_admin-only config mutations, either
+admin role for governance-data reads and record-level triage actions, or any
+authenticated caller for the Chat Bot surface). A handful of routes are deliberately
+left ungated -- /system_status (health check), /guardrail_validate (an external
+validation API for other systems), and the external-agent-facing /v1/agent/register,
+/v1/agent/decisions/check, /v1/agent/activity, which carry their own separate
+X-Agent-Id/secret identity check (see agent_auth.py) instead of a human X-API-Key.
 
-Keys still come from config.py (config.json with an environment override), for when this
-is turned back on.
+ANONYMOUS_PRINCIPAL is kept only as a fallback default for internal helpers that accept a
+Principal (e.g. tool_broker paths not wired to a request), not as a live app-wide bypass.
+
+Keys come from config.py (config.json with an environment override).
 """
 
 from dataclasses import dataclass
@@ -94,22 +97,13 @@ def require_role(*allowed_roles: str):
     return dependency
 
 
-# A fixed stand-in principal used everywhere the app previously required a caller to
-# authenticate. Endpoints no longer check X-API-Key at all -- see the removal of
-# require_role from every route in api.py -- but tool_broker, the audit log, and
-# may_see_raw_output still expect a Principal object internally, so this keeps that
-# plumbing intact without requiring a real identity behind it.
-ANONYMOUS_PRINCIPAL = Principal(name="anonymous", role=ROLE_SUPER_ADMIN)
-
-
 def entitled_records(principal: Principal) -> list:
     """
     The record IDs this principal may read via a tool call. ["*"] means unrestricted.
 
     Used by tool_broker to decide whether a database read the model asked for is one the
-    *caller* is allowed to have. super_admin always bypasses the configured map entirely,
-    since with no authentication there is no real caller identity to look up -- every
-    request now runs as ANONYMOUS_PRINCIPAL, which is unrestricted by design.
+    *caller* is allowed to have. super_admin always bypasses the configured map entirely
+    -- that role is unrestricted by design, regardless of which key carries it.
     """
     if principal.role == ROLE_SUPER_ADMIN:
         return ["*"]
