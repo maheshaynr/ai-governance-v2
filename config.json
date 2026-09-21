@@ -2,5 +2,8 @@
   "OLLAMA_URL": "http://localhost:11434/api/chat",
   "DEFAULT_LLM_MODEL": "phi4-mini-cpu",
   "TOXIC_LLM_MODEL": "tinyllama-cpu",
-  "CODING_LLM_MODEL": "phi4-mini-cpu"
+  "CODING_LLM_MODEL": "phi4-mini-cpu",
+  "DPDP_BASE_URL": "http://localhost:8002",
+  "DPDP_SERVICE_TOKEN": "dev-ai-guardrail-token",
+  "EXPOSE_RAW_OUTPUT": true
 }

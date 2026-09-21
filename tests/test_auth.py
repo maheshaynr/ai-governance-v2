@@ -1,16 +1,15 @@
 """
-G-03: every endpoint requires a caller, and configuration changes require super_admin.
-
-Before this, /toggle_toxicity, /add_rule and /delete_rule were open to anyone who could
-reach the API -- so the guardrails could be switched off and the alarm recording it
-deleted. RBAC was later removed entirely (by explicit request) and has since been
-restored -- this file is the restored band-matrix, extended to cover everything added
-to api.py while auth was off (the DPDP consent ledger, the Agent Governance Layer).
+Role-based behavior for the admin/config surface -- self-declared via X-Role (see
+auth.py), not authenticated. There's no login, no key, and no 401 case any more: a
+missing or unrecognized role simply defaults to the least-privileged role (caller), and
+require_role() enforces what that role may do from there. What's still real and worth
+testing: admin_pii can view governance data but not change guardrail config, only
+super_admin can, and a caller can't reach either.
 """
 
 import pytest
 
-from conftest import SUPER_KEY, caller_headers, pii_admin_headers, super_headers
+from conftest import caller_headers, pii_admin_headers, super_headers
 
 # (method, path, json body) for each band.
 SUPER_ADMIN_ONLY = [
@@ -54,8 +53,9 @@ CALLER_READABLE = [
     ("get", "/get_benchmarks", None),
 ]
 
-# Deliberately excluded from human RBAC entirely -- external-system-facing, see auth.py.
-NEVER_REQUIRES_API_KEY = [
+# Never gated by require_role() at all -- external-system-facing (VOXA etc.), see
+# auth.py. Unaffected by X-Role entirely, not just defaulted to caller.
+NOT_ROLE_GATED = [
     ("post", "/guardrail_validate", {"text": "hello"}),
     ("post", "/v1/agent/register", {"agent_name": "test-open-check"}),
 ]
@@ -68,23 +68,24 @@ def _call(client, method, path, body, headers):
 
 
 @pytest.mark.parametrize("method,path,body", SUPER_ADMIN_ONLY + ADMIN_ROLES_SURFACE)
-def test_requires_a_key(client, method, path, body):
-    """No key at all is a 401, on every guarded endpoint."""
+def test_no_role_declared_defaults_to_caller(client, method, path, body):
+    """No X-Role header at all defaults to caller, which can't reach any admin surface."""
     response = _call(client, method, path, body, headers=None)
-    assert response.status_code == 401, f"{path} answered {response.status_code} unauthenticated"
+    assert response.status_code == 403, f"{path} answered {response.status_code} with no role declared"
 
 
 @pytest.mark.parametrize("method,path,body", SUPER_ADMIN_ONLY + ADMIN_ROLES_SURFACE)
-def test_rejects_unknown_key(client, method, path, body):
-    response = _call(client, method, path, body, headers={"X-API-Key": "not-a-real-key"})
-    assert response.status_code == 401
+def test_unrecognized_role_defaults_to_caller(client, method, path, body):
+    response = _call(client, method, path, body, headers={"X-Role": "not-a-real-role"})
+    assert response.status_code == 403
 
 
 @pytest.mark.parametrize("method,path,body", SUPER_ADMIN_ONLY)
 def test_config_changes_need_super_admin(client, method, path, body):
     """
     A PII admin can read governance data but must not be able to change the guard
-    configuration. The UI already drew this distinction; now the server enforces it.
+    configuration. The UI already drew this distinction; the server still enforces it,
+    based on whichever role was declared.
     """
     response = _call(client, method, path, body, headers=pii_admin_headers())
     assert response.status_code == 403, f"{path} let admin_pii through"
@@ -110,30 +111,27 @@ def test_callers_can_read_non_sensitive_endpoints(client, method, path, body):
         assert response.status_code == 200, f"{path} refused {headers}: {response.text}"
 
 
-@pytest.mark.parametrize("method,path,body", NEVER_REQUIRES_API_KEY)
-def test_external_facing_endpoints_never_require_an_api_key(client, method, path, body):
+@pytest.mark.parametrize("method,path,body", NOT_ROLE_GATED)
+def test_external_facing_endpoints_are_never_role_gated(client, method, path, body):
     """
     /guardrail_validate and /v1/agent/register are for external systems (e.g. VOXA) that
-    have no internal admin key -- confirmed explicitly here rather than left implicit.
+    never send X-Role at all -- confirmed explicitly here rather than left implicit.
     """
     response = _call(client, method, path, body, headers=None)
-    assert response.status_code not in (401, 403), f"{path} started requiring human RBAC"
+    assert response.status_code != 403, f"{path} started requiring a declared role"
 
 
 def test_system_status_is_open(client):
-    """Health checks must work without a key, and must not leak configuration."""
+    """Health checks must work with no role declared, and must not leak configuration."""
     response = client.get("/system_status")
     assert response.status_code == 200
 
     body = response.json()
     assert "guards" in body and "status" in body
-
-    serialized = response.text.lower()
-    assert SUPER_KEY.lower() not in serialized
-    assert "regex" not in serialized
+    assert "regex" not in response.text.lower()
 
 
-def test_whoami_reports_the_server_side_role(client):
+def test_whoami_reports_the_declared_role(client):
     for headers, expected_role, expected_admin in [
         (super_headers(), "super_admin", True),
         (pii_admin_headers(), "admin_pii", True),
@@ -145,7 +143,7 @@ def test_whoami_reports_the_server_side_role(client):
 
 
 def test_config_change_is_audited(client, audit_entries, app_module):
-    """A guard being switched off must leave a record of who did it."""
+    """A guard being switched off must leave a record of who (which declared role) did it."""
     before_count = len(audit_entries())
 
     response = client.post("/toggle_watchdog", json={"enable_llm_watchdog": False},
@@ -157,7 +155,7 @@ def test_config_change_is_audited(client, audit_entries, app_module):
     assert changes, "toggling a guard wrote no config_change audit entry"
 
     entry = changes[-1]
-    assert entry["actor"] == "test_super"
+    assert entry["actor"] == "super_admin"
     assert entry["actor_role"] == "super_admin"
     assert entry["action"] == "toggle_watchdog"
     assert entry["after"] is False

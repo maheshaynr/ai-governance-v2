@@ -52,11 +52,11 @@ BLOCKED_EXAMPLE = (
 )
 
 
-def test_response_has_exactly_flag_message_and_flag_reason(client):
-    """The contract is deliberately minimal -- just these three fields, nothing else."""
+def test_response_has_exactly_flag_message_correlation_id_and_flag_reason(client):
+    """The contract is deliberately minimal -- just these four fields, nothing else."""
     response = client.post("/guardrail_validate", json={"text": CLEAN_TEXT})
     body = response.json()
-    assert set(body.keys()) == {"flag", "message", "flag_reason"}
+    assert set(body.keys()) == {"flag", "message", "correlation_id", "flag_reason"}
 
 
 def test_truly_clean_text_returns_clear(client):
@@ -209,14 +209,14 @@ def _mock_confirmation(app_module, monkeypatch, is_confirmation=True, is_related
 
     monkeypatch.setattr(app_module.llm_watchdog, "analyze_payment_intent", fake_intent)
 
-    def fake_check_decision(subject_ref, data_categories, purpose, operation,
+    def fake_check_decision(principal_ref, data_categories, purpose, operation,
                              recipient_ref=None, policy_context=None, correlation_id=None):
-        allowed = subject_ref in _DPDP_AUTO_PAY_CONSENTED
+        allowed = principal_ref in _DPDP_AUTO_PAY_CONSENTED
         return {
             "decision": "ALLOW" if allowed else "DENY",
             "guard_failed": False,
             "error": None,
-            "decision_id": f"dec_test_{subject_ref}",
+            "decision_id": f"dec_test_{principal_ref}",
             "notice_version": None,
             "reason_code": None if allowed else "CONSENT_NOT_GRANTED",
         }

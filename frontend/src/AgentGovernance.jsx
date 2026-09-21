@@ -95,20 +95,18 @@ export default function AgentGovernance({ principal = DEFAULT_PRINCIPAL }) {
   );
 
   return (
-    <div className="app-container">
-      <div className="header">
-        <div>
-          <h1>🧭 Agent Governance</h1>
-          <div className="nav-tabs">
-            <button className={activeTab === 'agents' ? 'active' : ''} onClick={() => setActiveTab('agents')}>Registered Agents</button>
-            <button className={activeTab === 'activity' ? 'active' : ''} onClick={() => setActiveTab('activity')}>Activity Log</button>
-            <button className={activeTab === 'events' ? 'active' : ''} onClick={() => setActiveTab('events')}>Compliance Events</button>
-            <button className={activeTab === 'stats' ? 'active' : ''} onClick={() => setActiveTab('stats')}>Stats</button>
-          </div>
+    <div>
+      <div style={{ marginBottom: '1rem' }}>
+        <h2>🧭 Agent Governance</h2>
+        <div className="nav-tabs">
+          <button className={activeTab === 'agents' ? 'active' : ''} onClick={() => setActiveTab('agents')}>Registered Agents</button>
+          <button className={activeTab === 'activity' ? 'active' : ''} onClick={() => setActiveTab('activity')}>Activity Log</button>
+          <button className={activeTab === 'events' ? 'active' : ''} onClick={() => setActiveTab('events')}>Compliance Events</button>
+          <button className={activeTab === 'stats' ? 'active' : ''} onClick={() => setActiveTab('stats')}>Stats</button>
         </div>
       </div>
 
-      <main>
+      <div>
         {activeTab === 'agents' && (
           <div className="admin-layout">
             <div className="rules-list">
@@ -122,9 +120,11 @@ export default function AgentGovernance({ principal = DEFAULT_PRINCIPAL }) {
                   <thead style={{ background: '#f6f8fa' }}>
                     <tr>
                       <th style={th}>Agent Name</th>
+                      <th style={th}>Agent ID</th>
                       <th style={th}>Business Unit</th>
                       <th style={th}>Owner</th>
                       <th style={th}>Location</th>
+                      <th style={th}>Device</th>
                       <th style={th}>Type</th>
                       <th style={th}>Status</th>
                       <th style={th}>Registered</th>
@@ -133,13 +133,15 @@ export default function AgentGovernance({ principal = DEFAULT_PRINCIPAL }) {
                   </thead>
                   <tbody>
                     {agents.length === 0 ? (
-                      <tr><td colSpan="8" style={{ padding: '2rem', textAlign: 'center', color: '#57606a' }}>No agents registered yet.</td></tr>
+                      <tr><td colSpan="10" style={{ padding: '2rem', textAlign: 'center', color: '#57606a' }}>No agents registered yet.</td></tr>
                     ) : agents.map((a) => (
                       <tr key={a.agent_id} style={{ borderBottom: '1px solid #d0d7de' }}>
                         <td style={{ ...td, fontWeight: '500' }}>{a.agent_name}</td>
+                        <td style={{ ...td, fontFamily: 'monospace', fontSize: '0.8rem' }} title={a.agent_id}>{a.agent_id ? `${a.agent_id.slice(0, 8)}…` : '—'}</td>
                         <td style={td}>{a.business_unit || '—'}</td>
                         <td style={td}>{a.owner_name || '—'}</td>
                         <td style={{ ...td, fontFamily: 'monospace', fontSize: '0.8rem' }}>{a.location_of_deployment || '—'}</td>
+                        <td style={{ ...td, fontFamily: 'monospace', fontSize: '0.8rem' }} title={a.device_id || ''}>{a.device_id || '—'}</td>
                         <td style={td}>{a.in_house_or_external || '—'}</td>
                         <td style={td}>{statusPill(a.status, a.status === 'active')}</td>
                         <td style={{ ...td, fontSize: '0.8rem', color: '#57606a', whiteSpace: 'nowrap' }}>
@@ -183,12 +185,13 @@ export default function AgentGovernance({ principal = DEFAULT_PRINCIPAL }) {
                       <th style={th}>Invoking User</th>
                       <th style={th}>Action</th>
                       <th style={th}>Outcome</th>
+                      <th style={th}>Reason</th>
                       <th style={th}>Correlation ID</th>
                     </tr>
                   </thead>
                   <tbody>
                     {activity.length === 0 ? (
-                      <tr><td colSpan="6" style={{ padding: '2rem', textAlign: 'center', color: '#57606a' }}>No activity logged yet.</td></tr>
+                      <tr><td colSpan="7" style={{ padding: '2rem', textAlign: 'center', color: '#57606a' }}>No activity logged yet.</td></tr>
                     ) : activity.map((row) => (
                       <tr key={row.id} style={{ borderBottom: '1px solid #d0d7de' }}>
                         <td style={{ ...td, fontSize: '0.8rem', color: '#57606a', whiteSpace: 'nowrap' }}>
@@ -198,6 +201,7 @@ export default function AgentGovernance({ principal = DEFAULT_PRINCIPAL }) {
                         <td style={{ ...td, fontFamily: 'monospace', fontSize: '0.75rem' }}>{row.invoking_user_id || '—'}</td>
                         <td style={td}>{row.action}</td>
                         <td style={td}>{statusPill(row.outcome, row.outcome === 'SERVED')}</td>
+                        <td style={{ ...td, fontFamily: 'monospace', fontSize: '0.75rem', color: '#57606a' }}>{row.reason_code || '—'}</td>
                         <td style={{ ...td, fontFamily: 'monospace', fontSize: '0.75rem', color: '#57606a' }}>{row.correlation_id || '—'}</td>
                       </tr>
                     ))}
@@ -269,7 +273,7 @@ export default function AgentGovernance({ principal = DEFAULT_PRINCIPAL }) {
             </div>
           </div>
         )}
-      </main>
+      </div>
     </div>
   );
 }

@@ -18,22 +18,15 @@ _DEFAULTS = {
     "CODING_LLM_MODEL": "phi4-mini-cpu",    # GPU alternative: "phi4-mini:3.8b"
 
     # --- Access control ---
-    # DEVELOPMENT PLACEHOLDERS ONLY. Every deployment must replace these, either by
-    # editing config.json or -- preferred, so keys never enter version control -- by
-    # setting the API_KEYS environment variable to the same structure as JSON.
-    "API_KEYS": {
-        "dev-super-admin-key": {"name": "dev_super_admin", "role": "super_admin"},
-        "dev-pii-admin-key": {"name": "dev_pii_admin", "role": "admin_pii"},
-        "dev-caller-key": {"name": "dev_caller", "role": "caller"},
-    },
-
-    # Which database records each principal may read through a tool call. "*" means any
-    # record; the demo caller is deliberately limited to 101 so the refusal path can be
-    # demonstrated without editing config.
+    # Roles are self-declared (X-Role header, see auth.py) -- there is no credential and
+    # no per-user identity, so entitlements are keyed by role directly rather than by an
+    # individual name. Which database records each role may read through a tool call.
+    # "*" means any record; caller is deliberately limited to 101 so the refusal path
+    # can be demonstrated without editing config.
     "ENTITLEMENTS": {
-        "dev_super_admin": ["*"],
-        "dev_pii_admin": ["*"],
-        "dev_caller": ["101"],
+        "super_admin": ["*"],
+        "admin_pii": ["*"],
+        "caller": ["101"],
     },
 
     # When false, unmasked model output is never returned to any caller. Turning this on
@@ -92,7 +85,6 @@ OLLAMA_URL = _settings["OLLAMA_URL"]
 DEFAULT_LLM_MODEL = _settings["DEFAULT_LLM_MODEL"]
 TOXIC_LLM_MODEL = _settings["TOXIC_LLM_MODEL"]
 CODING_LLM_MODEL = _settings["CODING_LLM_MODEL"]
-API_KEYS = _settings["API_KEYS"]
 ENTITLEMENTS = _settings["ENTITLEMENTS"]
 EXPOSE_RAW_OUTPUT = _settings["EXPOSE_RAW_OUTPUT"]
 DPDP_BASE_URL = _settings["DPDP_BASE_URL"]

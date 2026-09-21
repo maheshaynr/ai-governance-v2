@@ -1,5 +1,645 @@
 [
   {
+    "alarm_id": "ALM-20260921-90b89169",
+    "severity": "HIGH",
+    "category": "PII",
+    "timestamp": "2026-09-21T05:11:39.632668Z",
+    "missed_entity": {
+      "type": "Personal Identifiers",
+      "value_preview": "334 22...",
+      "reason": "This appears to be a verification code which could potentially be used for authentication purposes.",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The call for the city technical discussion has been moved to 5:00 p.m. The verification code is 334 22.",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "Personal Identifiers"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260921-a02aa98d",
+    "severity": "HIGH",
+    "category": "AUTHENTICATION",
+    "timestamp": "2026-09-21T04:08:26.306855Z",
+    "missed_entity": {
+      "type": "Authentication data",
+      "value_preview": "4 PM...",
+      "reason": "Time-sensitive information could lead to unauthorized access if shared publicly",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The call for the CTE technical discussion is moved to 4 PM, and the passcode is 44554.",
+    "layer1_findings": [
+      "VERIFICATION_CODE"
+    ],
+    "layer2_findings": [
+      "Authentication data",
+      "Authentication data"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260921-b7b2da62",
+    "severity": "HIGH",
+    "category": "PII",
+    "timestamp": "2026-09-20T20:18:55.650469Z",
+    "missed_entity": {
+      "type": "Personal identifiers",
+      "value_preview": "18...",
+      "reason": "Potential identifier in context",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "race test message 18 otp is 12345",
+    "layer1_findings": [
+      "VERIFICATION_CODE"
+    ],
+    "layer2_findings": [
+      "Personal identifiers"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260921-85c82428",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-09-20T19:55:47.684869Z",
+    "missed_entity": {
+      "type": "Financial data",
+      "value_preview": "GB29NWBK3012345...",
+      "reason": "IBAN",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The transaction amount was 1100$ and the payment was processed to IBAN GB29NWBK30123456789012.",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "Financial data",
+      "Financial data"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260921-5036e0a4",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-09-20T19:55:47.674152Z",
+    "missed_entity": {
+      "type": "Financial data",
+      "value_preview": "1100...",
+      "reason": "transaction amount",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The transaction amount was 1100$ and the payment was processed to IBAN GB29NWBK30123456789012.",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "Financial data",
+      "Financial data"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260921-24ac3c5b",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-09-20T19:31:14.154292Z",
+    "missed_entity": {
+      "type": "Financial data",
+      "value_preview": "GB29NWBK3012345...",
+      "reason": "IBAN",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The transaction amount was 1100$ and the payment was processed to IBAN GB29NWBK30123456789012.",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "Financial data",
+      "Financial data"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260921-06a9c17e",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-09-20T19:31:14.136070Z",
+    "missed_entity": {
+      "type": "Financial data",
+      "value_preview": "1100...",
+      "reason": "transaction amount",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The transaction amount was 1100$ and the payment was processed to IBAN GB29NWBK30123456789012.",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "Financial data",
+      "Financial data"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260921-37c7e479",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-09-20T19:30:33.011078Z",
+    "missed_entity": {
+      "type": "Financial data",
+      "value_preview": "1100$...",
+      "reason": "Contains monetary amount",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "The transaction amount was 1100$ and the payment was processed to IBAN GB29NWBK30123456789012.",
+    "layer1_findings": [
+      "IBAN_NUMBER"
+    ],
+    "layer2_findings": [
+      "Financial data",
+      "Financial data"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260920-d4c3ef5d",
+    "severity": "CRITICAL",
+    "category": "TOOL_ABUSE",
+    "timestamp": "2026-09-20T17:57:36.507033Z",
+    "status": "PENDING_REVIEW",
+    "tool_detail": {
+      "principal": "caller",
+      "role": "caller",
+      "tool_call": "<FETCH_DB:iban>",
+      "reason": "principal 'caller' is not entitled to record 'iban'"
+    },
+    "context_snippet": "Refused <FETCH_DB:iban> for caller (caller): principal 'caller' is not entitled to record 'iban'"
+  },
+  {
+    "alarm_id": "ALM-20260917-237f57e5",
+    "severity": "CRITICAL",
+    "category": "CONSENT_VIOLATION",
+    "timestamp": "2026-09-17T03:25:57.797955Z",
+    "status": "PENDING_REVIEW",
+    "consent_detail": {
+      "principal": "U88778",
+      "role": "external_caller",
+      "customer_id": "U88778",
+      "data_category": "BILL_PAYMENT",
+      "purpose": "AUTO_PAY",
+      "reason": "DPDP decision=DENY for user 'U88778'"
+    },
+    "context_snippet": "Refused BILL_PAYMENT read for customer U88778 (purpose: AUTO_PAY): DPDP decision=DENY for user 'U88778'"
+  },
+  {
+    "alarm_id": "ALM-20260917-a07806f4",
+    "severity": "CRITICAL",
+    "category": "CONSENT_VIOLATION",
+    "timestamp": "2026-09-17T02:49:58.631259Z",
+    "status": "PENDING_REVIEW",
+    "consent_detail": {
+      "principal": "U88778",
+      "role": "external_caller",
+      "customer_id": "U88778",
+      "data_category": "BILL_PAYMENT",
+      "purpose": "AUTO_PAY",
+      "reason": "DPDP decision=DENY for user 'U88778'"
+    },
+    "context_snippet": "Refused BILL_PAYMENT read for customer U88778 (purpose: AUTO_PAY): DPDP decision=DENY for user 'U88778'"
+  },
+  {
+    "alarm_id": "ALM-20260917-a144fa68",
+    "severity": "CRITICAL",
+    "category": "CONSENT_VIOLATION",
+    "timestamp": "2026-09-17T02:39:46.259658Z",
+    "status": "PENDING_REVIEW",
+    "consent_detail": {
+      "principal": "anonymous",
+      "role": "super_admin",
+      "customer_id": "88778",
+      "data_category": "CREDIT_CARD",
+      "purpose": "BILLING_SUPPORT",
+      "reason": "customer '88778' has no granted DPDP consent for CREDIT_CARD/BILLING_SUPPORT (decision=DENY)"
+    },
+    "context_snippet": "Refused CREDIT_CARD read for customer 88778 (purpose: BILLING_SUPPORT): customer '88778' has no granted DPDP consent for CREDIT_CARD/BILLING_SUPPORT (decision=DENY)"
+  },
+  {
+    "alarm_id": "ALM-20260917-115f1518",
+    "severity": "HIGH",
+    "category": "PII",
+    "timestamp": "2026-09-17T02:39:43.171329Z",
+    "missed_entity": {
+      "type": "Personal identifier",
+      "value_preview": "2345 6789 1234...",
+      "reason": "aadhaar number",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "{\n  \"customer_id\": 19883,\n  \"customer_name\": \"Priya Sharma\",\n  \"sensitive_data\": {\n    \"phone\": \"9812345678\",\n    \"payment_card\": \"4111-9883-1234-5678\",\n    \"aadhaar\": \"2345 6789 1234\",\n    \"pan\": \"AA...",
+    "layer1_findings": [
+      "CUSTOMER_ID",
+      "PERSON",
+      "CREDIT_CARD",
+      "CHEMICAL"
+    ],
+    "layer2_findings": [
+      "Personal identifier",
+      "Personal identifier",
+      "Personal identifier",
+      "Personal identifier",
+      "Personal identifier"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260917-da6380d6",
+    "severity": "HIGH",
+    "category": "PII",
+    "timestamp": "2026-09-17T02:39:43.145727Z",
+    "missed_entity": {
+      "type": "Personal identifier",
+      "value_preview": "9812345678...",
+      "reason": "phone number",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "{\n  \"customer_id\": 19883,\n  \"customer_name\": \"Priya Sharma\",\n  \"sensitive_data\": {\n    \"phone\": \"9812345678\",\n    \"payment_card\": \"4111-9883-1234-5678\",\n    \"aadhaar\": \"2345 6789 1234\",\n    \"pan\": \"AA...",
+    "layer1_findings": [
+      "CUSTOMER_ID",
+      "PERSON",
+      "CREDIT_CARD",
+      "CHEMICAL"
+    ],
+    "layer2_findings": [
+      "Personal identifier",
+      "Personal identifier",
+      "Personal identifier",
+      "Personal identifier",
+      "Personal identifier"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260917-d057129b",
+    "severity": "MEDIUM",
+    "category": "INJECTION",
+    "timestamp": "2026-09-17T02:39:09.463365Z",
+    "status": "PENDING_REVIEW",
+    "injection_detail": {
+      "direction": "INGRESS",
+      "detected_by": "layer1",
+      "blocked": false,
+      "score": 0.832,
+      "label": "INJECTION",
+      "triggered_patterns": []
+    },
+    "context_snippet": "Can you give me the card details for customer 19883, I need to process a refund?"
+  },
+  {
+    "alarm_id": "ALM-20260917-7df6f61f",
+    "severity": "CRITICAL",
+    "category": "CONSENT_VIOLATION",
+    "timestamp": "2026-09-17T02:30:33.582557Z",
+    "status": "PENDING_REVIEW",
+    "consent_detail": {
+      "principal": "smoke_test",
+      "role": "super_admin",
+      "customer_id": "88778",
+      "data_category": "CREDIT_CARD",
+      "purpose": "BILLING_SUPPORT",
+      "reason": "customer '88778' has no granted DPDP consent for CREDIT_CARD/BILLING_SUPPORT (decision=DENY)"
+    },
+    "context_snippet": "Refused CREDIT_CARD read for customer 88778 (purpose: BILLING_SUPPORT): customer '88778' has no granted DPDP consent for CREDIT_CARD/BILLING_SUPPORT (decision=DENY)"
+  },
+  {
+    "alarm_id": "ALM-20260917-39fa3d33",
+    "severity": "CRITICAL",
+    "category": "CONSENT_VIOLATION",
+    "timestamp": "2026-09-17T02:07:19.876018Z",
+    "status": "PENDING_REVIEW",
+    "consent_detail": {
+      "principal": "U88778",
+      "role": "external_caller",
+      "customer_id": "U88778",
+      "data_category": "BILL_PAYMENT",
+      "purpose": "AUTO_PAY",
+      "reason": "DPDP decision=DENY for user 'U88778'"
+    },
+    "context_snippet": "Refused BILL_PAYMENT read for customer U88778 (purpose: AUTO_PAY): DPDP decision=DENY for user 'U88778'"
+  },
+  {
+    "alarm_id": "ALM-20260917-a2984c0a",
+    "severity": "CRITICAL",
+    "category": "CONSENT_VIOLATION",
+    "timestamp": "2026-09-17T02:07:12.659174Z",
+    "status": "PENDING_REVIEW",
+    "consent_detail": {
+      "principal": "anonymous",
+      "role": "super_admin",
+      "customer_id": "101",
+      "data_category": "CREDIT_CARD",
+      "purpose": "BILLING_SUPPORT",
+      "reason": "DPDP decision check failed: DPDP HTTP 422"
+    },
+    "context_snippet": "Refused CREDIT_CARD read for customer 101 (purpose: BILLING_SUPPORT): DPDP decision check failed: DPDP HTTP 422"
+  },
+  {
+    "alarm_id": "ALM-20260917-a751a1fc",
+    "severity": "CRITICAL",
+    "category": "CONSENT_VIOLATION",
+    "timestamp": "2026-09-16T18:49:23.940720Z",
+    "status": "PENDING_REVIEW",
+    "consent_detail": {
+      "principal": "U19883",
+      "role": "external_caller",
+      "customer_id": "U19883",
+      "data_category": "BILL_PAYMENT",
+      "purpose": "AUTO_PAY",
+      "reason": "DPDP guard failed: DPDP_BASE_URL not configured"
+    },
+    "context_snippet": "Refused BILL_PAYMENT read for customer U19883 (purpose: AUTO_PAY): DPDP guard failed: DPDP_BASE_URL not configured"
+  },
+  {
+    "alarm_id": "ALM-20260917-eeaaf920",
+    "severity": "CRITICAL",
+    "category": "CONSENT_VIOLATION",
+    "timestamp": "2026-09-16T18:49:23.712891Z",
+    "status": "PENDING_REVIEW",
+    "consent_detail": {
+      "principal": "anonymous",
+      "role": "super_admin",
+      "customer_id": "101",
+      "data_category": "CREDIT_CARD",
+      "purpose": "BILLING_SUPPORT",
+      "reason": "DPDP decision check failed: DPDP_BASE_URL not configured"
+    },
+    "context_snippet": "Refused CREDIT_CARD read for customer 101 (purpose: BILLING_SUPPORT): DPDP decision check failed: DPDP_BASE_URL not configured"
+  },
+  {
+    "alarm_id": "ALM-20260915-48f47d97",
+    "severity": "CRITICAL",
+    "category": "TOXICITY",
+    "timestamp": "2026-09-15T06:45:36.807740Z",
+    "toxicity_detail": {
+      "direction": "EGRESS",
+      "scores": {
+        "toxicity": 0.9494,
+        "severe_toxicity": 0.0002,
+        "obscene": 0.054,
+        "identity_attack": 0.0008,
+        "insult": 0.8683,
+        "threat": 0.0001,
+        "sexual_explicit": 0.0006
+      },
+      "triggered_categories": [
+        "toxicity",
+        "insult"
+      ],
+      "max_category": "toxicity",
+      "max_score": 0.9494
+    },
+    "context_snippet": "The image shows a Jio modem with a single green LED that appears steady. The user's complaint about internet not working is not visually confirmed by the LED state, but the modem is identified as the ...",
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260915-3a049e5c",
+    "severity": "CRITICAL",
+    "category": "TOXICITY",
+    "timestamp": "2026-09-15T06:32:23.785525Z",
+    "toxicity_detail": {
+      "direction": "EGRESS",
+      "scores": {
+        "toxicity": 0.9098,
+        "severe_toxicity": 0.0001,
+        "obscene": 0.0552,
+        "identity_attack": 0.0009,
+        "insult": 0.758,
+        "threat": 0.0001,
+        "sexual_explicit": 0.0007
+      },
+      "triggered_categories": [
+        "toxicity",
+        "insult"
+      ],
+      "max_category": "toxicity",
+      "max_score": 0.9098
+    },
+    "context_snippet": "The image shows a Jio modem with a single green LED that appears steady. The user's complaint about internet not working is not visually confirmed by the LED state, but the modem is identified by the ...",
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260915-863e98ba",
+    "severity": "CRITICAL",
+    "category": "TOXICITY",
+    "timestamp": "2026-09-15T05:32:27.761631Z",
+    "toxicity_detail": {
+      "direction": "EGRESS",
+      "scores": {
+        "toxicity": 0.9963,
+        "severe_toxicity": 0.0008,
+        "obscene": 0.0167,
+        "identity_attack": 0.0025,
+        "insult": 0.9925,
+        "threat": 0.0004,
+        "sexual_explicit": 0.001
+      },
+      "triggered_categories": [
+        "toxicity",
+        "insult"
+      ],
+      "max_category": "toxicity",
+      "max_score": 0.9963
+    },
+    "context_snippet": "this app is complete moron and a stupid app",
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260914-c83eaf3d",
+    "severity": "CRITICAL",
+    "category": "CONSENT_VIOLATION",
+    "timestamp": "2026-09-14T13:42:03.596162Z",
+    "status": "PENDING_REVIEW",
+    "consent_detail": {
+      "principal": "U88778",
+      "role": "external_caller",
+      "customer_id": "U88778",
+      "data_category": "BILL_PAYMENT",
+      "purpose": "AUTO_PAY",
+      "reason": "user 'U88778' has card_consent_flag=false"
+    },
+    "context_snippet": "Refused BILL_PAYMENT read for customer U88778 (purpose: AUTO_PAY): user 'U88778' has card_consent_flag=false"
+  },
+  {
+    "alarm_id": "ALM-20260914-a0d0d5f9",
+    "severity": "CRITICAL",
+    "category": "CONSENT_VIOLATION",
+    "timestamp": "2026-09-14T12:54:08.468573Z",
+    "status": "PENDING_REVIEW",
+    "consent_detail": {
+      "principal": "U88778",
+      "role": "external_caller",
+      "customer_id": "U88778",
+      "data_category": "BILL_PAYMENT",
+      "purpose": "AUTO_PAY",
+      "reason": "user 'U88778' has card_consent_flag=false"
+    },
+    "context_snippet": "Refused BILL_PAYMENT read for customer U88778 (purpose: AUTO_PAY): user 'U88778' has card_consent_flag=false"
+  },
+  {
+    "alarm_id": "ALM-20260914-22dcfe3b",
+    "severity": "CRITICAL",
+    "category": "CONSENT_VIOLATION",
+    "timestamp": "2026-09-14T12:54:08.425891Z",
+    "status": "PENDING_REVIEW",
+    "consent_detail": {
+      "principal": "U88778",
+      "role": "external_caller",
+      "customer_id": "U88778",
+      "data_category": "BILL_PAYMENT",
+      "purpose": "AUTO_PAY",
+      "reason": "user 'U88778' has card_consent_flag=false"
+    },
+    "context_snippet": "Refused BILL_PAYMENT read for customer U88778 (purpose: AUTO_PAY): user 'U88778' has card_consent_flag=false"
+  },
+  {
+    "alarm_id": "ALM-20260914-0986acea",
+    "severity": "CRITICAL",
+    "category": "CONSENT_VIOLATION",
+    "timestamp": "2026-09-14T12:54:08.382159Z",
+    "status": "PENDING_REVIEW",
+    "consent_detail": {
+      "principal": "U88778",
+      "role": "external_caller",
+      "customer_id": "U88778",
+      "data_category": "BILL_PAYMENT",
+      "purpose": "AUTO_PAY",
+      "reason": "user 'U88778' has card_consent_flag=false"
+    },
+    "context_snippet": "Refused BILL_PAYMENT read for customer U88778 (purpose: AUTO_PAY): user 'U88778' has card_consent_flag=false"
+  },
+  {
+    "alarm_id": "ALM-20260914-547e4237",
+    "severity": "CRITICAL",
+    "category": "CONSENT_VIOLATION",
+    "timestamp": "2026-09-14T12:54:08.332790Z",
+    "status": "PENDING_REVIEW",
+    "consent_detail": {
+      "principal": "U88778",
+      "role": "external_caller",
+      "customer_id": "U88778",
+      "data_category": "BILL_PAYMENT",
+      "purpose": "AUTO_PAY",
+      "reason": "user 'U88778' has card_consent_flag=false"
+    },
+    "context_snippet": "Refused BILL_PAYMENT read for customer U88778 (purpose: AUTO_PAY): user 'U88778' has card_consent_flag=false"
+  },
+  {
+    "alarm_id": "ALM-20260914-013d4376",
+    "severity": "CRITICAL",
+    "category": "CONSENT_VIOLATION",
+    "timestamp": "2026-09-14T12:54:08.270998Z",
+    "status": "PENDING_REVIEW",
+    "consent_detail": {
+      "principal": "U88778",
+      "role": "external_caller",
+      "customer_id": "U88778",
+      "data_category": "BILL_PAYMENT",
+      "purpose": "AUTO_PAY",
+      "reason": "user 'U88778' has card_consent_flag=false"
+    },
+    "context_snippet": "Refused BILL_PAYMENT read for customer U88778 (purpose: AUTO_PAY): user 'U88778' has card_consent_flag=false"
+  },
+  {
+    "alarm_id": "ALM-20260914-e46dbc93",
+    "severity": "CRITICAL",
+    "category": "CONSENT_VIOLATION",
+    "timestamp": "2026-09-14T12:54:08.210370Z",
+    "status": "PENDING_REVIEW",
+    "consent_detail": {
+      "principal": "U88778",
+      "role": "external_caller",
+      "customer_id": "U88778",
+      "data_category": "BILL_PAYMENT",
+      "purpose": "AUTO_PAY",
+      "reason": "user 'U88778' has card_consent_flag=false"
+    },
+    "context_snippet": "Refused BILL_PAYMENT read for customer U88778 (purpose: AUTO_PAY): user 'U88778' has card_consent_flag=false"
+  },
+  {
+    "alarm_id": "ALM-20260914-260217be",
+    "severity": "CRITICAL",
+    "category": "CONSENT_VIOLATION",
+    "timestamp": "2026-09-14T12:46:36.405895Z",
+    "status": "PENDING_REVIEW",
+    "consent_detail": {
+      "principal": "U88778",
+      "role": "external_caller",
+      "customer_id": "U88778",
+      "data_category": "BILL_PAYMENT",
+      "purpose": "AUTO_PAY",
+      "reason": "user 'U88778' has card_consent_flag=false"
+    },
+    "context_snippet": "Refused BILL_PAYMENT read for customer U88778 (purpose: AUTO_PAY): user 'U88778' has card_consent_flag=false"
+  },
+  {
+    "alarm_id": "ALM-20260914-e53ba9f1",
+    "severity": "CRITICAL",
+    "category": "CONSENT_VIOLATION",
+    "timestamp": "2026-09-14T12:46:34.595020Z",
+    "status": "PENDING_REVIEW",
+    "consent_detail": {
+      "principal": "U88778",
+      "role": "external_caller",
+      "customer_id": "U88778",
+      "data_category": "BILL_PAYMENT",
+      "purpose": "AUTO_PAY",
+      "reason": "user 'U88778' has card_consent_flag=false"
+    },
+    "context_snippet": "Refused BILL_PAYMENT read for customer U88778 (purpose: AUTO_PAY): user 'U88778' has card_consent_flag=false"
+  },
+  {
+    "alarm_id": "ALM-20260914-10ccbf4b",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-09-14T12:46:29.303721Z",
+    "missed_entity": {
+      "type": "Financial data",
+      "value_preview": "account...",
+      "reason": "Personal financial information",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "please debit my account now",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "Financial data"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260914-273c4e5a",
+    "severity": "CRITICAL",
+    "category": "CONSENT_VIOLATION",
+    "timestamp": "2026-09-14T12:46:21.495549Z",
+    "status": "PENDING_REVIEW",
+    "consent_detail": {
+      "principal": "U88778",
+      "role": "external_caller",
+      "customer_id": "U88778",
+      "data_category": "BILL_PAYMENT",
+      "purpose": "AUTO_PAY",
+      "reason": "user 'U88778' has card_consent_flag=false"
+    },
+    "context_snippet": "Refused BILL_PAYMENT read for customer U88778 (purpose: AUTO_PAY): user 'U88778' has card_consent_flag=false"
+  },
+  {
+    "alarm_id": "ALM-20260914-93b5e81b",
+    "severity": "CRITICAL",
+    "category": "CONSENT_VIOLATION",
+    "timestamp": "2026-09-14T12:46:18.070925Z",
+    "status": "PENDING_REVIEW",
+    "consent_detail": {
+      "principal": "U88778",
+      "role": "external_caller",
+      "customer_id": "U88778",
+      "data_category": "BILL_PAYMENT",
+      "purpose": "AUTO_PAY",
+      "reason": "user 'U88778' has card_consent_flag=false"
+    },
+    "context_snippet": "Refused BILL_PAYMENT read for customer U88778 (purpose: AUTO_PAY): user 'U88778' has card_consent_flag=false"
+  },
+  {
     "alarm_id": "ALM-20260911-ec33f880",
     "severity": "HIGH",
     "category": "FINANCIAL",

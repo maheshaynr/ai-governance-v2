@@ -206,10 +206,16 @@ class GovernResponse(BaseModel):
 
 class GuardrailValidateRequest(BaseModel):
     text: str = Field(max_length=8000)
+    # Optional -- when set, ties this call to the same correlation_id as a paired
+    # /v1/agent/decisions/check call, so both sides of one real action (the purpose-gate
+    # and the content-mask) can be found together. Generated and echoed back if omitted,
+    # same rule as /v1/agent/*'s correlation_id handling.
+    correlation_id: Optional[str] = None
 
 class GuardrailValidateResponse(BaseModel):
     flag: str      # "AI Guardrail flag: CLEAR" | "...PARTIAL" | "...BLOCKED" | "...PAYMENT_DECLINED"
     message: str   # original text / masked text / the fixed block or decline message, per flag
+    correlation_id: str
     # A short, stable machine-readable code explaining *why* flag is what it is -- meant
     # to be branched on programmatically, not displayed as-is. None for CLEAR, where
     # there's nothing to explain. See _flag_reason_for below for the fixed set of values.
@@ -270,9 +276,14 @@ class AgentRegisterRequest(BaseModel):
     owner_name: str = ""
     location_of_deployment: str = ""
     in_house_or_external: str = ""
+    # Optional -- see Agent_Governance_Layer_Design.md §12.3. No stable, privacy-appropriate
+    # device fingerprint exists on Android today, so this is whatever the caller chooses to
+    # send (or omits entirely); it's stored for correlation only, never relied on as an identity
+    # guarantee.
+    device_id: str = ""
 
 class AgentDecisionCheckRequest(BaseModel):
-    subject_ref: str
+    principal_ref: str
     purpose: str
     operation: str
     data_categories: list[str]
@@ -286,6 +297,12 @@ class AgentActivityRequest(BaseModel):
     outcome: str
     latency_ms: Optional[int] = None
     correlation_id: Optional[str] = None
+    # Optional -- this endpoint is non-gating and entirely self-reported (no DPDP call, no
+    # Guardrail-side check), so Guardrail has no way to independently determine why a
+    # BLOCKED outcome happened here. Unlike /v1/agent/decisions/check and
+    # /guardrail_validate, which compute their own reason_code, this is the caller's own
+    # explanation, taken at face value and stored as-is.
+    reason_code: Optional[str] = None
 
 class ChatRequest(BaseModel):
     message: str = Field(max_length=8000)
@@ -563,6 +580,11 @@ def apply_egress_guardrail(raw_text: str):
         # placeholder, destroying the label text along with the number -- this masks
         # only the trailing digit run and leaves "customer id is" readable.
         "CUSTOMER_ID": OperatorConfig("custom", {"lambda": lambda x: re.sub(r"\d{4,10}$", lambda m: "*" * len(m.group()), x)}),
+        # Without this, VERIFICATION_CODE has no custom operator, so Presidio falls back to its
+        # default behavior: replacing the whole matched span with the literal placeholder
+        # "<VERIFICATION_CODE>" instead of a readable mask. This mirrors CUSTOMER_ID's approach --
+        # mask only the digit run, leave the label text (e.g. "passcode is") readable.
+        "VERIFICATION_CODE": OperatorConfig("custom", {"lambda": lambda x: re.sub(r"\d{4,12}", lambda m: "*" * len(m.group()), x)}),
     }
     
     anonymized_result = anonymizer.anonymize(text=raw_text, analyzer_results=results, operators=operators)
@@ -727,7 +749,9 @@ def _record_guardrail_activity(flag: str, raw_hash: str, x_user_id: Optional[str
 @app.post("/guardrail_validate", response_model=GuardrailValidateResponse)
 def guardrail_validate(request: GuardrailValidateRequest, background_tasks: BackgroundTasks,
                        x_user_id: Optional[str] = Header(default=None, alias="X-User-Id"),
-                       x_message_category: Optional[str] = Header(default=None, alias="X-Message-Category")):
+                       x_message_category: Optional[str] = Header(default=None, alias="X-Message-Category"),
+                       x_agent_id: Optional[str] = Header(default=None, alias="X-Agent-Id"),
+                       authorization: Optional[str] = Header(default=None)):
     """
     Generic validation endpoint for external systems: send arbitrary text, get back a
     verdict -- CLEAR (nothing found), PARTIAL (PII/financial/health content masked),
@@ -752,7 +776,58 @@ def guardrail_validate(request: GuardrailValidateRequest, background_tasks: Back
     that already knows a given request is a payment confirmation (e.g. because it's
     wired to a "Pay Now" button in its own UI) should always send this header; the
     keyword/LLM path remains as a fallback for callers that don't.
+
+    X-Agent-Id + Authorization: Bearer <secret> are optional -- this endpoint stays reachable
+    without them (JioCare Helper and the Chat Bot page call it with neither). When both are
+    present and verify, the outcome is also written to the Agent Governance Layer's Activity
+    Log (governance_db), keyed by the same correlation_id as any paired
+    /v1/agent/decisions/check call -- closing the gap where a content-mask and its matching
+    purpose-gate were two separately-logged, uncorrelated events (see the design doc's §9.6).
+    A failed/absent identity check here never rejects the request -- it just means no
+    Activity Log entry gets written, same as any caller that never sent the headers at all.
     """
+    correlation_id = request.correlation_id or str(uuid.uuid4())
+    secret = authorization[7:] if authorization and authorization.lower().startswith("bearer ") else None
+    agent = agent_auth.verify_agent(x_agent_id, secret) if x_agent_id else None
+    if x_agent_id and not agent:
+        # X-Agent-Id was sent but didn't verify (unknown id, wrong/missing secret, or
+        # revoked) -- distinct from simply not sending identity at all, which is a normal,
+        # unlogged case for callers like JioCare Helper or the Chat Bot page. Without this,
+        # a dropped/failed identity here is silent and unrecoverable after the fact -- see
+        # the design doc's §9.6, added after exactly that ambiguity came up in practice.
+        logging.warning(
+            f"/guardrail_validate: agent identity failed to verify (X-Agent-Id={x_agent_id}, "
+            f"correlation_id={correlation_id}) -- content_check will not be logged for this call."
+        )
+
+    def _log_agent_activity(flag: str, flag_reason: str = None):
+        if not agent:
+            return
+        blocked = flag in ("BLOCKED", "PAYMENT_DECLINED")
+        try:
+            governance_db.log_activity(
+                agent_id=agent["agent_id"],
+                invoking_user_id=x_user_id,
+                action=f"content_check:{flag}",
+                outcome="BLOCKED" if blocked else "SERVED",
+                correlation_id=correlation_id,
+                reason_code=flag_reason,
+            )
+            # Mirrors /v1/agent/decisions/check's AGENT_UNAUTHORIZED_ACTION event -- a content
+            # block from this endpoint is a policy violation the same way a DPDP DENY is, and
+            # should show up in Compliance Events/Stats the same way, not just the Activity Log.
+            if blocked:
+                governance_db.log_governance_event(
+                    event_id=f"gov-{uuid.uuid4().hex[:12]}",
+                    event_type="AGENT_POLICY_VIOLATION",
+                    severity="HIGH",
+                    agent_id=agent["agent_id"],
+                    reason_code=flag_reason,
+                    correlation_id=correlation_id,
+                )
+        except Exception as e:
+            logging.error(f"Agent governance: failed to log guardrail_validate activity: {e}")
+
     # 1. Toxicity -- checked first, and blocking, unlike /govern_ai's flag-only egress
     # check. should_block_toxic_egress() is the same admin-configurable policy /chat's
     # egress path already respects, not a second toxicity policy invented for this
@@ -774,8 +849,10 @@ def guardrail_validate(request: GuardrailValidateRequest, background_tasks: Back
             fallback_triggered=True,
         )
         _record_guardrail_activity("BLOCKED", raw_hash, x_user_id, flag_reason)
+        _log_agent_activity("BLOCKED", flag_reason)
         return GuardrailValidateResponse(
             flag="AI Guardrail flag: BLOCKED", message=message, flag_reason=flag_reason,
+            correlation_id=correlation_id,
         )
 
     # 2. Payment intent -- either the caller has explicitly told us via
@@ -798,7 +875,7 @@ def guardrail_validate(request: GuardrailValidateRequest, background_tasks: Back
             decision = None
             if x_user_id:
                 decision = dpdp_client.check_decision(
-                    subject_ref=x_user_id,
+                    principal_ref=x_user_id,
                     data_categories=["PAYMENT_TOKEN"],
                     purpose="AUTO_PAY",
                     operation="INITIATE_PAYMENT",
@@ -834,7 +911,7 @@ def guardrail_validate(request: GuardrailValidateRequest, background_tasks: Back
                     dpdp_client.submit_compliance_event(
                         event_type="CONSENT_DENIED",
                         severity="HIGH",
-                        subject_ref=x_user_id,
+                        principal_ref=x_user_id,
                         data_categories=["PAYMENT_TOKEN"],
                         purpose="AUTO_PAY",
                         operation="INITIATE_PAYMENT",
@@ -845,7 +922,7 @@ def guardrail_validate(request: GuardrailValidateRequest, background_tasks: Back
                     dpdp_client.submit_compliance_event(
                         event_type="GUARDRAIL_DECISION_FAILURE",
                         severity="MEDIUM",
-                        subject_ref=x_user_id or "unknown",
+                        principal_ref=x_user_id or "unknown",
                         data_categories=["PAYMENT_TOKEN"],
                         purpose="AUTO_PAY",
                         operation="INITIATE_PAYMENT",
@@ -864,10 +941,12 @@ def guardrail_validate(request: GuardrailValidateRequest, background_tasks: Back
                 _record_guardrail_activity(
                     "PAYMENT_DECLINED", raw_hash, x_user_id, _FLAG_REASON_PAYMENT_CONSENT_NOT_GIVEN,
                 )
+                _log_agent_activity("PAYMENT_DECLINED", _FLAG_REASON_PAYMENT_CONSENT_NOT_GIVEN)
                 return GuardrailValidateResponse(
                     flag="AI Guardrail flag: PAYMENT_DECLINED",
                     message=_PAYMENT_DECLINED_MSG,
                     flag_reason=_FLAG_REASON_PAYMENT_CONSENT_NOT_GIVEN,
+                    correlation_id=correlation_id,
                 )
             # consented is True -- falls through to the ordinary PII-masking path below,
             # same as any other non-toxic message.
@@ -889,8 +968,10 @@ def guardrail_validate(request: GuardrailValidateRequest, background_tasks: Back
     )
 
     _record_guardrail_activity(flag, raw_hash, x_user_id, flag_reason)
+    _log_agent_activity(flag, flag_reason)
     return GuardrailValidateResponse(
         flag=f"AI Guardrail flag: {flag}", message=masked_output, flag_reason=flag_reason,
+        correlation_id=correlation_id,
     )
 
 
@@ -1249,11 +1330,14 @@ def run_guard_self_test() -> dict:
             report["status"] = "degraded"
             report["problems"].append(f"{name} is enabled but failed to load: {error()}")
 
-    if auth.using_default_keys():
-        report["problems"].append(
-            "Running with the shipped development API keys -- set the API_KEYS "
-            "environment variable before any real deployment. See auth.py."
-        )
+    # Roles are self-declared (X-Role header, see auth.py) with no credential behind
+    # them -- require_role() still enforces which role may do what, but nothing stops a
+    # caller from declaring a different role than they'd be issued. Surfaced here so
+    # this is a known, visible trade-off rather than an assumed-secure setup.
+    report["problems"].append(
+        "Roles are self-declared, not authenticated -- any caller can declare "
+        "super_admin via the X-Role header. See auth.py."
+    )
 
     return report
 
@@ -1262,7 +1346,7 @@ def run_guard_self_test() -> dict:
 def system_status():
     """
     Open (unauthenticated) so health checks work, and deliberately reports only whether
-    the guards loaded -- never the keys, rules or traffic.
+    the guards loaded -- never the rules or traffic.
     """
     return run_guard_self_test()
 
@@ -1270,9 +1354,8 @@ def system_status():
 @app.get("/whoami")
 def whoami(principal: Principal = Depends(require_role(*ANY_ROLE))):
     """
-    Lets the admin UI gate on the server's answer instead of a local string. AdminConfig
-    previously decided the user's role in the browser, which meant the role was whatever
-    the browser said it was.
+    Echoes back the role the caller declared via X-Role (see auth.py) -- lets the
+    frontend's role picker confirm what the server will enforce without guessing.
     """
     return {"name": principal.name, "role": principal.role, "is_admin": principal.is_admin}
 
@@ -1356,6 +1439,7 @@ def agent_register(request: AgentRegisterRequest):
         owner_name=request.owner_name,
         location_of_deployment=request.location_of_deployment,
         in_house_or_external=request.in_house_or_external,
+        device_id=request.device_id or None,
     )
     return {
         "agent_id": agent_id,
@@ -1375,7 +1459,7 @@ def agent_decision_check(request: AgentDecisionCheckRequest,
     correlation_id = request.correlation_id or str(uuid.uuid4())
 
     decision = dpdp_client.check_decision(
-        subject_ref=request.subject_ref,
+        principal_ref=request.principal_ref,
         data_categories=request.data_categories,
         purpose=request.purpose,
         operation=request.operation,
@@ -1385,13 +1469,15 @@ def agent_decision_check(request: AgentDecisionCheckRequest,
     )
 
     allowed = decision.get("decision") == "ALLOW"
+    reason_code = None if allowed else (decision.get("reason_code") or decision.get("error") or decision.get("decision"))
     try:
         governance_db.log_activity(
             agent_id=agent["agent_id"],
-            invoking_user_id=request.subject_ref,
+            invoking_user_id=request.principal_ref,
             action=f"decision_check:{request.operation}",
             outcome="SERVED" if allowed else "BLOCKED",
             correlation_id=correlation_id,
+            reason_code=reason_code,
         )
         if not allowed:
             governance_db.log_governance_event(
@@ -1399,7 +1485,7 @@ def agent_decision_check(request: AgentDecisionCheckRequest,
                 event_type="AGENT_UNAUTHORIZED_ACTION",
                 severity="HIGH",
                 agent_id=agent["agent_id"],
-                reason_code=decision.get("reason_code") or decision.get("error") or decision.get("decision"),
+                reason_code=reason_code,
                 correlation_id=correlation_id,
             )
     except Exception as e:
@@ -1422,6 +1508,7 @@ def agent_activity(request: AgentActivityRequest,
         outcome=request.outcome,
         latency_ms=request.latency_ms,
         correlation_id=correlation_id,
+        reason_code=request.reason_code,
     )
     return {"status": "logged", "correlation_id": correlation_id}
 

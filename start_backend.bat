@@ -6,8 +6,10 @@ REM  running VOXA) can reach it via this machine's own IP --
 REM  reachable at http://<this-machine's-LAN-IP>:8000, not just
 REM  127.0.0.1. Requires a Windows Firewall inbound rule for TCP
 REM  8000 -- see README/CLAUDE notes if devices still can't connect.
-REM  Authentication is currently disabled (see auth.py) -- anything
-REM  on the same network segment gets full, unrestricted access.
+REM  Roles are self-declared via the X-Role header (see auth.py) -- there is no
+REM  login or secret, so anything on the same network segment can declare
+REM  whichever role it wants. require_role() still enforces per-endpoint bands,
+REM  but that is a workflow distinction, not a security boundary.
 REM ============================================================
 
 cd /d "%~dp0"

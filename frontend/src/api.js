@@ -3,63 +3,39 @@
 // -- when you change one, change the other. A restart of `npm run dev` is required after
 // editing .env (unlike a source file, Vite only reads env files at server startup).
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000';
-const STORAGE_KEY = 'gov_api_key';
+const STORAGE_KEY = 'gov_role';
 
-// Every endpoint except /system_status (and the deliberately-open external-facing ones,
-// see auth.py) now requires an X-API-Key header again. The key is entered once at the
-// login gate in App.jsx and kept here for every request this tab makes -- localStorage
-// so a refresh doesn't force logging in again.
-let currentApiKey = '';
+// Roles are self-declared (see auth.py) -- there's no login, just a role picker in
+// App.jsx's header. The picked role is sent as X-Role on every request and kept here
+// so a page refresh doesn't reset it back to the default. This is a workflow/UI
+// distinction between roles (who can change guardrail config vs. just view it), not a
+// security boundary -- nothing validates the picked role against a credential.
+let currentRole = '';
 try {
-  currentApiKey = localStorage.getItem(STORAGE_KEY) || '';
+  currentRole = localStorage.getItem(STORAGE_KEY) || '';
 } catch {
   // Private browsing / storage disabled -- fall back to in-memory only for this tab.
 }
 
-export function setApiKey(key) {
-  currentApiKey = key || '';
+export function setRole(role) {
+  currentRole = role || '';
   try {
-    if (currentApiKey) localStorage.setItem(STORAGE_KEY, currentApiKey);
+    if (currentRole) localStorage.setItem(STORAGE_KEY, currentRole);
     else localStorage.removeItem(STORAGE_KEY);
   } catch {
     // Ignore -- the in-memory copy still works for this tab.
   }
 }
 
-export function getApiKey() {
-  return currentApiKey;
-}
-
-export function clearApiKey() {
-  setApiKey('');
-}
-
-/** Thrown when the server rejects the current key (missing, unknown, or wrong role). */
-export class AuthError extends Error {
-  constructor(status, detail) {
-    super(detail || 'Authentication failed');
-    this.name = 'AuthError';
-    this.status = status;
-  }
+export function getRole() {
+  return currentRole;
 }
 
 async function apiFetch(path, options = {}) {
   const headers = { ...(options.headers || {}) };
-  if (currentApiKey) headers['X-API-Key'] = currentApiKey;
+  if (currentRole) headers['X-Role'] = currentRole;
 
   const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
-
-  if (res.status === 401 || res.status === 403) {
-    let detail = res.status === 401 ? 'Invalid or missing API key.' : 'Not permitted.';
-    try {
-      const body = await res.json();
-      detail = body.detail || detail;
-    } catch {
-      // Non-JSON error body -- keep the default message.
-    }
-    throw new AuthError(res.status, detail);
-  }
-
   return res.json();
 }
 
@@ -72,9 +48,6 @@ function postJson(path, body) {
 }
 
 export async function fetchSystemStatus() {
-  // Deliberately open (see auth.py) so health checks and the login screen itself work
-  // without a key -- calls apiFetch anyway so a key present in localStorage still gets
-  // sent, but a missing/invalid one here should not raise a screen-wide AuthError.
   try {
     return await apiFetch('/system_status');
   } catch (e) {

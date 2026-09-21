@@ -40,7 +40,7 @@ def _headers(correlation_id: str) -> dict:
     return headers
 
 
-def check_decision(subject_ref, data_categories, purpose, operation,
+def check_decision(principal_ref, data_categories, purpose, operation,
                     recipient_ref=None, policy_context=None, correlation_id=None) -> dict:
     """
     POST /v1/decisions/check.
@@ -60,7 +60,7 @@ def check_decision(subject_ref, data_categories, purpose, operation,
         return {**_DECISION_UNKNOWN, "error": "DPDP_BASE_URL not configured"}
 
     payload = {
-        "subject_ref": subject_ref,
+        "principal_ref": principal_ref,
         "data_categories": data_categories,
         "purpose": purpose,
         "operation": operation,
@@ -96,7 +96,7 @@ def check_decision(subject_ref, data_categories, purpose, operation,
         return {**_DECISION_UNKNOWN, "error": str(e)}
 
 
-def submit_compliance_event(event_type, severity, subject_ref, data_categories,
+def submit_compliance_event(event_type, severity, principal_ref, data_categories,
                              purpose, operation, decision_id, reason_code,
                              occurred_at=None) -> None:
     """
@@ -112,7 +112,7 @@ def submit_compliance_event(event_type, severity, subject_ref, data_categories,
         "event_type": event_type,
         "event_version": 1,
         "severity": severity,
-        "subject_ref": subject_ref,
+        "principal_ref": principal_ref,
         "data_categories": data_categories,
         "purpose": purpose,
         "operation": operation,

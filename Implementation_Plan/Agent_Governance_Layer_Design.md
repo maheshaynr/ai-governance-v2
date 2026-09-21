@@ -56,10 +56,20 @@ remains the sole authority on "is there consent for this" — this layer never r
   "invoking_user_id": "...",
   "action": "...",
   "outcome": "SERVED | BLOCKED",
+  "reason_code": "...",
   "latency_ms": 0,
   "correlation_id": "..."
 }
 ```
+
+`reason_code` was added after a real case where a `BLOCKED` row couldn't answer "why" on its own —
+tracing the reason meant separately cross-referencing Compliance Events (for a DPDP `DENY`) or, for a
+content-pipeline block via `/guardrail_validate`, nowhere durable at all. It's populated at both
+existing log-write sites (the DPDP decision's `reason_code`, or `/guardrail_validate`'s `flag_reason`)
+and is `null` for an ordinary `SERVED` row with nothing to explain. A `BLOCKED`/`PAYMENT_DECLINED`
+outcome from `/guardrail_validate` now also raises a Governance Compliance Event
+(`AGENT_POLICY_VIOLATION`), mirroring the DPDP-denial path's existing `AGENT_UNAUTHORIZED_ACTION`, so
+content-pipeline blocks show up in Compliance Events/Stats the same way DPDP denials always have.
 
 `invoking_user_id` lives here, not in the registry, because one agent can be used by many different
 people over time (or, for a single-user app like VOXA, by whatever stable pseudonym represents that
@@ -79,7 +89,7 @@ two different identifiers for exactly this reason.
 
 Same *shape* as the DPDP Engine's own `compliance_events` table (event type, version, severity,
 subject, structured categories, source, reason code, correlation id, two timestamps) but the subject
-is an `agent_id`, not a DPDP `subject_ref`. Suggested event types, parallel to DPDP's own vocabulary:
+is an `agent_id`, not a DPDP `principal_ref`. Suggested event types, parallel to DPDP's own vocabulary:
 `AGENT_IDENTITY_UNVERIFIED`, `AGENT_UNAUTHORIZED_ACTION`, `AGENT_POLICY_VIOLATION`,
 `AGENT_SCOPE_EXCEEDED`. Raised automatically by the Identity Verification and Decision Passthrough
 modules on failure — never sent by the calling app itself.
@@ -110,6 +120,14 @@ severity, distinct agents/users seen) — same approach as the DPDP Engine's own
 3. **Open item, not resolved here**: reinstall/re-registration behavior. Either accept some identity
    churn (a reinstall becomes a new `agent_id`), or design an idempotent registration key — needs an
    explicit decision, not an assumption.
+4. **Decided for this PoC**: secret loss with no reinstall (app data cleared, storage corruption, etc.)
+   is treated the same as reinstall — accept identity churn, register as a new agent. There is no
+   rotate/reissue endpoint; `agent_auth.py` only exposes `register_agent`/`verify_agent`, and
+   `governance_db.revoke_agent` only flips `status`, it never reissues a secret. A secure reissue path
+   needs its own bootstrap credential (you can't gate "give me a new secret" behind the secret that was
+   just lost) — real scope, not worth building for a PoC. Revisit for a production version, most likely
+   as an admin-mediated reissue (`admin_pii`/`super_admin`-gated, logged as its own governance event)
+   rather than a self-service endpoint.
 
 ---
 
@@ -136,7 +154,7 @@ Response (200): `{"agent_id": "...", "agent_secret": "...", "identity_assignment
 The secret's JSON key is `agent_secret`, shown exactly once, here.
 
 **`POST /v1/agent/decisions/check`**.
-Request: `{subject_ref, purpose, operation, data_categories, recipient_ref?, policy_context?, correlation_id?}`.
+Request: `{principal_ref, purpose, operation, data_categories, recipient_ref?, policy_context?, correlation_id?}`.
 Response (200): `dpdp_client.check_decision(...)`'s return value plus an echoed `correlation_id`:
 `{"decision", "guard_failed", "error", "decision_id", "notice_version", "reason_code", "correlation_id"}`.
 `correlation_id` is optional in the request — **if omitted, the server generates one and echoes it
@@ -145,11 +163,19 @@ Engine call, this layer's activity/event rows, and the response the caller sees)
 This endpoint has **no `latency_ms` field** — only `/activity` captures that.
 
 **`POST /v1/agent/activity`** (non-gating).
-Request: `{invoking_user_id, action, outcome, latency_ms?, correlation_id?}`.
+Request: `{invoking_user_id, action, outcome, latency_ms?, correlation_id?, reason_code?}`.
 Response (200): `{"status": "logged", "correlation_id": "..."}` (same omit-then-generate-and-echo rule).
 `ts` is always server-computed on receipt — there is no client-timestamp field. `latency_ms` is
 optional and entirely client-supplied and unvalidated; the Guardrail does not compute it, so the
-timer start point is the calling agent's own choice to define.
+timer start point is the calling agent's own choice to define. `reason_code` is likewise entirely
+caller-supplied, taken at face value — this endpoint never calls DPDP and runs no check of its own,
+so Guardrail has no independent way to know why a self-reported `BLOCKED` outcome happened. Send it
+whenever `outcome=BLOCKED`, or the row is opaque after the fact (found in practice: a self-reported
+`swiggy_payment_initiation` outcome of `BLOCKED` with no `reason_code` and no way to tell it apart
+from a DPDP-side denial, even though the paired `decision_check` for the same purpose had actually
+returned `ALLOW` — two different questions, easy to conflate without an explanation attached). Reuse
+the same `correlation_id` as any `/v1/agent/decisions/check` call this activity is reporting the
+outcome of, so the two rows can be told apart from unrelated ones sharing the same `agent_id`.
 
 **Error shape on identity failure**: always **401** (403 is not used), FastAPI's default
 `HTTPException` body: `{"detail": "Agent identity could not be verified."}`. Unknown `agent_id`,
@@ -221,7 +247,7 @@ there's no other tenant's data to protect by screening every utterance over the 
 |---|---|
 | `AiGuardrailClient.kt` | New client, same shape as the existing `SwiggyMcpClient`/`KiteClient`. |
 | Registration at install | In `MainActivity.onCreate`, alongside where `swiggyAuth`/`kiteAuth` are already constructed — register once, persist `agent_id` + secret via `EncryptedSharedPreferences`, reusing the exact storage pattern already proven for `swiggy_auth`. |
-| Subject pseudonym | **New state VOXA doesn't have today** — confirmed by direct investigation, VOXA has no end-user identity of any kind. Generate a stable per-install/per-account UUID once, persist it the same way, use it as `subject_ref` for DPDP consent checks. |
+| Subject pseudonym | **New state VOXA doesn't have today** — confirmed by direct investigation, VOXA has no end-user identity of any kind. Generate a stable per-install/per-account UUID once, persist it the same way, use it as `principal_ref` for DPDP consent checks. |
 | Write-operation gating | Inside `SwiggyMcpClient.callTool()`: for `update_food_cart` (confirmed existing) and a future payment-initiation tool (not yet present in the app), call `POST /v1/agent/decisions/check` *before* the real Swiggy MCP call; block on anything but `ALLOW`. Read operations (`search_restaurants`, `get_restaurant_menu`, `get_food_cart`, `get_addresses`) pass straight through, optionally with a non-gating `POST /v1/agent/activity` call. |
 | Activity logging hook | The existing `onToolExecuted` callback is already the right attachment point — no restructuring needed. |
 
@@ -292,9 +318,9 @@ departure from the Alexa comparison, worth stating explicitly rather than silent
 pattern: Alexa scopes `userId` differently per skill specifically to stop two *unrelated third-party
 developers* from correlating the same person across their independent skills. That threat doesn't
 exist here — both skills are the same app, same team, same device. The DPDP Engine already isolates
-consent per `(subject_ref, purpose)`, not per `subject_ref` alone (proven by the JioCare Helper
+consent per `(principal_ref, purpose)`, not per `principal_ref` alone (proven by the JioCare Helper
 integration: *"a second, hypothetical purpose does not inherit this grant... `consent_records` is
-keyed on `(subject_ref, purpose)`"*) — so reusing one pseudonym across skills doesn't leak anything
+keyed on `(principal_ref, purpose)`"*) — so reusing one pseudonym across skills doesn't leak anything
 between them; the purpose field already provides that isolation. One persisted UUID per install is
 simpler for VOXA to build than N, with no real privacy cost.
 
@@ -309,7 +335,7 @@ simpler for VOXA to build than N, with no real privacy cost.
 
 **Writes** (`update_food_cart`, and a future payment-initiation tool):
 - `POST /v1/agent/decisions/check` **before** the real Swiggy MCP call, with `agent_id`=Swiggy,
-  `subject_ref`=the shared pseudonym, `purpose="voxa_swiggy_cart_management"`,
+  `principal_ref`=the shared pseudonym, `purpose="voxa_swiggy_cart_management"`,
   `operation="UPDATE_CART"`, `data_categories=["ORDER_DATA"]` (for a future payment tool:
   `purpose="voxa_swiggy_payment_initiation"`, `operation="INITIATE_PAYMENT"`,
   `data_categories=["PAYMENT_TOKEN"]`).
@@ -344,9 +370,49 @@ simpler for VOXA to build than N, with no real privacy cost.
 | Field | Scope | Notes |
 |---|---|---|
 | `X-Agent-Id` + secret | Per skill | Different for Swiggy vs. Yahoo Finance calls |
-| `invoking_user_id` / `subject_ref` | Per install (shared) | One pseudonym, reused across both skills — see §9.2 |
+| `invoking_user_id` / `principal_ref` | Per install (shared) | One pseudonym, reused across both skills — see §9.2 |
 | `correlation_id` | Per request | Fresh every call, never reused |
-| Message/tool-argument content | **Never sent** | No skill's raw content crosses this boundary — metadata only, per §5 |
+| Message/tool-argument content | **Never sent to `/v1/agent/decisions/check`** | No skill's raw content crosses that boundary — metadata only, per §5. See §9.6 for the one deliberate exception (Teams, via a different endpoint) |
+
+### 9.6 Teams — content validation (resolved after a real leak, not a hypothetical)
+
+Teams was originally out of scope for this document (§8: "Kite and Teams are present in the VOXA
+codebase but explicitly excluded from this plan"), but VOXA built a Teams skill anyway and gated its
+`sendTeamsMessage` with `purpose="voxa_teams_message_post"`, `operation="POST_MESSAGE"`,
+`data_categories=["MESSAGE_CONTENT"]` — a real `/v1/agent/decisions/check` call, same shape as Swiggy's
+write path. That call can only ever answer "is this agent allowed to post *any* message" — it never
+receives the message text, so it cannot tell "the meeting code is 43345" apart from "the weather is
+nice today." This is not a bug in that endpoint; it's §6's ingress-validation principle working
+exactly as designed for content that never needed to leave the device — except a Teams post **is** an
+external effect (real third parties see it immediately, unlike a structured Swiggy cart write), so
+metadata-only gating was the wrong fit for this specific case. This was confirmed as a real leak, not
+a theoretical gap, when a meeting code was posted to Teams unmasked.
+
+**Resolution**: before calling `sendTeamsMessage`, VOXA also calls `POST /guardrail_validate` with the
+raw message text, and posts the returned `masked_output` to Teams instead of the raw text — never the
+original. This uses the same `correlation_id` as the paired `/v1/agent/decisions/check` call, so both
+sides of the same send (the purpose-gate and the content-mask) can be tied together after the fact.
+`/guardrail_validate` already runs the existing masking/toxicity/payment-intent pipeline (§`api.py`
+`guardrail_validate`) — no new endpoint was needed for this.
+
+**Update — item 1 below is now resolved.** `/guardrail_validate` now optionally accepts `X-Agent-Id` +
+`Authorization: Bearer <secret>` (still fully reachable without them — JioCare Helper and the Chat Bot
+page keep working unauthenticated) and a `correlation_id` in the request body (generated and echoed
+back if omitted, same rule as `/v1/agent/*`). When identity verifies, the outcome is written to the
+Agent Governance Layer's Activity Log as `content_check:<flag>` (`SERVED`/`BLOCKED`), under the same
+`agent_id` and `correlation_id` as the paired `/v1/agent/decisions/check` call — closing the exact gap
+found when a real Teams masking event showed up in `governance_audit.json` and the in-memory Guardrail
+Activity buffer, but nowhere under the Teams agent's own Activity Log. VOXA needs to start sending
+these two headers plus its existing `correlation_id` on its `/guardrail_validate` call for this to take
+effect on their side.
+
+**One thing this resolution does not yet close, tracked separately, not blocking this fix**:
+1. This closes the specific gap that caused the confirmed leak — a new `pii_rules.json` rule,
+   `VERIFICATION_CODE` (meeting code / OTP / verification code / passcode / access code + a 4–8 digit
+   number, under the `AUTHENTICATION` category), plus the pre-existing built-in `PHONE` recognizer,
+   which already covers a plain phone number in text. It is **not** a general content-safety guarantee
+   — it's regex-based pattern matching, not an exhaustive secret detector. Treat each new leak pattern
+   found as its own rule to add, not evidence the mechanism itself is complete.
 
 ---
 
@@ -359,6 +425,20 @@ simpler for VOXA to build than N, with no real privacy cost.
    technical default — out of scope for this design until explicitly requested.
 4. Exact DPDP Engine purpose registration for the two Swiggy purposes above is a DPDP-Engine-side task
    to schedule separately. Yahoo Finance needs no such registration at all (§9.4).
+5. Secret loss without reinstall (app data cleared, storage corruption) — **decided for this PoC**:
+   treated identically to reinstall, i.e. accept churn, register as a new agent. There is no
+   rotate/reissue endpoint (`agent_auth.py` only exposes `register_agent`/`verify_agent`;
+   `governance_db.revoke_agent` only flips `status`, it never reissues a secret). A secure reissue path
+   needs its own bootstrap credential — real scope, not worth it for a PoC. Revisit for production,
+   most likely as an admin-mediated reissue (`admin_pii`/`super_admin`-gated, its own governance event)
+   rather than a self-service endpoint.
+6. Self-deregistration — **not built, by design, not just by omission**. An agent can self-register
+   (§3.1 — no auth needed, that's how identity is obtained in the first place) but cannot deregister or
+   revoke itself; `POST /v1/agent/agents/{agent_id}/revoke` is admin-only (`admin_pii`/`super_admin`
+   RBAC via `X-Role`), never callable with an agent's own `X-Agent-Id`/secret. Same asymmetry as item 5:
+   identity *creation* is self-service, anything that removes an identity's ability to act is an admin
+   decision. If a skill needs a clean way to retire itself, that's a new admin-mediated flow, not a
+   change to the registration contract.
 
 ---
 
@@ -367,3 +447,107 @@ simpler for VOXA to build than N, with no real privacy cost.
 Build and test 7.1 (AI Guardrail's own governance layer) first, end-to-end, against a stub/manual
 caller. Only once that contract is stable does VOXA build 7.2 against it — so both sides can verify
 they generate/consume the same `agent_id`/metadata shape from a working reference, not a moving target.
+
+---
+
+## 12. Future identity model: Agent → Registration → Device (not built — target design only)
+
+**Status: proposed target design, captured here for VOXA's planning, zero code changes made for this
+section.** Nothing below is implemented, and per an explicit decision on this thread, **nothing that
+would require an existing VOXA install to reinstall gets built right now** — this section exists so
+VOXA can plan future builds against a stable target rather than the model shifting again later.
+
+### 12.1 What's already correct and needs no change
+
+Re-stated here because a review of this design mistook these for gaps — they aren't; they're already
+built exactly this way:
+
+- **`agent_id` is already immutable and separate from the display name.** `agent_id` (server-generated
+  UUID) is the identity; `agent_name` (e.g. `"VOXA — Swiggy Skill"`) is a human label only (§2.1).
+- **Owner vs. invoking principal is already split**, deliberately, with the Alexa Skills Kit precedent
+  as justification (§2.2): `owner_name` (static, per-agent, "who's accountable") lives in the registry;
+  `invoking_user_id` (dynamic, per-call, "who it's acting for right now") lives in the Activity Log.
+  These must never collapse into one field — see §2.2's reasoning.
+- **`identity_assignment_timestamp` already exists**, just labeled "Registered" in the current admin UI.
+
+### 12.2 What's changing: a `registrationId` layer
+
+The current model conflates "which skill" with "which install" — one `agent_id` *is* one install,
+which is exactly why reinstall forces a new identity (§10 item 1). The target model separates these:
+
+```
+AGENT (agt_voxa_swiggy_001)          -- stable, one per skill, no secret of its own
+   │
+   ├── REGISTRATION (reg_001) -- own secret, one per install/enrollment
+   │       └── DEVICE (dev_A)  -- correlation only, see 12.3
+   ├── REGISTRATION (reg_002) -- own secret
+   │       └── DEVICE (dev_B)
+   └── REGISTRATION (reg_003) -- own secret
+           └── DEVICE (dev_C)
+```
+
+`agent_id` becomes a stable, secret-free grouping label (identifies the *skill*, not the install).
+`registration_id` becomes the actual credentialed entity — each registration gets its own independent
+secret. This is a genuine improvement over both the current model (no grouping at all, one secret =
+one install = full identity) and a naively-shared-secret alternative (one secret shared across every
+install of a skill, where a single leak compromises every device running that skill worldwide):
+scoping the secret to `registration_id` means a leaked credential only ever compromises that one
+registration.
+
+Identity chain and what each layer answers:
+
+| Identity | Answers | Status |
+|---|---|---|
+| `agentId` | Which agent/skill? | Already built (as the sole identity today; becomes a grouping label) |
+| `registrationId` | Which deployment/registration of that agent? | **New — the real target change** |
+| `principalId` | Which user is it acting for right now? | Already built (`invoking_user_id`/`principal_ref`) |
+| `deviceId` | Which physical/runtime device? | Blocked — see 12.3 |
+| `agentSignature` | Can the *skill codebase* be cryptographically authenticated? | Blocked — see 12.4 |
+| `deviceSignature` | Can the *specific hardware* be cryptographically authenticated? | Blocked — see 12.4 |
+
+Implementing `registrationId` requires VOXA's registration call to change shape (distinguishing "first
+registration of a new agent" from "another registration under an existing agent_id"), which is itself
+a VOXA app change — so, per the reinstall freeze above, this is a planning target, not current work.
+
+### 12.3 `deviceId` — aspirational, blocked on a real device fingerprint
+
+`deviceId` only adds information beyond `registrationId` if it's a fingerprint that survives an app
+reinstall on the same physical device. Nothing proposed so far gives it that: if it's just a freshly
+generated UUID at registration time, it's indistinguishable from `registration_id` and adds nothing.
+Modern Android has no reliable, permission-free way to get a stable hardware ID — `ANDROID_ID` resets
+on factory reset and now varies per app-signing key, and IMEI requires privileged permissions Google
+restricts. This is the same "genuinely new work on VOXA's side" gap already flagged in §7.2/§9.2 for
+the subject pseudonym — this section doesn't solve it, it just names the dependency. **Do not build
+`deviceId` until VOXA can commit to a real mechanism**; until then, treat `registration_id` as the only
+per-install identifier that exists.
+
+**Decided for this PoC: not required.** A two-device scenario (same VOXA app, two different phones,
+two different people) was worked through explicitly and needs no `deviceId` to function correctly —
+`agent_id` and `principal_ref` are already generated independently per install, so two devices naturally
+get fully independent identities and consent state with zero collision risk. The only thing `deviceId`
+would still add is surviving a *reinstall on the same device*, which is out of scope per the reinstall
+freeze above. Not building this for the PoC.
+
+### 12.4 `agentSignature` / `deviceSignature` — two separate future initiatives, not fields
+
+Both names imply real cryptographic verification, and each is its own scoped project:
+
+- **`agentSignature`** (authenticate *which skill codebase* is calling) would mean verifying something
+  like the APK's code-signing certificate hash server-side — a code-provenance-verification subsystem.
+- **`deviceSignature`** (authenticate *the specific hardware*) would mean integrating hardware
+  attestation, e.g. Google's Play Integrity API — a full external-service integration with its own
+  failure modes (quota, outages, key rotation), not a value generated locally.
+
+Neither should be scheduled as part of the `registrationId` work above. If either is wanted, it needs
+its own design doc and its own decision to invest, separate from this identity-model change.
+
+**Decided for this PoC: not required.** Both are full standalone security subsystems (code-signing
+verification, hardware attestation via an external API) with their own infrastructure and failure
+modes — real scope for a production hardening pass, not this PoC. Left as future items only.
+
+### 12.5 `agentVersion` — accepted, low-risk, no reinstall required
+
+Worth adding for future registrations: no schema conflict, doesn't affect existing agents, doesn't
+force a reinstall (an install that never sends it just omits the field). Before adding it, decide what
+governance actually *does* with it — a version that's collected but never enforced against policy is a
+display-only field, not a governance control. Left as a future addition, not scheduled here.

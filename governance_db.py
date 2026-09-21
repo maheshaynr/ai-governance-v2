@@ -35,9 +35,16 @@ def init_db():
             location_of_deployment TEXT,
             in_house_or_external TEXT,
             identity_assignment_timestamp TEXT,
-            status TEXT
+            status TEXT,
+            device_id TEXT
         )
     ''')
+
+    # device_id was added after the initial release -- an existing governance.db from before this
+    # change won't have the column yet, so add it in place rather than requiring a fresh DB.
+    existing_columns = {row[1] for row in cursor.execute("PRAGMA table_info(agents)").fetchall()}
+    if "device_id" not in existing_columns:
+        cursor.execute("ALTER TABLE agents ADD COLUMN device_id TEXT")
 
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS activity_log (
@@ -48,9 +55,16 @@ def init_db():
             action TEXT,
             outcome TEXT,
             latency_ms INTEGER,
-            correlation_id TEXT
+            correlation_id TEXT,
+            reason_code TEXT
         )
     ''')
+
+    # reason_code was added after the initial release, so a blocked row can answer "why"
+    # on its own instead of requiring a separate Compliance Events lookup.
+    activity_columns = {row[1] for row in cursor.execute("PRAGMA table_info(activity_log)").fetchall()}
+    if "reason_code" not in activity_columns:
+        cursor.execute("ALTER TABLE activity_log ADD COLUMN reason_code TEXT")
 
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS governance_events (
@@ -69,16 +83,16 @@ def init_db():
 
 
 def create_agent(agent_id, agent_name, agent_secret_hash, business_unit, owner_name,
-                  location_of_deployment, in_house_or_external):
+                  location_of_deployment, in_house_or_external, device_id=None):
     conn = _connect()
     cursor = conn.cursor()
     timestamp = _now()
     cursor.execute(
         'INSERT INTO agents (agent_id, agent_name, agent_secret_hash, business_unit, owner_name, '
-        'location_of_deployment, in_house_or_external, identity_assignment_timestamp, status) '
-        'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        'location_of_deployment, in_house_or_external, identity_assignment_timestamp, status, device_id) '
+        'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
         (agent_id, agent_name, agent_secret_hash, business_unit, owner_name,
-         location_of_deployment, in_house_or_external, timestamp, "active"),
+         location_of_deployment, in_house_or_external, timestamp, "active", device_id or None),
     )
     conn.commit()
     conn.close()
@@ -90,7 +104,7 @@ def get_agent(agent_id):
     cursor = conn.cursor()
     cursor.execute(
         'SELECT agent_id, agent_name, agent_secret_hash, business_unit, owner_name, '
-        'location_of_deployment, in_house_or_external, identity_assignment_timestamp, status '
+        'location_of_deployment, in_house_or_external, identity_assignment_timestamp, status, device_id '
         'FROM agents WHERE agent_id = ?',
         (agent_id,),
     )
@@ -108,6 +122,7 @@ def get_agent(agent_id):
         "in_house_or_external": row[6],
         "identity_assignment_timestamp": row[7],
         "status": row[8],
+        "device_id": row[9],
     }
 
 
@@ -126,7 +141,7 @@ def list_agents():
     cursor = conn.cursor()
     cursor.execute(
         'SELECT agent_id, agent_name, business_unit, owner_name, location_of_deployment, '
-        'in_house_or_external, identity_assignment_timestamp, status '
+        'in_house_or_external, identity_assignment_timestamp, status, device_id '
         'FROM agents ORDER BY identity_assignment_timestamp DESC'
     )
     rows = cursor.fetchall()
@@ -135,19 +150,20 @@ def list_agents():
         {
             "agent_id": r[0], "agent_name": r[1], "business_unit": r[2], "owner_name": r[3],
             "location_of_deployment": r[4], "in_house_or_external": r[5],
-            "identity_assignment_timestamp": r[6], "status": r[7],
+            "identity_assignment_timestamp": r[6], "status": r[7], "device_id": r[8],
         }
         for r in rows
     ]
 
 
-def log_activity(agent_id, invoking_user_id, action, outcome, latency_ms=None, correlation_id=None):
+def log_activity(agent_id, invoking_user_id, action, outcome, latency_ms=None, correlation_id=None,
+                  reason_code=None):
     conn = _connect()
     cursor = conn.cursor()
     cursor.execute(
-        'INSERT INTO activity_log (ts, agent_id, invoking_user_id, action, outcome, latency_ms, correlation_id) '
-        'VALUES (?, ?, ?, ?, ?, ?, ?)',
-        (_now(), agent_id, invoking_user_id, action, outcome, latency_ms, correlation_id),
+        'INSERT INTO activity_log (ts, agent_id, invoking_user_id, action, outcome, latency_ms, correlation_id, reason_code) '
+        'VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        (_now(), agent_id, invoking_user_id, action, outcome, latency_ms, correlation_id, reason_code),
     )
     conn.commit()
     conn.close()
@@ -157,7 +173,7 @@ def list_activity(limit=100):
     conn = _connect()
     cursor = conn.cursor()
     cursor.execute(
-        'SELECT id, ts, agent_id, invoking_user_id, action, outcome, latency_ms, correlation_id '
+        'SELECT id, ts, agent_id, invoking_user_id, action, outcome, latency_ms, correlation_id, reason_code '
         'FROM activity_log ORDER BY id DESC LIMIT ?',
         (limit,),
     )
@@ -167,6 +183,7 @@ def list_activity(limit=100):
         {
             "id": r[0], "ts": r[1], "agent_id": r[2], "invoking_user_id": r[3],
             "action": r[4], "outcome": r[5], "latency_ms": r[6], "correlation_id": r[7],
+            "reason_code": r[8],
         }
         for r in rows
     ]

@@ -21,7 +21,7 @@ def _hash_secret(secret: str) -> str:
 
 
 def register_agent(agent_name, business_unit, owner_name, location_of_deployment,
-                    in_house_or_external):
+                    in_house_or_external, device_id=None):
     agent_id = str(uuid.uuid4())
     plaintext_secret = secrets.token_urlsafe(32)
     timestamp = governance_db.create_agent(
@@ -32,6 +32,7 @@ def register_agent(agent_name, business_unit, owner_name, location_of_deployment
         owner_name=owner_name,
         location_of_deployment=location_of_deployment,
         in_house_or_external=in_house_or_external,
+        device_id=device_id,
     )
     return agent_id, plaintext_secret, timestamp
 

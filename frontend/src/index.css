@@ -49,6 +49,7 @@ body {
   font-size: 1rem;
   color: var(--text-color);
   border-bottom: 2px solid transparent;
+  white-space: nowrap;
 }
 
 .nav-tabs button.active {

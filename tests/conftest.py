@@ -18,23 +18,14 @@ import pytest
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-# Keys used throughout the suite. Set before `api` is imported, because config.py reads
-# the environment once at import time.
-SUPER_KEY = "test-super-key"
-PII_ADMIN_KEY = "test-pii-admin-key"
-CALLER_KEY = "test-caller-key"
-
-TEST_API_KEYS = {
-    SUPER_KEY: {"name": "test_super", "role": "super_admin"},
-    PII_ADMIN_KEY: {"name": "test_pii_admin", "role": "admin_pii"},
-    CALLER_KEY: {"name": "test_caller", "role": "caller"},
-}
-
-# test_caller may read record 101 only, so the refusal path is exercised by asking for 102.
+# Roles are self-declared (X-Role header, see auth.py) -- there's no key to set up, just
+# an entitlements map. Set before `api` is imported, because config.py reads the
+# environment once at import time. caller may read record 101 only, so the refusal path
+# is exercised by asking for 102.
 TEST_ENTITLEMENTS = {
-    "test_super": ["*"],
-    "test_pii_admin": ["*"],
-    "test_caller": ["101"],
+    "super_admin": ["*"],
+    "admin_pii": ["*"],
+    "caller": ["101"],
 }
 
 SEEDED_FILES = ["pii_rules.json", "test_cases.json"]
@@ -63,7 +54,6 @@ def app_module(workdir):
     Import the API once for the whole session -- it loads three models, so importing per
     test would make the suite unusably slow.
     """
-    os.environ["API_KEYS"] = json.dumps(TEST_API_KEYS)
     os.environ["ENTITLEMENTS"] = json.dumps(TEST_ENTITLEMENTS)
     os.environ["EXPOSE_RAW_OUTPUT"] = "false"
 
@@ -119,12 +109,12 @@ def audit_entries(workdir):
 
 
 def super_headers():
-    return {"X-API-Key": SUPER_KEY}
+    return {"X-Role": "super_admin"}
 
 
 def pii_admin_headers():
-    return {"X-API-Key": PII_ADMIN_KEY}
+    return {"X-Role": "admin_pii"}
 
 
 def caller_headers():
-    return {"X-API-Key": CALLER_KEY}
+    return {"X-Role": "caller"}

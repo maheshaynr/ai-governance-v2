@@ -36,9 +36,9 @@ def fake_dpdp_decision(app_module, monkeypatch):
     state = {"response": {"decision": "ALLOW", "guard_failed": False, "error": None,
                            "decision_id": "dec_test", "notice_version": None, "reason_code": None}}
 
-    def fake_check_decision(subject_ref, data_categories, purpose, operation,
+    def fake_check_decision(principal_ref, data_categories, purpose, operation,
                              recipient_ref=None, policy_context=None, correlation_id=None):
-        calls.append({"subject_ref": subject_ref, "purpose": purpose, "operation": operation})
+        calls.append({"principal_ref": principal_ref, "purpose": purpose, "operation": operation})
         return state["response"]
 
     monkeypatch.setattr(app_module.dpdp_client, "check_decision", fake_check_decision)
@@ -91,7 +91,7 @@ def test_decision_check_with_valid_identity_and_dpdp_allow(client, fake_dpdp_dec
 
     response = client.post(
         "/v1/agent/decisions/check",
-        json={"subject_ref": "U19883", "purpose": "BILLING_SUPPORT", "operation": "READ",
+        json={"principal_ref": "U19883", "purpose": "BILLING_SUPPORT", "operation": "READ",
               "data_categories": ["PAYMENT_TOKEN"]},
         headers=_auth_headers(agent_id, secret),
     )
@@ -114,7 +114,7 @@ def test_decision_check_with_dpdp_deny_logs_activity_and_event(client, fake_dpdp
 
     response = client.post(
         "/v1/agent/decisions/check",
-        json={"subject_ref": "U88778", "purpose": "BILLING_SUPPORT", "operation": "READ",
+        json={"principal_ref": "U88778", "purpose": "BILLING_SUPPORT", "operation": "READ",
               "data_categories": ["PAYMENT_TOKEN"]},
         headers=_auth_headers(agent_id, secret),
     )
@@ -138,7 +138,7 @@ def test_decision_check_with_wrong_secret_never_calls_dpdp(client, fake_dpdp_dec
 
     response = client.post(
         "/v1/agent/decisions/check",
-        json={"subject_ref": "U19883", "purpose": "BILLING_SUPPORT", "operation": "READ",
+        json={"principal_ref": "U19883", "purpose": "BILLING_SUPPORT", "operation": "READ",
               "data_categories": ["PAYMENT_TOKEN"]},
         headers=_auth_headers(agent_id, "totally-wrong-secret"),
     )
@@ -154,7 +154,7 @@ def test_decision_check_with_unknown_agent_id_is_rejected(client, fake_dpdp_deci
     calls, _ = fake_dpdp_decision
     response = client.post(
         "/v1/agent/decisions/check",
-        json={"subject_ref": "U19883", "purpose": "BILLING_SUPPORT", "operation": "READ",
+        json={"principal_ref": "U19883", "purpose": "BILLING_SUPPORT", "operation": "READ",
               "data_categories": ["PAYMENT_TOKEN"]},
         headers=_auth_headers("no-such-agent", "whatever"),
     )
@@ -166,7 +166,7 @@ def test_decision_check_with_missing_headers_is_rejected(client, fake_dpdp_decis
     calls, _ = fake_dpdp_decision
     response = client.post(
         "/v1/agent/decisions/check",
-        json={"subject_ref": "U19883", "purpose": "BILLING_SUPPORT", "operation": "READ",
+        json={"principal_ref": "U19883", "purpose": "BILLING_SUPPORT", "operation": "READ",
               "data_categories": ["PAYMENT_TOKEN"]},
     )
     assert response.status_code == 401
@@ -201,7 +201,7 @@ def test_revoked_agent_fails_verification(client, fake_dpdp_decision):
 
     response = client.post(
         "/v1/agent/decisions/check",
-        json={"subject_ref": "U19883", "purpose": "BILLING_SUPPORT", "operation": "READ",
+        json={"principal_ref": "U19883", "purpose": "BILLING_SUPPORT", "operation": "READ",
               "data_categories": ["PAYMENT_TOKEN"]},
         headers=_auth_headers(agent_id, secret),
     )
@@ -223,7 +223,7 @@ def test_stats_reflects_recorded_activity(client, fake_dpdp_decision):
 
     client.post(
         "/v1/agent/decisions/check",
-        json={"subject_ref": "U19883", "purpose": "BILLING_SUPPORT", "operation": "READ",
+        json={"principal_ref": "U19883", "purpose": "BILLING_SUPPORT", "operation": "READ",
               "data_categories": ["PAYMENT_TOKEN"]},
         headers=_auth_headers(agent_id, secret),
     )

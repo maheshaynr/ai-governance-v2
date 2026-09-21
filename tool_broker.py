@@ -198,12 +198,12 @@ def authorize(principal: Principal, call: ToolCall, purpose: str = None) -> Tool
                 },
             )
 
-        # Per API_INTEGRATION.pdf: subject_ref must be a stable pseudonym, not the bare
+        # Per API_INTEGRATION.pdf: principal_ref must be a stable pseudonym, not the bare
         # internal customer id -- prefix with "U" (customer 101 -> "U101"), the same
         # convention the payment gate's seeded test subjects already follow.
-        dpdp_subject_ref = f"U{call.argument}"
+        dpdp_principal_ref = f"U{call.argument}"
         decision = dpdp_client.check_decision(
-            subject_ref=dpdp_subject_ref,
+            principal_ref=dpdp_principal_ref,
             data_categories=_CONSENT_DPDP_DATA_CATEGORIES,
             purpose=purpose,
             operation=_CONSENT_OPERATION,
@@ -216,7 +216,7 @@ def authorize(principal: Principal, call: ToolCall, purpose: str = None) -> Tool
                      f"{_CONSENT_GATED_CATEGORY}/{purpose} (decision={decision['decision']})"
             )
             _alarm_consent(principal, call, purpose, reason)
-            _submit_consent_denied_event(dpdp_subject_ref, purpose, decision)
+            _submit_consent_denied_event(dpdp_principal_ref, purpose, decision)
             return ToolResult(
                 call=call,
                 allowed=False,
@@ -279,7 +279,7 @@ def _alarm_consent(principal: Principal, call: ToolCall, purpose: str, reason: s
         logging.error(f"Tool broker: failed to raise CONSENT_VIOLATION alarm: {e}")
 
 
-def _submit_consent_denied_event(subject_ref: str, purpose: str, decision: dict) -> None:
+def _submit_consent_denied_event(principal_ref: str, purpose: str, decision: dict) -> None:
     """
     Per API_INTEGRATION.pdf's event catalogue: a DPDP outage/timeout is a
     GUARDRAIL_DECISION_FAILURE (a failure of the decision infrastructure, no decision_id),
@@ -291,7 +291,7 @@ def _submit_consent_denied_event(subject_ref: str, purpose: str, decision: dict)
             dpdp_client.submit_compliance_event(
                 event_type="GUARDRAIL_DECISION_FAILURE",
                 severity="MEDIUM",
-                subject_ref=subject_ref,
+                principal_ref=principal_ref,
                 data_categories=_CONSENT_DPDP_DATA_CATEGORIES,
                 purpose=purpose,
                 operation=_CONSENT_OPERATION,
@@ -302,7 +302,7 @@ def _submit_consent_denied_event(subject_ref: str, purpose: str, decision: dict)
             dpdp_client.submit_compliance_event(
                 event_type="CONSENT_DENIED",
                 severity="HIGH",
-                subject_ref=subject_ref,
+                principal_ref=principal_ref,
                 data_categories=_CONSENT_DPDP_DATA_CATEGORIES,
                 purpose=purpose,
                 operation=_CONSENT_OPERATION,
