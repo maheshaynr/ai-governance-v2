@@ -33,6 +33,7 @@ import governance_db
 import agent_auth
 import injection_guard
 import tool_broker
+from notifications import EmailNotifier
 from auth import Principal, require_role, ROLE_SUPER_ADMIN, ADMIN_ROLES, ANY_ROLE
 from fidelity_check import FidelityChecker
 
@@ -290,6 +291,9 @@ class AgentDecisionCheckRequest(BaseModel):
     recipient_ref: Optional[str] = None
     policy_context: Optional[str] = None
     correlation_id: Optional[str] = None
+    # Optional today (older callers omit it); a missing value is treated as "no device
+    # context" and only matches an entitlement row whose own device_id is NULL (wildcard).
+    device_id: Optional[str] = None
 
 class AgentActivityRequest(BaseModel):
     invoking_user_id: str = ""
@@ -1401,6 +1405,48 @@ def withdraw_consent(request: WithdrawConsentRequest,
 # around the existing, unmodified dpdp_client.check_decision -- the DPDP Engine remains the
 # sole authority on consent. See Implementation_Plan/Agent_Governance_Layer_Design.md.
 
+# Mocked IAM -- a purpose string maps to the "app" it belongs to, checked against
+# iam_entitlements before DPDP is ever asked. This is deliberately a separate, prior
+# question from consent: "is this agent even scoped to attempt this at all" vs. "has the
+# principal consented to this purpose." An unrecognized purpose maps to None, which
+# governance_db.is_entitled() always treats as not-entitled -- fail closed on anything
+# this table doesn't know about, rather than silently allowing an unmapped app through.
+_PURPOSE_APP_SUBSTRINGS = (
+    ("swiggy", "swiggy"),
+    ("teams", "teams"),
+    ("kite", "kite"),
+    ("yahoo", "yahoo_finance"),
+)
+
+
+def _purpose_to_app(purpose: str) -> Optional[str]:
+    lowered = (purpose or "").lower()
+    for substring, app in _PURPOSE_APP_SUBSTRINGS:
+        if substring in lowered:
+            return app
+    return None
+
+
+def notify_incident(incident_id: str, agent: dict, request: "AgentDecisionCheckRequest", reason_code: str):
+    """Fire-and-log, same discipline as diff_engine.py's alarm emails -- a notification
+    failure must never affect the DENY already decided. Reuses the same
+    notification_subscribers list every other alarm email already reads from, rather than
+    inventing a separate recipient config just for incidents."""
+    try:
+        with open("pii_rules.json", "r") as f:
+            subscribers = json.load(f).get("notification_subscribers", [])
+        for sub in subscribers:
+            if sub.get("alert_type") not in ("ALL", "AGENT_SCOPE_EXCEEDED"):
+                continue
+            if sub.get("email"):
+                EmailNotifier.send_incident_email(
+                    sub.get("email"), incident_id, agent, request, reason_code,
+                    f"{sub.get('role')} ({sub.get('alert_type')})",
+                )
+    except Exception as e:
+        logging.error(f"Failed to notify incident {incident_id}: {e}")
+
+
 def _verify_agent_or_401(x_agent_id: Optional[str], authorization: Optional[str]):
     """
     Inline identity verification for every /v1/agent/* route that isn't registration itself.
@@ -1457,6 +1503,43 @@ def agent_decision_check(request: AgentDecisionCheckRequest,
     # ties together the DPDP Engine call, our activity/event rows, and the response --
     # a caller that omits it must still get one back to correlate against.
     correlation_id = request.correlation_id or str(uuid.uuid4())
+
+    # IAM scope check -- a prior, separate question from consent. DPDP is never even asked
+    # when this fails: "is this agent scoped to attempt this at all" is answered first, and
+    # a scope violation is an incident (§ design doc), not an ordinary consent denial.
+    # Only enforced for purposes recognized as belonging to a known (VOXA) app -- this is a
+    # scoped addition for the multi-skill-agent scenario, not a blanket policy over every
+    # possible purpose. A purpose this repo's own original chatbot uses (e.g.
+    # BILLING_SUPPORT, AUTO_PAY) maps to app=None and skips this gate entirely, proceeding
+    # straight to DPDP exactly as before IAM existed.
+    app = _purpose_to_app(request.purpose)
+    if app and not governance_db.is_entitled(request.principal_ref, agent["agent_id"], request.device_id, app):
+        reason_code = "IAM_SCOPE_EXCEEDED"
+        try:
+            governance_db.log_activity(
+                agent_id=agent["agent_id"],
+                invoking_user_id=request.principal_ref,
+                action=f"decision_check:{request.operation}",
+                outcome="BLOCKED",
+                correlation_id=correlation_id,
+                reason_code=reason_code,
+            )
+            incident_id = governance_db.create_incident(
+                event_type="AGENT_SCOPE_EXCEEDED",
+                severity="HIGH",
+                agent_id=agent["agent_id"],
+                principal_ref=request.principal_ref,
+                reason_code=reason_code,
+                correlation_id=correlation_id,
+            )
+            notify_incident(incident_id, agent, request, reason_code)
+        except Exception as e:
+            logging.error(f"Agent governance: failed to log/incident IAM scope violation: {e}")
+        return {
+            "decision": "DENY", "guard_failed": False, "error": None,
+            "decision_id": None, "notice_version": None, "reason_code": reason_code,
+            "correlation_id": correlation_id,
+        }
 
     decision = dpdp_client.check_decision(
         principal_ref=request.principal_ref,
@@ -1540,6 +1623,18 @@ def agent_list_events(limit: int = 100, principal: Principal = Depends(require_r
 @app.get("/v1/agent/stats")
 def agent_stats(principal: Principal = Depends(require_role(*ADMIN_ROLES))):
     return governance_db.get_stats()
+
+
+@app.get("/v1/agent/entitlements")
+def agent_list_entitlements(principal: Principal = Depends(require_role(*ADMIN_ROLES))):
+    """Read-only for now -- entitlements are seeded/managed by whoever owns the (mocked)
+    IAM sync process, not editable from this admin UI yet."""
+    return {"entitlements": governance_db.list_entitlements()}
+
+
+@app.get("/v1/agent/incidents")
+def agent_list_incidents(limit: int = 100, principal: Principal = Depends(require_role(*ADMIN_ROLES))):
+    return {"incidents": governance_db.list_incidents(limit)}
 
 
 @app.post("/delete_alarm")

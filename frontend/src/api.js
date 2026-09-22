@@ -198,6 +198,14 @@ export async function fetchGovernanceStats() {
   return apiFetch('/v1/agent/stats');
 }
 
+export async function fetchAgentEntitlements() {
+  return apiFetch('/v1/agent/entitlements');
+}
+
+export async function fetchAgentIncidents() {
+  return apiFetch('/v1/agent/incidents');
+}
+
 export async function updateToxicitySettings({ thresholds, enable_toxicity_guard }) {
   // Takes the request body shape directly -- the caller already builds
   // { thresholds, enable_toxicity_guard }, and wrapping it again here used to nest it

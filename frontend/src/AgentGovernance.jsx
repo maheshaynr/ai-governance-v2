@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { fetchAgents, revokeAgent, fetchAgentActivity, fetchGovernanceEvents, fetchGovernanceStats } from './api';
+import { fetchAgents, revokeAgent, fetchAgentActivity, fetchGovernanceEvents, fetchGovernanceStats, fetchAgentEntitlements, fetchAgentIncidents } from './api';
 
 // Matches AdminConfig.jsx's own fallback -- App.jsx always passes a real principal once
 // RBAC is in effect, but this keeps the component safe to render standalone (e.g. tests).
@@ -10,18 +10,22 @@ const DEFAULT_PRINCIPAL = { name: 'anonymous', role: 'super_admin', is_admin: tr
 // a different concern from the content-policy tuning AdminConfig.jsx covers. See
 // Implementation_Plan/Agent_Governance_Layer_Design.md for the full design.
 export default function AgentGovernance({ principal = DEFAULT_PRINCIPAL }) {
-  const [activeTab, setActiveTab] = useState('agents'); // 'agents', 'activity', 'events', 'stats'
+  const [activeTab, setActiveTab] = useState('agents'); // 'agents', 'entitlements', 'activity', 'events', 'incidents', 'stats'
 
   const [agents, setAgents] = useState([]);
+  const [entitlements, setEntitlements] = useState([]);
   const [activity, setActivity] = useState([]);
   const [events, setEvents] = useState([]);
+  const [incidents, setIncidents] = useState([]);
   const [stats, setStats] = useState(null);
   const [revokingAgentId, setRevokingAgentId] = useState(null);
 
   useEffect(() => {
     loadAgents();
+    loadEntitlements();
     loadActivity();
     loadEvents();
+    loadIncidents();
     loadStats();
   }, [activeTab]);
 
@@ -31,6 +35,24 @@ export default function AgentGovernance({ principal = DEFAULT_PRINCIPAL }) {
       if (data.agents) setAgents(data.agents);
     } catch (e) {
       console.error('Failed to load agents', e);
+    }
+  };
+
+  const loadEntitlements = async () => {
+    try {
+      const data = await fetchAgentEntitlements();
+      if (data.entitlements) setEntitlements(data.entitlements);
+    } catch (e) {
+      console.error('Failed to load entitlements', e);
+    }
+  };
+
+  const loadIncidents = async () => {
+    try {
+      const data = await fetchAgentIncidents();
+      if (data.incidents) setIncidents(data.incidents);
+    } catch (e) {
+      console.error('Failed to load incidents', e);
     }
   };
 
@@ -100,8 +122,10 @@ export default function AgentGovernance({ principal = DEFAULT_PRINCIPAL }) {
         <h2>🧭 Agent Governance</h2>
         <div className="nav-tabs">
           <button className={activeTab === 'agents' ? 'active' : ''} onClick={() => setActiveTab('agents')}>Registered Agents</button>
+          <button className={activeTab === 'entitlements' ? 'active' : ''} onClick={() => setActiveTab('entitlements')}>Entitlements</button>
           <button className={activeTab === 'activity' ? 'active' : ''} onClick={() => setActiveTab('activity')}>Activity Log</button>
           <button className={activeTab === 'events' ? 'active' : ''} onClick={() => setActiveTab('events')}>Compliance Events</button>
+          <button className={activeTab === 'incidents' ? 'active' : ''} onClick={() => setActiveTab('incidents')}>Incidents</button>
           <button className={activeTab === 'stats' ? 'active' : ''} onClick={() => setActiveTab('stats')}>Stats</button>
         </div>
       </div>
@@ -158,6 +182,46 @@ export default function AgentGovernance({ principal = DEFAULT_PRINCIPAL }) {
                               {revokingAgentId === a.agent_id ? '⏳ Revoking...' : 'Revoke'}
                             </button>
                           )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'entitlements' && (
+          <div className="admin-layout">
+            <div className="rules-list">
+              {cardHeader(
+                'Entitlements',
+                'Mocked IAM -- which (principal, agent) pairs are entitled to which app. Read-only here; seeded/managed by whoever owns the IAM sync process, never granted by a calling agent itself. A blank Device ID means the entitlement is not yet restricted to a specific device.',
+                loadEntitlements,
+              )}
+              <div style={{ border: '1px solid #d0d7de', borderRadius: '6px', background: '#fff', overflow: 'hidden' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.9rem' }}>
+                  <thead style={{ background: '#f6f8fa' }}>
+                    <tr>
+                      <th style={th}>Principal</th>
+                      <th style={th}>Agent ID</th>
+                      <th style={th}>Device ID</th>
+                      <th style={th}>Allowed App</th>
+                      <th style={th}>Granted</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {entitlements.length === 0 ? (
+                      <tr><td colSpan="5" style={{ padding: '2rem', textAlign: 'center', color: '#57606a' }}>No entitlements granted yet.</td></tr>
+                    ) : entitlements.map((row, idx) => (
+                      <tr key={idx} style={{ borderBottom: '1px solid #d0d7de' }}>
+                        <td style={{ ...td, fontFamily: 'monospace', fontSize: '0.75rem' }}>{row.principal_ref}</td>
+                        <td style={{ ...td, fontFamily: 'monospace', fontSize: '0.75rem' }}>{row.agent_id}</td>
+                        <td style={{ ...td, fontFamily: 'monospace', fontSize: '0.75rem', color: '#57606a' }}>{row.device_id || '— (any device)'}</td>
+                        <td style={{ ...td, fontWeight: '500' }}>{row.allowed_app}</td>
+                        <td style={{ ...td, fontSize: '0.8rem', color: '#57606a', whiteSpace: 'nowrap' }}>
+                          {row.granted_at ? new Date(row.granted_at).toLocaleString() : '—'}
                         </td>
                       </tr>
                     ))}
@@ -243,6 +307,52 @@ export default function AgentGovernance({ principal = DEFAULT_PRINCIPAL }) {
                         <td style={td}>{statusPill(row.severity, false)}</td>
                         <td style={{ ...td, fontFamily: 'monospace', fontSize: '0.75rem' }}>{row.agent_id}</td>
                         <td style={td}>{row.reason_code || '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'incidents' && (
+          <div className="admin-layout">
+            <div className="rules-list">
+              {cardHeader(
+                'Incidents',
+                'Reserved for genuine scope/authorization violations only -- never raised for an ordinary consent denial or a masked-content block, which stay in Activity Log/Compliance Events. incident_id is a dummy reference; this never calls a real ITSM tool.',
+                loadIncidents,
+              )}
+              <div style={{ border: '1px solid #d0d7de', borderRadius: '6px', background: '#fff', overflow: 'hidden' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.9rem' }}>
+                  <thead style={{ background: '#f6f8fa' }}>
+                    <tr>
+                      <th style={th}>Time</th>
+                      <th style={th}>Incident ID</th>
+                      <th style={th}>Type</th>
+                      <th style={th}>Severity</th>
+                      <th style={th}>Agent ID</th>
+                      <th style={th}>Principal</th>
+                      <th style={th}>Reason</th>
+                      <th style={th}>Correlation ID</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {incidents.length === 0 ? (
+                      <tr><td colSpan="8" style={{ padding: '2rem', textAlign: 'center', color: '#57606a' }}>No incidents raised yet.</td></tr>
+                    ) : incidents.map((row) => (
+                      <tr key={row.incident_id} style={{ borderBottom: '1px solid #d0d7de' }}>
+                        <td style={{ ...td, fontSize: '0.8rem', color: '#57606a', whiteSpace: 'nowrap' }}>
+                          {row.created_at ? new Date(row.created_at).toLocaleString() : '—'}
+                        </td>
+                        <td style={{ ...td, fontFamily: 'monospace', fontWeight: '600' }}>{row.incident_id}</td>
+                        <td style={td}>{row.event_type}</td>
+                        <td style={td}>{statusPill(row.severity, false)}</td>
+                        <td style={{ ...td, fontFamily: 'monospace', fontSize: '0.75rem' }}>{row.agent_id}</td>
+                        <td style={{ ...td, fontFamily: 'monospace', fontSize: '0.75rem' }}>{row.principal_ref}</td>
+                        <td style={td}>{row.reason_code}</td>
+                        <td style={{ ...td, fontFamily: 'monospace', fontSize: '0.75rem', color: '#57606a' }}>{row.correlation_id || '—'}</td>
                       </tr>
                     ))}
                   </tbody>

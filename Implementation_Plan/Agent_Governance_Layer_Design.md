@@ -551,3 +551,98 @@ Worth adding for future registrations: no schema conflict, doesn't affect existi
 force a reinstall (an install that never sends it just omits the field). Before adding it, decide what
 governance actually *does* with it — a version that's collected but never enforced against policy is a
 display-only field, not a governance control. Left as a future addition, not scheduled here.
+
+---
+
+## 13. Mocked IAM, Entitlements, and Incidents — implemented
+
+Grounded in a real planning discussion (Mahesh's data architect, 2026-09-21): identity (§3) and
+consent (§1) are not the only governance questions. A third, separate one — **is this agent even
+scoped to attempt this at all** — sits *before* consent, answers a different question, and needed its
+own mechanism. Canonical example from that discussion: an agent authorized only for Swiggy-shaped
+actions attempting a payment on a completely different app is an **incident** (a security/scope
+violation), not an ordinary consent denial.
+
+### 13.1 Why this is a separate table, not a field on the Agent Registry
+
+The natural-seeming shortcut — store "allowed apps" directly on the `agents` row at registration time
+— was considered and rejected. Two reasons: (1) an `agent_id` like "VOXA — Kite Skill" already *is*,
+by construction, permanently scoped to Kite (§9.2) — asking "can this agent act as Kite" is
+tautological; the real question the scenario asks is "is this **user** allowed to use Kite at all,"
+which is a fact about the `principal_ref`, not the already-registered agent identity. (2) Storing a
+mutable authorization fact on a mostly-static identity record creates two sources of truth the moment
+an independent "IAM sync" process needs to update it — the same reasoning that already keeps
+`activity_log`/`governance_events` separate from `agents`. So: `iam_entitlements` is its own table,
+checked live on every call (same "real-time, never cached" principle the architect insisted on for
+consent), never duplicated onto the Agent Registry.
+
+### 13.2 Data model
+
+```
+iam_entitlements(principal_ref, agent_id, device_id, allowed_app, granted_at)
+```
+
+The lookup key is the three-part "signature" from that discussion — *user + agent + the device/server
+hosting it* — not `agent_id` alone. `device_id` is nullable and treated as a wildcard when NULL ("not
+yet restricted by device"), since VOXA didn't send `device_id` on every call until this feature existed
+— entitlements can be tightened to a specific device once real values are flowing.
+
+`allowed_app` is derived from `purpose` via a small substring map (`api.py`'s `_purpose_to_app`):
+`"swiggy"`, `"teams"`, `"kite"`, `"yahoo"`. **Deliberately scoped, not universal**: a purpose that
+doesn't match any known app (e.g. this repo's own pre-existing `BILLING_SUPPORT`/`AUTO_PAY` purposes,
+unrelated to VOXA) skips the IAM gate entirely and proceeds straight to DPDP, exactly as before this
+feature existed. This was a real regression caught by the existing test suite during implementation —
+the first version fail-closed on *any* unmapped purpose, which incorrectly blocked every non-VOXA
+caller. IAM here answers a VOXA-specific scoping question; it is not a blanket policy over every
+purpose in the system.
+
+No entitlement is currently granted for `"kite"`, on purpose — that's the gap Scenario 5 depends on.
+
+### 13.3 Wire contract
+
+`/v1/agent/decisions/check`'s request gains `device_id` (optional; a missing value only matches an
+entitlement row whose own `device_id` is NULL). The check runs immediately after identity verification
+and *before* `dpdp_client.check_decision` is ever called — a scope violation never reaches DPDP at all,
+since it isn't a consent question.
+
+### 13.4 Incidents — a new, higher tier than Compliance Events
+
+```
+incidents(incident_id, event_type, severity, agent_id, principal_ref, reason_code, correlation_id, created_at)
+```
+
+`incident_id` is a dummy string (`INC-######`) — this never calls a real ITSM tool. Per the same
+discussion: **not every block is an incident.** No consent given, withdrawn consent, masked-but-passed
+content — all ordinary enforcement, alert-only at most, unchanged (Activity Log + `reason_code` +
+existing Alarms). `incidents` is reserved specifically for scope/authorization violations
+(`AGENT_SCOPE_EXCEEDED` today), raised only from the IAM-check failure path.
+
+On creation: log the Activity Log row (`BLOCKED`, `reason_code="IAM_SCOPE_EXCEEDED"`) → create the
+incident → attempt a notification email (`notifications.py`'s `send_incident_email`, reusing the same
+`notification_subscribers` list every other alarm email already reads from `pii_rules.json` — no new
+recipient config). Fire-and-log: a notification failure (e.g. `SMTP_USER`/`SMTP_PASSWORD` unset) never
+affects the already-decided DENY, same discipline as every other alarm path in this project.
+Post-incident investigation is explicitly out of scope, per the same discussion: the incident record
+just needs enough detail to be handed to a real system, not an investigation workflow of its own.
+
+### 13.5 Admin UI
+
+Two new tabs under Agent Governance: **Entitlements** (read-only — seeded/managed by whoever owns the
+IAM sync process, no grant/revoke UI yet) and **Incidents**. Ordered by category, not by build order:
+`Registered Agents, Entitlements, Activity Log, Compliance Events, Incidents, Stats` — the two identity/
+authorization "setup" tabs grouped first, the three event-stream tabs next, Stats last as the aggregate
+over everything.
+
+### 13.6 What VOXA needs to change
+
+1. Register Kite as a real agent (`agent_name="VOXA — Kite Skill"`) — identity must genuinely succeed;
+   this is an authorization test, not an identity-failure test.
+2. Wire Kite's existing write action(s) to call `/v1/agent/decisions/check` first, same insertion
+   pattern already used in `SwiggyTools.kt`.
+3. Send `device_id` on **every** `/v1/agent/decisions/check` call going forward, not just at
+   registration — the same value already generated and persisted locally.
+4. Nothing else — the DENY response is kept in the same shape as any other DPDP-driven denial, so
+   existing "not allowed" handling already covers it.
+
+Guardrail deliberately will not grant Kite any entitlement — identity passes, the new IAM layer is
+what stops it.

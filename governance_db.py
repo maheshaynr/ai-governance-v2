@@ -78,6 +78,39 @@ def init_db():
         )
     ''')
 
+    # Mocked IAM -- deliberately its own table, never duplicated onto `agents`. Identity
+    # (who this agent is) and authorization (what it's entitled to do) stay separate for the
+    # same reason activity_log/governance_events are already separate from agents: a static
+    # identity record and a live, independently-changing state must not be conflated, or one
+    # ends up caching a stale copy of the other. device_id NULL here means "not yet
+    # restricted by device" (wildcard) -- VOXA doesn't send device_id on every call yet, so
+    # entitlements can't all be device-scoped from day one.
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS iam_entitlements (
+            principal_ref TEXT NOT NULL,
+            agent_id TEXT NOT NULL,
+            device_id TEXT,
+            allowed_app TEXT NOT NULL,
+            granted_at TEXT
+        )
+    ''')
+
+    # Reserved for genuine scope/authorization violations only (§ the design doc's incident
+    # vs. compliance-event distinction) -- never raised for an ordinary consent denial or a
+    # masked-content block, which stay as Activity Log + Compliance Events, nothing higher.
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS incidents (
+            incident_id TEXT PRIMARY KEY,
+            event_type TEXT,
+            severity TEXT,
+            agent_id TEXT,
+            principal_ref TEXT,
+            reason_code TEXT,
+            correlation_id TEXT,
+            created_at TEXT
+        )
+    ''')
+
     conn.commit()
     conn.close()
 
@@ -215,6 +248,96 @@ def list_governance_events(limit=100):
         {
             "event_id": r[0], "event_type": r[1], "severity": r[2], "agent_id": r[3],
             "reason_code": r[4], "correlation_id": r[5], "occurred_at": r[6],
+        }
+        for r in rows
+    ]
+
+
+def grant_entitlement(principal_ref, agent_id, allowed_app, device_id=None):
+    """Seeding/admin helper -- there is no self-service grant endpoint; entitlements are set
+    by whoever owns the (mocked) IAM sync process, never by the calling agent itself."""
+    conn = _connect()
+    cursor = conn.cursor()
+    cursor.execute(
+        'INSERT INTO iam_entitlements (principal_ref, agent_id, device_id, allowed_app, granted_at) '
+        'VALUES (?, ?, ?, ?, ?)',
+        (principal_ref, agent_id, device_id, allowed_app, _now()),
+    )
+    conn.commit()
+    conn.close()
+
+
+def is_entitled(principal_ref, agent_id, device_id, allowed_app) -> bool:
+    """
+    True only if a matching (principal_ref, agent_id, allowed_app) row exists AND either the
+    row's device_id is NULL (wildcard -- not yet restricted by device) or matches the
+    device_id on this call. allowed_app=None (an unrecognized/unmapped purpose) always
+    fails closed -- there's nothing to look up, so nothing can be entitled.
+    """
+    if not allowed_app:
+        return False
+    conn = _connect()
+    cursor = conn.cursor()
+    cursor.execute(
+        'SELECT device_id FROM iam_entitlements WHERE principal_ref = ? AND agent_id = ? AND allowed_app = ?',
+        (principal_ref, agent_id, allowed_app),
+    )
+    rows = cursor.fetchall()
+    conn.close()
+    return any(row[0] is None or row[0] == device_id for row in rows)
+
+
+def list_entitlements(limit=200):
+    conn = _connect()
+    cursor = conn.cursor()
+    cursor.execute(
+        'SELECT principal_ref, agent_id, device_id, allowed_app, granted_at '
+        'FROM iam_entitlements ORDER BY granted_at DESC LIMIT ?',
+        (limit,),
+    )
+    rows = cursor.fetchall()
+    conn.close()
+    return [
+        {
+            "principal_ref": r[0], "agent_id": r[1], "device_id": r[2],
+            "allowed_app": r[3], "granted_at": r[4],
+        }
+        for r in rows
+    ]
+
+
+def create_incident(event_type, severity, agent_id, principal_ref, reason_code, correlation_id):
+    """Dummy incident number -- this never calls a real ITSM tool (ServiceNow or otherwise);
+    it's a self-contained record with enough detail to be handed to one, per the design
+    doc's explicit scope: create the incident, relinquish post-incident investigation."""
+    import random
+    incident_id = f"INC-{random.randint(100000, 999999)}"
+    conn = _connect()
+    cursor = conn.cursor()
+    cursor.execute(
+        'INSERT INTO incidents (incident_id, event_type, severity, agent_id, principal_ref, reason_code, correlation_id, created_at) '
+        'VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        (incident_id, event_type, severity, agent_id, principal_ref, reason_code, correlation_id, _now()),
+    )
+    conn.commit()
+    conn.close()
+    return incident_id
+
+
+def list_incidents(limit=100):
+    conn = _connect()
+    cursor = conn.cursor()
+    cursor.execute(
+        'SELECT incident_id, event_type, severity, agent_id, principal_ref, reason_code, correlation_id, created_at '
+        'FROM incidents ORDER BY created_at DESC LIMIT ?',
+        (limit,),
+    )
+    rows = cursor.fetchall()
+    conn.close()
+    return [
+        {
+            "incident_id": r[0], "event_type": r[1], "severity": r[2], "agent_id": r[3],
+            "principal_ref": r[4], "reason_code": r[5], "correlation_id": r[6], "created_at": r[7],
         }
         for r in rows
     ]
