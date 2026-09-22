@@ -307,6 +307,9 @@ class AgentActivityRequest(BaseModel):
     # /guardrail_validate, which compute their own reason_code, this is the caller's own
     # explanation, taken at face value and stored as-is.
     reason_code: Optional[str] = None
+    # Same persisted per-install value as /v1/agent/decisions/check's device_id -- lets this
+    # row be cross-checked against the decisions/check row sharing its correlation_id.
+    device_id: Optional[str] = None
 
 class ChatRequest(BaseModel):
     message: str = Field(max_length=8000)
@@ -1523,6 +1526,7 @@ def agent_decision_check(request: AgentDecisionCheckRequest,
                 outcome="BLOCKED",
                 correlation_id=correlation_id,
                 reason_code=reason_code,
+                device_id=request.device_id,
             )
             incident_id = governance_db.create_incident(
                 event_type="AGENT_SCOPE_EXCEEDED",
@@ -1561,6 +1565,7 @@ def agent_decision_check(request: AgentDecisionCheckRequest,
             outcome="SERVED" if allowed else "BLOCKED",
             correlation_id=correlation_id,
             reason_code=reason_code,
+            device_id=request.device_id,
         )
         if not allowed:
             governance_db.log_governance_event(
@@ -1592,6 +1597,7 @@ def agent_activity(request: AgentActivityRequest,
         latency_ms=request.latency_ms,
         correlation_id=correlation_id,
         reason_code=request.reason_code,
+        device_id=request.device_id,
     )
     return {"status": "logged", "correlation_id": correlation_id}
 

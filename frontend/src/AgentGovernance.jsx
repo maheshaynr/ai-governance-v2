@@ -5,12 +5,61 @@ import { fetchAgents, revokeAgent, fetchAgentActivity, fetchGovernanceEvents, fe
 // RBAC is in effect, but this keeps the component safe to render standalone (e.g. tests).
 const DEFAULT_PRINCIPAL = { name: 'anonymous', role: 'super_admin', is_admin: true };
 
+const iamTh = { padding: '0.75rem', borderBottom: '1px solid #d0d7de', textAlign: 'left' };
+const iamTd = { padding: '0.75rem' };
+
+// Deliberately a modal, not a tab alongside Registered Agents/Activity Log/etc. -- those are
+// all genuinely Guardrail-owned data; this represents a real external IAM system's data that
+// we have no choice but to mock. Presenting it as a peer tab would misleadingly imply it's
+// "ours" the same way the rest of this page is.
+const EntitlementsModal = ({ entitlements, onRefresh, onClose }) => (
+  <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
+    <div className="card" style={{ width: '80%', maxWidth: '900px', height: '80vh', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #d0d7de', padding: '1rem' }}>
+        <h3 style={{ margin: 0 }}>🔌 Entitlements (Mocked IAM)</h3>
+        <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
+          <button onClick={onRefresh} className="secondary" style={{ padding: '0.2rem 0.5rem', fontSize: '0.8rem' }}>Refresh</button>
+          <button onClick={onClose} className="secondary" style={{ padding: '0.5rem 1rem' }}>Close</button>
+        </div>
+      </div>
+      <div style={{ flex: 1, overflow: 'auto', padding: '1rem' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+          <thead style={{ background: '#f6f8fa' }}>
+            <tr>
+              <th style={iamTh}>Principal</th>
+              <th style={iamTh}>Agent ID</th>
+              <th style={iamTh}>Device ID</th>
+              <th style={iamTh}>Allowed App</th>
+              <th style={iamTh}>Granted</th>
+            </tr>
+          </thead>
+          <tbody>
+            {entitlements.length === 0 ? (
+              <tr><td colSpan="5" style={{ padding: '2rem', textAlign: 'center', color: '#57606a' }}>No entitlements granted yet.</td></tr>
+            ) : entitlements.map((row, idx) => (
+              <tr key={idx} style={{ borderBottom: '1px solid #d0d7de' }}>
+                <td style={{ ...iamTd, fontFamily: 'monospace', fontSize: '0.75rem' }}>{row.principal_ref}</td>
+                <td style={{ ...iamTd, fontFamily: 'monospace', fontSize: '0.75rem' }}>{row.agent_id}</td>
+                <td style={{ ...iamTd, fontFamily: 'monospace', fontSize: '0.75rem', color: '#57606a' }}>{row.device_id || '— (any device)'}</td>
+                <td style={{ ...iamTd, fontWeight: '500' }}>{row.allowed_app}</td>
+                <td style={{ ...iamTd, fontSize: '0.8rem', color: '#57606a', whiteSpace: 'nowrap' }}>
+                  {row.granted_at ? new Date(row.granted_at).toLocaleString() : '—'}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+);
+
 // Agent Governance Layer -- a separate page from Admin Configuration on purpose: this governs
 // which external agents (e.g. VOXA) may call this Guardrail at all, and what they did, which is
 // a different concern from the content-policy tuning AdminConfig.jsx covers. See
 // Implementation_Plan/Agent_Governance_Layer_Design.md for the full design.
 export default function AgentGovernance({ principal = DEFAULT_PRINCIPAL }) {
-  const [activeTab, setActiveTab] = useState('agents'); // 'agents', 'entitlements', 'activity', 'events', 'incidents', 'stats'
+  const [activeTab, setActiveTab] = useState('agents'); // 'agents', 'activity', 'events', 'incidents', 'stats'
 
   const [agents, setAgents] = useState([]);
   const [entitlements, setEntitlements] = useState([]);
@@ -19,10 +68,10 @@ export default function AgentGovernance({ principal = DEFAULT_PRINCIPAL }) {
   const [incidents, setIncidents] = useState([]);
   const [stats, setStats] = useState(null);
   const [revokingAgentId, setRevokingAgentId] = useState(null);
+  const [showEntitlements, setShowEntitlements] = useState(false);
 
   useEffect(() => {
     loadAgents();
-    loadEntitlements();
     loadActivity();
     loadEvents();
     loadIncidents();
@@ -97,12 +146,9 @@ export default function AgentGovernance({ principal = DEFAULT_PRINCIPAL }) {
 
   const th = { padding: '0.75rem', borderBottom: '1px solid #d0d7de' };
   const td = { padding: '0.75rem' };
-  const cardHeader = (title, description, onRefresh) => (
+  const cardHeader = (title, onRefresh) => (
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-      <div>
-        <h3 style={{ margin: 0 }}>{title}</h3>
-        <p style={{ margin: '0.25rem 0 0 0', color: '#57606a', fontSize: '0.85rem' }}>{description}</p>
-      </div>
+      <h3 style={{ margin: 0 }}>{title}</h3>
       <button onClick={onRefresh} className="secondary" style={{ padding: '0.2rem 0.5rem', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>Refresh</button>
     </div>
   );
@@ -118,27 +164,40 @@ export default function AgentGovernance({ principal = DEFAULT_PRINCIPAL }) {
 
   return (
     <div>
-      <div style={{ marginBottom: '1rem' }}>
-        <h2>🧭 Agent Governance</h2>
-        <div className="nav-tabs">
-          <button className={activeTab === 'agents' ? 'active' : ''} onClick={() => setActiveTab('agents')}>Registered Agents</button>
-          <button className={activeTab === 'entitlements' ? 'active' : ''} onClick={() => setActiveTab('entitlements')}>Entitlements</button>
-          <button className={activeTab === 'activity' ? 'active' : ''} onClick={() => setActiveTab('activity')}>Activity Log</button>
-          <button className={activeTab === 'events' ? 'active' : ''} onClick={() => setActiveTab('events')}>Compliance Events</button>
-          <button className={activeTab === 'incidents' ? 'active' : ''} onClick={() => setActiveTab('incidents')}>Incidents</button>
-          <button className={activeTab === 'stats' ? 'active' : ''} onClick={() => setActiveTab('stats')}>Stats</button>
+      {showEntitlements && (
+        <EntitlementsModal
+          entitlements={entitlements}
+          onRefresh={loadEntitlements}
+          onClose={() => setShowEntitlements(false)}
+        />
+      )}
+
+      <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+        <div>
+          <h2 style={{ margin: 0 }}>🧭 Agent Governance</h2>
+          <div className="nav-tabs">
+            <button className={activeTab === 'agents' ? 'active' : ''} onClick={() => setActiveTab('agents')}>Registered Agents</button>
+            <button className={activeTab === 'activity' ? 'active' : ''} onClick={() => setActiveTab('activity')}>Activity Log</button>
+            <button className={activeTab === 'events' ? 'active' : ''} onClick={() => setActiveTab('events')}>Compliance Events</button>
+            <button className={activeTab === 'incidents' ? 'active' : ''} onClick={() => setActiveTab('incidents')}>Incidents</button>
+            <button className={activeTab === 'stats' ? 'active' : ''} onClick={() => setActiveTab('stats')}>Stats</button>
+          </div>
         </div>
+        <button
+          className="secondary"
+          onClick={() => { loadEntitlements(); setShowEntitlements(true); }}
+          style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem', whiteSpace: 'nowrap' }}
+          title="A mocked external IAM system -- not Guardrail's own data, shown separately on purpose."
+        >
+          🔌 Entitlements (Mocked IAM)
+        </button>
       </div>
 
       <div>
         {activeTab === 'agents' && (
           <div className="admin-layout">
             <div className="rules-list">
-              {cardHeader(
-                'Registered Agents',
-                'Every external agent (e.g. a VOXA skill) that has self-registered an identity with this Guardrail. Revoking here takes effect on that agent\'s very next call.',
-                loadAgents,
-              )}
+              {cardHeader('Registered Agents', loadAgents)}
               <div style={{ border: '1px solid #d0d7de', borderRadius: '6px', background: '#fff', overflow: 'hidden' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.9rem' }}>
                   <thead style={{ background: '#f6f8fa' }}>
@@ -192,54 +251,10 @@ export default function AgentGovernance({ principal = DEFAULT_PRINCIPAL }) {
           </div>
         )}
 
-        {activeTab === 'entitlements' && (
-          <div className="admin-layout">
-            <div className="rules-list">
-              {cardHeader(
-                'Entitlements',
-                'Mocked IAM -- which (principal, agent) pairs are entitled to which app. Read-only here; seeded/managed by whoever owns the IAM sync process, never granted by a calling agent itself. A blank Device ID means the entitlement is not yet restricted to a specific device.',
-                loadEntitlements,
-              )}
-              <div style={{ border: '1px solid #d0d7de', borderRadius: '6px', background: '#fff', overflow: 'hidden' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.9rem' }}>
-                  <thead style={{ background: '#f6f8fa' }}>
-                    <tr>
-                      <th style={th}>Principal</th>
-                      <th style={th}>Agent ID</th>
-                      <th style={th}>Device ID</th>
-                      <th style={th}>Allowed App</th>
-                      <th style={th}>Granted</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {entitlements.length === 0 ? (
-                      <tr><td colSpan="5" style={{ padding: '2rem', textAlign: 'center', color: '#57606a' }}>No entitlements granted yet.</td></tr>
-                    ) : entitlements.map((row, idx) => (
-                      <tr key={idx} style={{ borderBottom: '1px solid #d0d7de' }}>
-                        <td style={{ ...td, fontFamily: 'monospace', fontSize: '0.75rem' }}>{row.principal_ref}</td>
-                        <td style={{ ...td, fontFamily: 'monospace', fontSize: '0.75rem' }}>{row.agent_id}</td>
-                        <td style={{ ...td, fontFamily: 'monospace', fontSize: '0.75rem', color: '#57606a' }}>{row.device_id || '— (any device)'}</td>
-                        <td style={{ ...td, fontWeight: '500' }}>{row.allowed_app}</td>
-                        <td style={{ ...td, fontSize: '0.8rem', color: '#57606a', whiteSpace: 'nowrap' }}>
-                          {row.granted_at ? new Date(row.granted_at).toLocaleString() : '—'}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        )}
-
         {activeTab === 'activity' && (
           <div className="admin-layout">
             <div className="rules-list">
-              {cardHeader(
-                'Activity Log',
-                'One row per agent call, regardless of outcome. Never the request content itself -- only who called, what action, and whether it was served or blocked.',
-                loadActivity,
-              )}
+              {cardHeader('Activity Log', loadActivity)}
               <div style={{ border: '1px solid #d0d7de', borderRadius: '6px', background: '#fff', overflow: 'hidden' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.9rem' }}>
                   <thead style={{ background: '#f6f8fa' }}>
@@ -250,12 +265,13 @@ export default function AgentGovernance({ principal = DEFAULT_PRINCIPAL }) {
                       <th style={th}>Action</th>
                       <th style={th}>Outcome</th>
                       <th style={th}>Reason</th>
+                      <th style={th}>Device ID</th>
                       <th style={th}>Correlation ID</th>
                     </tr>
                   </thead>
                   <tbody>
                     {activity.length === 0 ? (
-                      <tr><td colSpan="7" style={{ padding: '2rem', textAlign: 'center', color: '#57606a' }}>No activity logged yet.</td></tr>
+                      <tr><td colSpan="8" style={{ padding: '2rem', textAlign: 'center', color: '#57606a' }}>No activity logged yet.</td></tr>
                     ) : activity.map((row) => (
                       <tr key={row.id} style={{ borderBottom: '1px solid #d0d7de' }}>
                         <td style={{ ...td, fontSize: '0.8rem', color: '#57606a', whiteSpace: 'nowrap' }}>
@@ -266,6 +282,7 @@ export default function AgentGovernance({ principal = DEFAULT_PRINCIPAL }) {
                         <td style={td}>{row.action}</td>
                         <td style={td}>{statusPill(row.outcome, row.outcome === 'SERVED')}</td>
                         <td style={{ ...td, fontFamily: 'monospace', fontSize: '0.75rem', color: '#57606a' }}>{row.reason_code || '—'}</td>
+                        <td style={{ ...td, fontFamily: 'monospace', fontSize: '0.75rem', color: '#57606a' }}>{row.device_id || '—'}</td>
                         <td style={{ ...td, fontFamily: 'monospace', fontSize: '0.75rem', color: '#57606a' }}>{row.correlation_id || '—'}</td>
                       </tr>
                     ))}
@@ -279,11 +296,7 @@ export default function AgentGovernance({ principal = DEFAULT_PRINCIPAL }) {
         {activeTab === 'events' && (
           <div className="admin-layout">
             <div className="rules-list">
-              {cardHeader(
-                'Compliance Events',
-                'Raised automatically by identity verification and decision-check failures -- never sent directly by a calling agent.',
-                loadEvents,
-              )}
+              {cardHeader('Compliance Events', loadEvents)}
               <div style={{ border: '1px solid #d0d7de', borderRadius: '6px', background: '#fff', overflow: 'hidden' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.9rem' }}>
                   <thead style={{ background: '#f6f8fa' }}>
@@ -319,11 +332,7 @@ export default function AgentGovernance({ principal = DEFAULT_PRINCIPAL }) {
         {activeTab === 'incidents' && (
           <div className="admin-layout">
             <div className="rules-list">
-              {cardHeader(
-                'Incidents',
-                'Reserved for genuine scope/authorization violations only -- never raised for an ordinary consent denial or a masked-content block, which stay in Activity Log/Compliance Events. incident_id is a dummy reference; this never calls a real ITSM tool.',
-                loadIncidents,
-              )}
+              {cardHeader('Incidents', loadIncidents)}
               <div style={{ border: '1px solid #d0d7de', borderRadius: '6px', background: '#fff', overflow: 'hidden' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.9rem' }}>
                   <thead style={{ background: '#f6f8fa' }}>
@@ -365,7 +374,7 @@ export default function AgentGovernance({ principal = DEFAULT_PRINCIPAL }) {
         {activeTab === 'stats' && (
           <div className="admin-layout">
             <div className="rules-list">
-              {cardHeader('Stats', 'Pure aggregation over the three stores above -- no separately maintained counters.', loadStats)}
+              {cardHeader('Stats', loadStats)}
               {!stats ? (
                 <p style={{ color: '#57606a' }}>Loading...</p>
               ) : (

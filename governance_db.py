@@ -56,15 +56,22 @@ def init_db():
             outcome TEXT,
             latency_ms INTEGER,
             correlation_id TEXT,
-            reason_code TEXT
+            reason_code TEXT,
+            device_id TEXT
         )
     ''')
 
     # reason_code was added after the initial release, so a blocked row can answer "why"
-    # on its own instead of requiring a separate Compliance Events lookup.
+    # on its own instead of requiring a separate Compliance Events lookup. device_id was
+    # added after that, so a decision-check row and its paired activity row (same
+    # correlation_id) can be cross-checked against each other -- confirmed useful once
+    # VOXA verified device_id is one persisted value shared across every skill on an
+    # install, not something that could legitimately differ row to row.
     activity_columns = {row[1] for row in cursor.execute("PRAGMA table_info(activity_log)").fetchall()}
     if "reason_code" not in activity_columns:
         cursor.execute("ALTER TABLE activity_log ADD COLUMN reason_code TEXT")
+    if "device_id" not in activity_columns:
+        cursor.execute("ALTER TABLE activity_log ADD COLUMN device_id TEXT")
 
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS governance_events (
@@ -190,13 +197,13 @@ def list_agents():
 
 
 def log_activity(agent_id, invoking_user_id, action, outcome, latency_ms=None, correlation_id=None,
-                  reason_code=None):
+                  reason_code=None, device_id=None):
     conn = _connect()
     cursor = conn.cursor()
     cursor.execute(
-        'INSERT INTO activity_log (ts, agent_id, invoking_user_id, action, outcome, latency_ms, correlation_id, reason_code) '
-        'VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-        (_now(), agent_id, invoking_user_id, action, outcome, latency_ms, correlation_id, reason_code),
+        'INSERT INTO activity_log (ts, agent_id, invoking_user_id, action, outcome, latency_ms, correlation_id, reason_code, device_id) '
+        'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        (_now(), agent_id, invoking_user_id, action, outcome, latency_ms, correlation_id, reason_code, device_id),
     )
     conn.commit()
     conn.close()
@@ -206,7 +213,7 @@ def list_activity(limit=100):
     conn = _connect()
     cursor = conn.cursor()
     cursor.execute(
-        'SELECT id, ts, agent_id, invoking_user_id, action, outcome, latency_ms, correlation_id, reason_code '
+        'SELECT id, ts, agent_id, invoking_user_id, action, outcome, latency_ms, correlation_id, reason_code, device_id '
         'FROM activity_log ORDER BY id DESC LIMIT ?',
         (limit,),
     )
@@ -216,7 +223,7 @@ def list_activity(limit=100):
         {
             "id": r[0], "ts": r[1], "agent_id": r[2], "invoking_user_id": r[3],
             "action": r[4], "outcome": r[5], "latency_ms": r[6], "correlation_id": r[7],
-            "reason_code": r[8],
+            "reason_code": r[8], "device_id": r[9],
         }
         for r in rows
     ]

@@ -57,6 +57,7 @@ remains the sole authority on "is there consent for this" — this layer never r
   "action": "...",
   "outcome": "SERVED | BLOCKED",
   "reason_code": "...",
+  "device_id": "...",
   "latency_ms": 0,
   "correlation_id": "..."
 }
@@ -70,6 +71,17 @@ and is `null` for an ordinary `SERVED` row with nothing to explain. A `BLOCKED`/
 outcome from `/guardrail_validate` now also raises a Governance Compliance Event
 (`AGENT_POLICY_VIOLATION`), mirroring the DPDP-denial path's existing `AGENT_UNAUTHORIZED_ACTION`, so
 content-pipeline blocks show up in Compliance Events/Stats the same way DPDP denials always have.
+
+`device_id` was added for the same reason as `reason_code` -- a decision-check row and its paired
+activity row (same `correlation_id`) could each carry a `device_id`, but neither was recorded anywhere
+durable, so there was no way to cross-check them after the fact. Populated from the same field on both
+`/v1/agent/decisions/check` and `/v1/agent/activity`'s requests. Confirmed by VOXA's own code
+inspection (not assumed): a single persisted UUID, generated once per install and read from one
+`SharedPreferences` key, is the *only* value their `deviceId()` function can ever return -- the exact
+same call is used in both `registerAgent()` and `checkDecisionFor()`, for every skill. So this value is
+guaranteed to be identical across Swiggy/Teams/Yahoo Finance/Kite on one install, and identical between
+a decision-check row and its paired activity row -- a mismatch would indicate a real bug, not a
+legitimate different device.
 
 `invoking_user_id` lives here, not in the registry, because one agent can be used by many different
 people over time (or, for a single-user app like VOXA, by whatever stable pseudonym represents that
@@ -154,7 +166,7 @@ Response (200): `{"agent_id": "...", "agent_secret": "...", "identity_assignment
 The secret's JSON key is `agent_secret`, shown exactly once, here.
 
 **`POST /v1/agent/decisions/check`**.
-Request: `{principal_ref, purpose, operation, data_categories, recipient_ref?, policy_context?, correlation_id?}`.
+Request: `{principal_ref, purpose, operation, data_categories, recipient_ref?, policy_context?, correlation_id?, device_id?}`.
 Response (200): `dpdp_client.check_decision(...)`'s return value plus an echoed `correlation_id`:
 `{"decision", "guard_failed", "error", "decision_id", "notice_version", "reason_code", "correlation_id"}`.
 `correlation_id` is optional in the request — **if omitted, the server generates one and echoes it
@@ -163,7 +175,7 @@ Engine call, this layer's activity/event rows, and the response the caller sees)
 This endpoint has **no `latency_ms` field** — only `/activity` captures that.
 
 **`POST /v1/agent/activity`** (non-gating).
-Request: `{invoking_user_id, action, outcome, latency_ms?, correlation_id?, reason_code?}`.
+Request: `{invoking_user_id, action, outcome, latency_ms?, correlation_id?, reason_code?, device_id?}`.
 Response (200): `{"status": "logged", "correlation_id": "..."}` (same omit-then-generate-and-echo rule).
 `ts` is always server-computed on receipt — there is no client-timestamp field. `latency_ms` is
 optional and entirely client-supplied and unvalidated; the Guardrail does not compute it, so the
