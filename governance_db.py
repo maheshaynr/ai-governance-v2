@@ -176,6 +176,20 @@ def revoke_agent(agent_id) -> bool:
     return updated
 
 
+def backfill_agent_device_id(agent_id, device_id) -> bool:
+    """Admin-only backfill for an agent registered before device_id existed on this table --
+    not a general-purpose update. Legitimate only when the value being written is actually
+    known to be correct (e.g. confirmed the same install as another already-registered
+    agent), never a guess."""
+    conn = _connect()
+    cursor = conn.cursor()
+    cursor.execute('UPDATE agents SET device_id = ? WHERE agent_id = ?', (device_id, agent_id))
+    updated = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+    return updated
+
+
 def list_agents():
     conn = _connect()
     cursor = conn.cursor()
