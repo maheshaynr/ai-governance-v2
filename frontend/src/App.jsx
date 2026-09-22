@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import Dashboard from './Dashboard';
 import AdminConfig from './AdminConfig';
 import AnalyticsDashboard from './AnalyticsDashboard';
 import ChatBot from './ChatBot';
@@ -91,12 +90,6 @@ function App() {
               Analytics & Metrics
             </button>
             <button
-              className={activeTab === 'dashboard' ? 'active' : ''}
-              onClick={() => setActiveTab('dashboard')}
-            >
-              Testing Dashboard
-            </button>
-            <button
               className={activeTab === 'governance' ? 'active' : ''}
               onClick={() => setActiveTab('governance')}
             >
@@ -123,7 +116,6 @@ function App() {
       </div>
 
       <main>
-        {activeTab === 'dashboard' && <Dashboard />}
         {activeTab === 'chatbot' && <ChatBot />}
         {activeTab === 'analytics' && <AnalyticsDashboard />}
         {activeTab === 'admin' && <AdminConfig principal={principal} />}
