@@ -1,4 +1,5 @@
 import logging
+import re
 
 import spacy
 from presidio_analyzer import EntityRecognizer, Pattern, PatternRecognizer, RecognizerResult
@@ -74,6 +75,94 @@ class MedicalEntityRecognizer(EntityRecognizer):
                 end=ent.end_char,
                 score=self.DEFAULT_SCORE,
             ))
+        return results
+
+
+_CURRENCY_CONTEXT_RE = re.compile(r"(?i)\b(?:rs\.?|inr|rupees?|₹|\$|usd|eur|€)\b")
+_INDIAN_PREFIX_AMOUNT_RE = re.compile(r"(?i)\b(?:rs\.?|inr|₹)\s?[\d,]+(?:\.\d+)?\b")
+_LAKH_CRORE_AMOUNT_RE = re.compile(r"(?i)\b[\d,]+(?:\.\d+)?\s*(?:lakh|lakhs|crore|crores)\b")
+_INDIAN_GROUPED_DIGITS_RE = re.compile(r"\b\d{1,2}(?:,\d{2}){1,}(?:,\d{3})\b")
+_SHORTHAND_K_RE = re.compile(r"(?i)\b\d+(?:\.\d+)?k\b")
+
+
+class TransactionAmountRecognizer(EntityRecognizer):
+    """
+    TRANSACTION_AMOUNT detection -- confirmed directly (see the Reports/awareness-email
+    work this session) that the shared nlp_engine's own en_core_web_lg model tags common
+    Western-style amounts ("50,000 rupees", "$500", "2500.50 EUR") as MONEY out of the
+    box, but misses "Rs. 50000", Indian-style digit grouping ("1,25,000"), "500k"
+    shorthand, and "12 lakh rupees" entirely -- it's trained on general English text, not
+    Indian financial conventions. Combines two signals rather than betting on either
+    alone: the shared model's own MONEY/CARDINAL tagging (reused via nlp_artifacts, no
+    second spaCy pass) for what it already gets right, plus a handful of India-specific
+    regex patterns for what it doesn't.
+
+    A bare CARDINAL number or "500k" shorthand is too ambiguous to count as an amount on
+    its own (could be a phone number, a quantity, anything) -- both only count when a
+    currency word/symbol appears within CONTEXT_WINDOW characters either side.
+    """
+
+    ENTITIES = ["TRANSACTION_AMOUNT"]
+    SCORE_SPACY_MONEY = 0.85
+    SCORE_SPACY_CARDINAL_WITH_CONTEXT = 0.6
+    SCORE_REGEX = 0.6
+    CONTEXT_WINDOW = 25
+
+    def __init__(self):
+        super().__init__(supported_entities=self.ENTITIES, name="TransactionAmountRecognizer")
+
+    def load(self) -> None:
+        pass  # reuses the shared nlp_engine's own parse via nlp_artifacts -- nothing to load
+
+    def _has_currency_context(self, text: str, start: int, end: int) -> bool:
+        window_start = max(0, start - self.CONTEXT_WINDOW)
+        window_end = min(len(text), end + self.CONTEXT_WINDOW)
+        return bool(_CURRENCY_CONTEXT_RE.search(text[window_start:window_end]))
+
+    def analyze(self, text, entities, nlp_artifacts=None):
+        if "TRANSACTION_AMOUNT" not in entities:
+            return []
+
+        results = []
+        seen_spans = set()
+
+        if nlp_artifacts is not None:
+            for ent in nlp_artifacts.entities:
+                if ent.label_ == "MONEY":
+                    results.append(RecognizerResult(
+                        entity_type="TRANSACTION_AMOUNT", start=ent.start_char,
+                        end=ent.end_char, score=self.SCORE_SPACY_MONEY,
+                    ))
+                    seen_spans.add((ent.start_char, ent.end_char))
+                elif ent.label_ == "CARDINAL" and self._has_currency_context(text, ent.start_char, ent.end_char):
+                    results.append(RecognizerResult(
+                        entity_type="TRANSACTION_AMOUNT", start=ent.start_char,
+                        end=ent.end_char, score=self.SCORE_SPACY_CARDINAL_WITH_CONTEXT,
+                    ))
+                    seen_spans.add((ent.start_char, ent.end_char))
+
+        for pattern in (_INDIAN_PREFIX_AMOUNT_RE, _LAKH_CRORE_AMOUNT_RE, _INDIAN_GROUPED_DIGITS_RE):
+            for m in pattern.finditer(text):
+                span = (m.start(), m.end())
+                if span in seen_spans:
+                    continue
+                results.append(RecognizerResult(
+                    entity_type="TRANSACTION_AMOUNT", start=span[0], end=span[1],
+                    score=self.SCORE_REGEX,
+                ))
+                seen_spans.add(span)
+
+        for m in _SHORTHAND_K_RE.finditer(text):
+            span = (m.start(), m.end())
+            if span in seen_spans:
+                continue
+            if self._has_currency_context(text, span[0], span[1]):
+                results.append(RecognizerResult(
+                    entity_type="TRANSACTION_AMOUNT", start=span[0], end=span[1],
+                    score=self.SCORE_REGEX,
+                ))
+                seen_spans.add(span)
+
         return results
 
 

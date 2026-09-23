@@ -364,6 +364,118 @@ def list_incidents(limit=100):
     ]
 
 
+def query_report(record_types=None, start_ts=None, end_ts=None, agent_id=None,
+                  principal_ref=None, outcome=None, reason_code=None, severity=None,
+                  correlation_id=None):
+    """Backs the Reports tab -- a single filtered, normalized view across activity_log,
+    governance_events and incidents, which are otherwise three separate tabs with no
+    shared query surface. Each table only pushes its own timestamp/agent_id/reason_code
+    filters down to SQL (the columns every table actually has); principal_ref/outcome/
+    severity/correlation_id are applied afterwards in Python since not every table has
+    every column, and PoC data volumes make that simple approach fast enough.
+
+    Returns rows normalized to one shape:
+    {record_type, timestamp, agent_id, principal_ref, outcome_or_severity, reason_code,
+     correlation_id, detail} -- sorted newest first -- plus a summary of counts by
+    record_type/outcome_or_severity/reason_code over exactly those rows."""
+    record_types = record_types or ["activity", "event", "incident"]
+    conn = _connect()
+    cursor = conn.cursor()
+    rows = []
+
+    if "activity" in record_types:
+        clauses, params = [], []
+        if start_ts:
+            clauses.append("ts >= ?"); params.append(start_ts)
+        if end_ts:
+            clauses.append("ts <= ?"); params.append(end_ts)
+        if agent_id:
+            clauses.append("agent_id = ?"); params.append(agent_id)
+        if reason_code:
+            clauses.append("reason_code = ?"); params.append(reason_code)
+        where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+        cursor.execute(
+            f'SELECT ts, agent_id, invoking_user_id, outcome, reason_code, correlation_id, action '
+            f'FROM activity_log {where} ORDER BY ts DESC',
+            params,
+        )
+        for r in cursor.fetchall():
+            rows.append({
+                "record_type": "activity", "timestamp": r[0], "agent_id": r[1],
+                "principal_ref": r[2], "outcome_or_severity": r[3], "reason_code": r[4],
+                "correlation_id": r[5], "detail": r[6],
+            })
+
+    if "event" in record_types:
+        clauses, params = [], []
+        if start_ts:
+            clauses.append("occurred_at >= ?"); params.append(start_ts)
+        if end_ts:
+            clauses.append("occurred_at <= ?"); params.append(end_ts)
+        if agent_id:
+            clauses.append("agent_id = ?"); params.append(agent_id)
+        if reason_code:
+            clauses.append("reason_code = ?"); params.append(reason_code)
+        where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+        cursor.execute(
+            f'SELECT occurred_at, agent_id, severity, reason_code, correlation_id, event_type '
+            f'FROM governance_events {where} ORDER BY occurred_at DESC',
+            params,
+        )
+        for r in cursor.fetchall():
+            rows.append({
+                "record_type": "event", "timestamp": r[0], "agent_id": r[1],
+                "principal_ref": None, "outcome_or_severity": r[2], "reason_code": r[3],
+                "correlation_id": r[4], "detail": r[5],
+            })
+
+    if "incident" in record_types:
+        clauses, params = [], []
+        if start_ts:
+            clauses.append("created_at >= ?"); params.append(start_ts)
+        if end_ts:
+            clauses.append("created_at <= ?"); params.append(end_ts)
+        if agent_id:
+            clauses.append("agent_id = ?"); params.append(agent_id)
+        if reason_code:
+            clauses.append("reason_code = ?"); params.append(reason_code)
+        where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+        cursor.execute(
+            f'SELECT created_at, agent_id, principal_ref, severity, reason_code, correlation_id, event_type '
+            f'FROM incidents {where} ORDER BY created_at DESC',
+            params,
+        )
+        for r in cursor.fetchall():
+            rows.append({
+                "record_type": "incident", "timestamp": r[0], "agent_id": r[1],
+                "principal_ref": r[2], "outcome_or_severity": r[3], "reason_code": r[4],
+                "correlation_id": r[5], "detail": r[6],
+            })
+
+    conn.close()
+
+    if principal_ref:
+        rows = [r for r in rows if r["principal_ref"] == principal_ref]
+    if outcome:
+        rows = [r for r in rows if r["outcome_or_severity"] == outcome]
+    if severity:
+        rows = [r for r in rows if r["outcome_or_severity"] == severity]
+    if correlation_id:
+        rows = [r for r in rows if r["correlation_id"] == correlation_id]
+
+    rows.sort(key=lambda r: r["timestamp"] or "", reverse=True)
+
+    summary = {"total": len(rows), "by_record_type": {}, "by_outcome_or_severity": {}, "by_reason_code": {}}
+    for r in rows:
+        summary["by_record_type"][r["record_type"]] = summary["by_record_type"].get(r["record_type"], 0) + 1
+        if r["outcome_or_severity"]:
+            summary["by_outcome_or_severity"][r["outcome_or_severity"]] = summary["by_outcome_or_severity"].get(r["outcome_or_severity"], 0) + 1
+        if r["reason_code"]:
+            summary["by_reason_code"][r["reason_code"]] = summary["by_reason_code"].get(r["reason_code"], 0) + 1
+
+    return {"rows": rows, "summary": summary}
+
+
 def get_stats():
     """Pure read-side aggregation over the three tables above -- no running counters maintained,
     same approach as the DPDP Engine's own get_stats()."""

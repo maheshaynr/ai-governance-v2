@@ -168,14 +168,6 @@ export async function fetchGuardrailActivity() {
   return apiFetch('/guardrail_activity');
 }
 
-export async function fetchConsents() {
-  return apiFetch('/consents');
-}
-
-export async function withdrawConsent(customer_id, data_category, purpose) {
-  return postJson('/withdraw_consent', { customer_id, data_category, purpose });
-}
-
 // --- Agent Governance Layer -- read-only from the admin UI. Registration/decisions/activity
 // are called by external agents (e.g. VOXA) directly, not from this frontend.
 export async function fetchAgents() {
@@ -204,6 +196,15 @@ export async function fetchAgentEntitlements() {
 
 export async function fetchAgentIncidents() {
   return apiFetch('/v1/agent/incidents');
+}
+
+export async function fetchAgentReports(filters = {}) {
+  const params = new URLSearchParams();
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value !== '' && value !== null && value !== undefined) params.set(key, value);
+  });
+  const qs = params.toString();
+  return apiFetch(`/v1/agent/reports${qs ? `?${qs}` : ''}`);
 }
 
 export async function updateToxicitySettings({ thresholds, enable_toxicity_guard }) {

@@ -1,5 +1,259 @@
 [
   {
+    "alarm_id": "ALM-20260923-bd2e674e",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-09-23T05:40:01.035606Z",
+    "missed_entity": {
+      "type": "Financial data",
+      "value_preview": "1234567890123...",
+      "reason": "This is a bank account number which is sensitive.",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "Please send 5000000 to account 1234567890123.",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "Financial data",
+      "Financial data"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260923-b73b0329",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-09-23T05:40:00.105435Z",
+    "missed_entity": {
+      "type": "Financial Data",
+      "value_preview": "1234567890123...",
+      "reason": "Bank account number",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "Please send 10000 to account 1234567890123.",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "Financial Data",
+      "Financial Data"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260923-0783ca84",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-09-23T05:39:59.923606Z",
+    "missed_entity": {
+      "type": "Financial data",
+      "value_preview": "1234567890123...",
+      "reason": "Account number that could compromise security if exposed",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "Please send 100000 to account 1234567890123.",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "Financial data",
+      "Financial data"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260923-327e657c",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-09-23T05:39:56.968084Z",
+    "missed_entity": {
+      "type": "Financial data",
+      "value_preview": "5000000...",
+      "reason": "This is a financial value that could be used for unauthorized transactions.",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "Please send 5000000 to account 1234567890123.",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "Financial data",
+      "Financial data"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260923-ea54a894",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-09-23T05:39:56.136449Z",
+    "missed_entity": {
+      "type": "Financial data",
+      "value_preview": "100000...",
+      "reason": "Amount that could be used for financial transactions",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "Please send 100000 to account 1234567890123.",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "Financial data",
+      "Financial data"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260923-713349c4",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-09-23T05:39:55.739549Z",
+    "missed_entity": {
+      "type": "Financial Data",
+      "value_preview": "10000...",
+      "reason": "Amount of money transferred",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "Please send 10000 to account 1234567890123.",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "Financial Data",
+      "Financial Data"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260923-d40af180",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-09-23T05:39:54.787240Z",
+    "missed_entity": {
+      "type": "Financial data",
+      "value_preview": "1234567890123...",
+      "reason": "This is a bank account number, which is sensitive financial information.",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "Please send 100 to account 1234567890123.",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "Financial data"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260923-9e63844d",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-09-23T05:39:50.003618Z",
+    "missed_entity": {
+      "type": "Financial data",
+      "value_preview": "1234567890123...",
+      "reason": "bank account number, which is sensitive financial information.",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "Please wire 10000 rupees to account 1234567890123 right now.",
+    "layer1_findings": [
+      "TRANSACTION_AMOUNT"
+    ],
+    "layer2_findings": [
+      "Financial data",
+      "Financial data"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260923-b7095307",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-09-23T05:39:48.423975Z",
+    "missed_entity": {
+      "type": "Financial data",
+      "value_preview": "1234567890123...",
+      "reason": "Bank account number",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "Please wire 5000000 rupees to account 1234567890123 right now.",
+    "layer1_findings": [
+      "TRANSACTION_AMOUNT"
+    ],
+    "layer2_findings": [
+      "Financial data",
+      "Financial data"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260923-fd306cc8",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-09-23T05:39:47.451434Z",
+    "missed_entity": {
+      "type": "Financial data",
+      "value_preview": "1234567890123...",
+      "reason": "bank account number",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "Please wire 100000 rupees to account 1234567890123 right now.",
+    "layer1_findings": [
+      "TRANSACTION_AMOUNT"
+    ],
+    "layer2_findings": [
+      "Financial data",
+      "Financial data"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260923-17eb0099",
+    "severity": "HIGH",
+    "category": "AUTHENTICATION",
+    "timestamp": "2026-09-23T05:39:37.201625Z",
+    "missed_entity": {
+      "type": "Authentication data",
+      "value_preview": "account 1234567...",
+      "reason": "contains account number",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "Please wire 100000 rupees to account 1234567890123 right now.",
+    "layer1_findings": [
+      "TRANSACTION_AMOUNT"
+    ],
+    "layer2_findings": [
+      "Financial data",
+      "Authentication data"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260923-ce30469f",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-09-23T05:16:03.423200Z",
+    "missed_entity": {
+      "type": "Financial data",
+      "value_preview": "1234567890123...",
+      "reason": "bank account number",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "Please wire 50,000 rupees to account number 1234567890123 right now.",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "Financial data",
+      "Financial data"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260923-c6eb1bf3",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-09-23T05:15:59.477733Z",
+    "missed_entity": {
+      "type": "Financial data",
+      "value_preview": "50,000...",
+      "reason": "amount of money transfer",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "Please wire 50,000 rupees to account number 1234567890123 right now.",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "Financial data",
+      "Financial data"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
     "alarm_id": "ALM-20260921-90b89169",
     "severity": "HIGH",
     "category": "PII",
@@ -160,21 +414,23 @@
     "severity": "CRITICAL",
     "category": "TOOL_ABUSE",
     "timestamp": "2026-09-20T17:57:36.507033Z",
-    "status": "PENDING_REVIEW",
+    "status": "DISMISSED",
     "tool_detail": {
       "principal": "caller",
       "role": "caller",
       "tool_call": "<FETCH_DB:iban>",
       "reason": "principal 'caller' is not entitled to record 'iban'"
     },
-    "context_snippet": "Refused <FETCH_DB:iban> for caller (caller): principal 'caller' is not entitled to record 'iban'"
+    "context_snippet": "Refused <FETCH_DB:iban> for caller (caller): principal 'caller' is not entitled to record 'iban'",
+    "resolved_by": "super_admin",
+    "resolved_at": "2026-09-22T07:18:35.765618Z"
   },
   {
     "alarm_id": "ALM-20260917-237f57e5",
     "severity": "CRITICAL",
     "category": "CONSENT_VIOLATION",
     "timestamp": "2026-09-17T03:25:57.797955Z",
-    "status": "PENDING_REVIEW",
+    "status": "DISMISSED",
     "consent_detail": {
       "principal": "U88778",
       "role": "external_caller",
@@ -183,7 +439,9 @@
       "purpose": "AUTO_PAY",
       "reason": "DPDP decision=DENY for user 'U88778'"
     },
-    "context_snippet": "Refused BILL_PAYMENT read for customer U88778 (purpose: AUTO_PAY): DPDP decision=DENY for user 'U88778'"
+    "context_snippet": "Refused BILL_PAYMENT read for customer U88778 (purpose: AUTO_PAY): DPDP decision=DENY for user 'U88778'",
+    "resolved_by": "super_admin",
+    "resolved_at": "2026-09-22T07:18:37.327490Z"
   },
   {
     "alarm_id": "ALM-20260917-a07806f4",

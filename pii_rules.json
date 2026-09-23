@@ -105,6 +105,15 @@
       "is_active": true
     },
     {
+      "name": "Transaction_Amount",
+      "entity": "TRANSACTION_AMOUNT",
+      "regex": "Python: TransactionAmountRecognizer()",
+      "score": 1.0,
+      "is_builtin": false,
+      "is_algorithmic": true,
+      "is_active": true
+    },
+    {
       "name": "Meeting_OTP_Verification_Code",
       "entity": "VERIFICATION_CODE",
       "regex": "(?i)\\b(?:meeting\\s*code|otp|verification\\s*code|passcode|access\\s*code)\\s*(?:is|:|=)?\\s*\\d{4,8}\\b",
@@ -167,6 +176,9 @@
       "email": "mahesh.r2@quest-global.com"
     }
   ],
+  "principal_contacts": {
+    "4f2a91": "mahesh.r2@quest-global.com"
+  },
   "injection_patterns": [
     {
       "name": "INSTRUCTION_OVERRIDE",

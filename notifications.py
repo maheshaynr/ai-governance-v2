@@ -154,3 +154,68 @@ class EmailNotifier:
             logging.info(f"Successfully sent incident email to {to_email}")
         except Exception as e:
             logging.error(f"Failed to send incident email to {to_email}: {str(e)}")
+
+    @staticmethod
+    def send_user_awareness_email(to_email: str, agent: dict, reason_code: str, awareness_url: str):
+        """Separate from send_incident_email, which goes to the back-office security
+        council. This one goes to the Data Principal themselves, in plain language --
+        no incident IDs or internal reason codes as the headline, just what happened and
+        why it was stopped, plus a link to a short explainer (same idea as a brokerage's
+        investor-education article linked from a trade-block SMS)."""
+        if not to_email or "@" not in to_email:
+            return
+
+        smtp_host = os.environ.get('SMTP_HOST', 'smtp.gmail.com')
+        smtp_port = int(os.environ.get('SMTP_PORT', 587))
+        smtp_user = os.environ.get('SMTP_USER')
+        smtp_pass = os.environ.get('SMTP_PASSWORD')
+
+        if not smtp_user or not smtp_pass:
+            logging.error("SMTP_USER or SMTP_PASSWORD environment variables not set. Cannot send email.")
+            return
+
+        agent_name = agent.get('agent_name') or 'An AI agent'
+        subject = f"We blocked {agent_name} from doing something outside its permissions"
+
+        html_content = f"""
+        <html>
+          <body style="font-family: Arial, sans-serif; color: #333;">
+            <h2 style="color: #0969da;">🛡️ We stopped an action on your behalf</h2>
+            <p>
+              <strong>{agent_name}</strong> just tried to do something it isn't allowed to do on your
+              account, so we blocked it before anything happened. Nothing was changed, ordered, or shared.
+            </p>
+            <p>
+              This usually means an app tried to use a skill or capability that was never granted to it,
+              not that your account was compromised. We're telling you so you know exactly what your AI
+              agents can and can't do on your behalf.
+            </p>
+            <p style="margin-top: 20px;">
+              <a href="{awareness_url}" style="display: inline-block; background-color: #0969da; color: white;
+                 padding: 10px 18px; border-radius: 6px; text-decoration: none;">
+                Learn what this means and what to do next
+              </a>
+            </p>
+            <p style="margin-top: 20px; font-size: 0.9em; color: #57606a;">
+              If you don't recognize this agent or didn't expect this, you can review it any time using the
+              link above.
+            </p>
+          </body>
+        </html>
+        """
+
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = subject
+        msg["From"] = smtp_user
+        msg["To"] = to_email
+        msg.attach(MIMEText(html_content, "html"))
+
+        try:
+            server = smtplib.SMTP(smtp_host, smtp_port)
+            server.starttls()
+            server.login(smtp_user, smtp_pass)
+            server.sendmail(smtp_user, to_email, msg.as_string())
+            server.quit()
+            logging.info(f"Successfully sent user awareness email to {to_email}")
+        except Exception as e:
+            logging.error(f"Failed to send user awareness email to {to_email}: {str(e)}")

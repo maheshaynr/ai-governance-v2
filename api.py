@@ -7,6 +7,7 @@ import requests
 import re
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, BackgroundTasks, Header, HTTPException, Depends
+from fastapi.responses import HTMLResponse
 import time
 import uuid
 from fastapi.middleware.cors import CORSMiddleware
@@ -18,7 +19,7 @@ from presidio_anonymizer import AnonymizerEngine
 from presidio_anonymizer.entities import OperatorConfig
 import hashlib
 from audit_logger import AuditLogger
-from custom_recognizers import AadhaarRecognizer, MedicalEntityRecognizer
+from custom_recognizers import AadhaarRecognizer, MedicalEntityRecognizer, TransactionAmountRecognizer
 import database
 from benchmark_logger import BenchmarkLogger
 import llm_watchdog
@@ -124,6 +125,11 @@ def reload_presidio_engine():
 
     # Load custom python recognizer (Verhoeff Math)
     new_analyzer.registry.add_recognizer(AadhaarRecognizer())
+
+    # Combines the shared nlp_engine's own MONEY/CARDINAL tagging with India-specific
+    # regex patterns -- see custom_recognizers.TransactionAmountRecognizer for the test
+    # matrix of what the shared model misses on its own (Rs./lakh/crore/Indian grouping).
+    new_analyzer.registry.add_recognizer(TransactionAmountRecognizer())
 
     # Medical entity recognizer -- its own dedicated pipeline, not the shared
     # nlp_engine (see custom_recognizers.MedicalEntityRecognizer for why).
@@ -1450,6 +1456,72 @@ def notify_incident(incident_id: str, agent: dict, request: "AgentDecisionCheckR
         logging.error(f"Failed to notify incident {incident_id}: {e}")
 
 
+# Reason-code -> plain-language explainer content, shown at GET /awareness/{reason_code}
+# and linked from the Data Principal's own awareness email. Distinct from any back-office
+# runbook -- written for the end user, not for whoever investigates the incident.
+AWARENESS_CONTENT = {
+    "IAM_SCOPE_EXCEEDED": {
+        "title": "An AI agent tried to do something outside its permissions",
+        "body": [
+            "One of the AI agents acting on your behalf tried to use a capability it was never "
+            "granted, for example, an agent that's only allowed to check information tried to "
+            "place an order or take an action instead. We blocked it automatically, before "
+            "anything happened.",
+            "Every AI agent connected to your account is only allowed to do the specific things "
+            "it was explicitly set up for. This is deliberate: even if an agent is compromised, "
+            "buggy, or simply misconfigured, it can never do more than it was scoped to do.",
+            "You don't need to take any action. If you don't recognize the agent involved, or you "
+            "didn't expect it to attempt this, let us know so we can review it.",
+        ],
+    },
+}
+DEFAULT_AWARENESS = {
+    "title": "We blocked an AI agent action on your behalf",
+    "body": [
+        "One of the AI agents acting on your behalf attempted an action that didn't meet our "
+        "governance rules, so it was blocked automatically before anything happened.",
+        "You don't need to take any action. If you don't recognize the agent involved, let us "
+        "know so we can review it.",
+    ],
+}
+
+
+@app.get("/awareness/{reason_code}", response_class=HTMLResponse)
+def awareness_page(reason_code: str):
+    """Public, unauthenticated explainer page -- the link opened straight from the Data
+    Principal's own email, same purpose as an investor-education article linked from a
+    brokerage's trade-block SMS. No incident IDs, agent secrets, or other internal detail."""
+    content = AWARENESS_CONTENT.get(reason_code, DEFAULT_AWARENESS)
+    paragraphs = "".join(f"<p>{p}</p>" for p in content["body"])
+    return f"""
+    <html>
+      <head><title>{content['title']}</title></head>
+      <body style="font-family: Arial, sans-serif; color: #1c2128; max-width: 640px; margin: 40px auto; padding: 0 20px;">
+        <h1 style="font-size: 1.4rem;">🛡️ {content['title']}</h1>
+        {paragraphs}
+      </body>
+    </html>
+    """
+
+
+def notify_principal_awareness(incident_id: str, agent: dict, request: "AgentDecisionCheckRequest", reason_code: str):
+    """Separate audience from notify_incident: the Data Principal themselves, not the
+    back-office security council. Looks up a mocked principal->email mapping (PoC-scope,
+    same pattern as notification_subscribers -- a real deployment would resolve this via
+    the identity provider, not a JSON file). Fire-and-log; never affects the DENY."""
+    try:
+        with open("pii_rules.json", "r") as f:
+            contacts = json.load(f).get("principal_contacts", {})
+        to_email = contacts.get(request.principal_ref)
+        if not to_email:
+            return
+        base_url = os.environ.get("GUARDRAIL_BASE_URL", "http://localhost:8000")
+        awareness_url = f"{base_url}/awareness/{reason_code}"
+        EmailNotifier.send_user_awareness_email(to_email, agent, reason_code, awareness_url)
+    except Exception as e:
+        logging.error(f"Failed to notify principal awareness for incident {incident_id}: {e}")
+
+
 def _verify_agent_or_401(x_agent_id: Optional[str], authorization: Optional[str]):
     """
     Inline identity verification for every /v1/agent/* route that isn't registration itself.
@@ -1537,6 +1609,7 @@ def agent_decision_check(request: AgentDecisionCheckRequest,
                 correlation_id=correlation_id,
             )
             notify_incident(incident_id, agent, request, reason_code)
+            notify_principal_awareness(incident_id, agent, request, reason_code)
         except Exception as e:
             logging.error(f"Agent governance: failed to log/incident IAM scope violation: {e}")
         return {
@@ -1641,6 +1714,24 @@ def agent_list_entitlements(principal: Principal = Depends(require_role(*ADMIN_R
 @app.get("/v1/agent/incidents")
 def agent_list_incidents(limit: int = 100, principal: Principal = Depends(require_role(*ADMIN_ROLES))):
     return {"incidents": governance_db.list_incidents(limit)}
+
+
+@app.get("/v1/agent/reports")
+def agent_reports(record_types: Optional[str] = None, start_ts: Optional[str] = None,
+                   end_ts: Optional[str] = None, agent_id: Optional[str] = None,
+                   principal_ref: Optional[str] = None, outcome: Optional[str] = None,
+                   reason_code: Optional[str] = None, severity: Optional[str] = None,
+                   correlation_id: Optional[str] = None,
+                   principal: Principal = Depends(require_role(*ADMIN_ROLES))):
+    """Backs the Reports tab -- a single filtered, normalized view across Activity Log,
+    Compliance Events and Incidents. record_types is a comma-separated subset of
+    activity,event,incident (all three when omitted)."""
+    types = [t.strip() for t in record_types.split(",")] if record_types else None
+    return governance_db.query_report(
+        record_types=types, start_ts=start_ts, end_ts=end_ts, agent_id=agent_id,
+        principal_ref=principal_ref, outcome=outcome, reason_code=reason_code,
+        severity=severity, correlation_id=correlation_id,
+    )
 
 
 @app.post("/delete_alarm")

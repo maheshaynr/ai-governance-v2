@@ -1,5 +1,35 @@
 import { useState, useEffect } from 'react';
-import { fetchAgents, revokeAgent, fetchAgentActivity, fetchGovernanceEvents, fetchGovernanceStats, fetchAgentEntitlements, fetchAgentIncidents } from './api';
+import { fetchAgents, revokeAgent, fetchAgentActivity, fetchGovernanceEvents, fetchGovernanceStats, fetchAgentEntitlements, fetchAgentIncidents, fetchAgentReports } from './api';
+
+const REPORT_RECORD_TYPES = [
+  { key: 'activity', label: 'Activity Log' },
+  { key: 'event', label: 'Compliance Events' },
+  { key: 'incident', label: 'Incidents' },
+];
+
+const EMPTY_REPORT_FILTERS = {
+  recordTypes: ['activity', 'event', 'incident'],
+  startTs: '', endTs: '', agentId: '', principalRef: '', outcome: '',
+  reasonCode: '', severity: '', correlationId: '',
+};
+
+function reportRowsToCsv(rows) {
+  const header = ['record_type', 'timestamp', 'agent_id', 'principal_ref', 'outcome_or_severity', 'reason_code', 'correlation_id', 'detail'];
+  const escape = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const lines = [header.join(',')];
+  rows.forEach((r) => lines.push(header.map((h) => escape(r[h])).join(',')));
+  return lines.join('\n');
+}
+
+function downloadCsv(csv, filename) {
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+}
 
 // Matches AdminConfig.jsx's own fallback -- App.jsx always passes a real principal once
 // RBAC is in effect, but this keeps the component safe to render standalone (e.g. tests).
@@ -59,7 +89,7 @@ const EntitlementsModal = ({ entitlements, onRefresh, onClose }) => (
 // a different concern from the content-policy tuning AdminConfig.jsx covers. See
 // Implementation_Plan/Agent_Governance_Layer_Design.md for the full design.
 export default function AgentGovernance({ principal = DEFAULT_PRINCIPAL }) {
-  const [activeTab, setActiveTab] = useState('agents'); // 'agents', 'activity', 'events', 'incidents', 'stats'
+  const [activeTab, setActiveTab] = useState('agents'); // 'agents', 'activity', 'events', 'incidents', 'stats', 'reports'
 
   const [agents, setAgents] = useState([]);
   const [entitlements, setEntitlements] = useState([]);
@@ -69,6 +99,11 @@ export default function AgentGovernance({ principal = DEFAULT_PRINCIPAL }) {
   const [stats, setStats] = useState(null);
   const [revokingAgentId, setRevokingAgentId] = useState(null);
   const [showEntitlements, setShowEntitlements] = useState(false);
+
+  const [reportFilters, setReportFilters] = useState(EMPTY_REPORT_FILTERS);
+  const [reportRows, setReportRows] = useState([]);
+  const [reportSummary, setReportSummary] = useState(null);
+  const [reportLoading, setReportLoading] = useState(false);
 
   useEffect(() => {
     loadAgents();
@@ -132,6 +167,37 @@ export default function AgentGovernance({ principal = DEFAULT_PRINCIPAL }) {
     }
   };
 
+  const loadReports = async (filters = reportFilters) => {
+    setReportLoading(true);
+    try {
+      const data = await fetchAgentReports({
+        record_types: filters.recordTypes.join(','),
+        start_ts: filters.startTs ? new Date(filters.startTs).toISOString() : '',
+        end_ts: filters.endTs ? new Date(filters.endTs).toISOString() : '',
+        agent_id: filters.agentId,
+        principal_ref: filters.principalRef,
+        outcome: filters.outcome,
+        reason_code: filters.reasonCode,
+        severity: filters.severity,
+        correlation_id: filters.correlationId,
+      });
+      setReportRows(data.rows || []);
+      setReportSummary(data.summary || null);
+    } catch (e) {
+      console.error('Failed to load report', e);
+    } finally {
+      setReportLoading(false);
+    }
+  };
+
+  const toggleReportRecordType = (key) => {
+    setReportFilters((prev) => {
+      const has = prev.recordTypes.includes(key);
+      const recordTypes = has ? prev.recordTypes.filter((k) => k !== key) : [...prev.recordTypes, key];
+      return { ...prev, recordTypes };
+    });
+  };
+
   const handleRevoke = async (agentId) => {
     setRevokingAgentId(agentId);
     try {
@@ -181,6 +247,7 @@ export default function AgentGovernance({ principal = DEFAULT_PRINCIPAL }) {
             <button className={activeTab === 'events' ? 'active' : ''} onClick={() => setActiveTab('events')}>Compliance Events</button>
             <button className={activeTab === 'incidents' ? 'active' : ''} onClick={() => setActiveTab('incidents')}>Incidents</button>
             <button className={activeTab === 'stats' ? 'active' : ''} onClick={() => setActiveTab('stats')}>Stats</button>
+            <button className={activeTab === 'reports' ? 'active' : ''} onClick={() => setActiveTab('reports')}>Reports</button>
           </div>
         </div>
         <button
@@ -220,7 +287,7 @@ export default function AgentGovernance({ principal = DEFAULT_PRINCIPAL }) {
                     ) : agents.map((a) => (
                       <tr key={a.agent_id} style={{ borderBottom: '1px solid #d0d7de' }}>
                         <td style={{ ...td, fontWeight: '500' }}>{a.agent_name}</td>
-                        <td style={{ ...td, fontFamily: 'monospace', fontSize: '0.8rem' }} title={a.agent_id}>{a.agent_id ? `${a.agent_id.slice(0, 8)}…` : '—'}</td>
+                        <td style={{ ...td, fontFamily: 'monospace', fontSize: '0.8rem' }} title={a.agent_id}>{a.agent_id || '—'}</td>
                         <td style={td}>{a.business_unit || '—'}</td>
                         <td style={td}>{a.owner_name || '—'}</td>
                         <td style={{ ...td, fontFamily: 'monospace', fontSize: '0.8rem' }}>{a.location_of_deployment || '—'}</td>
@@ -382,13 +449,151 @@ export default function AgentGovernance({ principal = DEFAULT_PRINCIPAL }) {
                   <StatCard title="Calls by outcome" data={stats.calls_by_outcome} />
                   <StatCard title="Calls by agent" data={stats.calls_by_agent} />
                   <StatCard title="Events by severity" data={stats.events_by_severity} />
-                  <div style={{ border: '1px solid #d0d7de', borderRadius: '6px', background: '#fff', padding: '1rem' }}>
+                  <div style={{ border: '1px solid #d0d7de', borderRadius: '6px', background: '#f6f8fa', padding: '1rem' }}>
                     <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem' }}>Distinct counts</h4>
                     <div style={{ fontSize: '0.85rem', color: '#57606a' }}>Agents seen: <strong>{stats.distinct_agents}</strong></div>
                     <div style={{ fontSize: '0.85rem', color: '#57606a' }}>Invoking users seen: <strong>{stats.distinct_invoking_users}</strong></div>
                   </div>
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'reports' && (
+          <div className="admin-layout">
+            <div className="rules-list">
+              {cardHeader('Reports', () => loadReports())}
+
+              <div style={{ border: '1px solid #d0d7de', borderRadius: '6px', background: '#fff', padding: '1rem', marginBottom: '1rem' }}>
+                <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
+                  {REPORT_RECORD_TYPES.map(({ key, label }) => (
+                    <label key={key} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.85rem' }}>
+                      <input
+                        type="checkbox"
+                        checked={reportFilters.recordTypes.includes(key)}
+                        onChange={() => toggleReportRecordType(key)}
+                      />
+                      {label}
+                    </label>
+                  ))}
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.6rem' }}>
+                  <label style={{ fontSize: '0.75rem', color: '#57606a' }}>
+                    From
+                    <input type="datetime-local" value={reportFilters.startTs}
+                      onChange={(e) => setReportFilters({ ...reportFilters, startTs: e.target.value })}
+                      style={{ display: 'block', width: '100%', marginTop: '0.2rem', padding: '0.3rem', fontSize: '0.85rem' }} />
+                  </label>
+                  <label style={{ fontSize: '0.75rem', color: '#57606a' }}>
+                    To
+                    <input type="datetime-local" value={reportFilters.endTs}
+                      onChange={(e) => setReportFilters({ ...reportFilters, endTs: e.target.value })}
+                      style={{ display: 'block', width: '100%', marginTop: '0.2rem', padding: '0.3rem', fontSize: '0.85rem' }} />
+                  </label>
+                  <label style={{ fontSize: '0.75rem', color: '#57606a' }}>
+                    Agent ID
+                    <input type="text" value={reportFilters.agentId} placeholder="agent_id"
+                      onChange={(e) => setReportFilters({ ...reportFilters, agentId: e.target.value })}
+                      style={{ display: 'block', width: '100%', marginTop: '0.2rem', padding: '0.3rem', fontSize: '0.85rem' }} />
+                  </label>
+                  <label style={{ fontSize: '0.75rem', color: '#57606a' }}>
+                    Principal
+                    <input type="text" value={reportFilters.principalRef} placeholder="principal_ref"
+                      onChange={(e) => setReportFilters({ ...reportFilters, principalRef: e.target.value })}
+                      style={{ display: 'block', width: '100%', marginTop: '0.2rem', padding: '0.3rem', fontSize: '0.85rem' }} />
+                  </label>
+                  <label style={{ fontSize: '0.75rem', color: '#57606a' }}>
+                    Outcome
+                    <input type="text" value={reportFilters.outcome} placeholder="e.g. BLOCKED"
+                      onChange={(e) => setReportFilters({ ...reportFilters, outcome: e.target.value })}
+                      style={{ display: 'block', width: '100%', marginTop: '0.2rem', padding: '0.3rem', fontSize: '0.85rem' }} />
+                  </label>
+                  <label style={{ fontSize: '0.75rem', color: '#57606a' }}>
+                    Severity
+                    <input type="text" value={reportFilters.severity} placeholder="e.g. HIGH"
+                      onChange={(e) => setReportFilters({ ...reportFilters, severity: e.target.value })}
+                      style={{ display: 'block', width: '100%', marginTop: '0.2rem', padding: '0.3rem', fontSize: '0.85rem' }} />
+                  </label>
+                  <label style={{ fontSize: '0.75rem', color: '#57606a' }}>
+                    Reason code
+                    <input type="text" value={reportFilters.reasonCode} placeholder="e.g. IAM_SCOPE_EXCEEDED"
+                      onChange={(e) => setReportFilters({ ...reportFilters, reasonCode: e.target.value })}
+                      style={{ display: 'block', width: '100%', marginTop: '0.2rem', padding: '0.3rem', fontSize: '0.85rem' }} />
+                  </label>
+                  <label style={{ fontSize: '0.75rem', color: '#57606a' }}>
+                    Correlation ID
+                    <input type="text" value={reportFilters.correlationId} placeholder="correlation_id"
+                      onChange={(e) => setReportFilters({ ...reportFilters, correlationId: e.target.value })}
+                      style={{ display: 'block', width: '100%', marginTop: '0.2rem', padding: '0.3rem', fontSize: '0.85rem' }} />
+                  </label>
+                </div>
+                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}>
+                  <button onClick={() => loadReports()} disabled={reportLoading} style={{ padding: '0.4rem 0.9rem', fontSize: '0.85rem' }}>
+                    {reportLoading ? 'Running…' : 'Run report'}
+                  </button>
+                  <button
+                    className="secondary"
+                    onClick={() => { setReportFilters(EMPTY_REPORT_FILTERS); }}
+                    style={{ padding: '0.4rem 0.9rem', fontSize: '0.85rem' }}
+                  >
+                    Clear filters
+                  </button>
+                  <button
+                    className="secondary"
+                    onClick={() => downloadCsv(reportRowsToCsv(reportRows), `agent_governance_report_${Date.now()}.csv`)}
+                    disabled={reportRows.length === 0}
+                    style={{ padding: '0.4rem 0.9rem', fontSize: '0.85rem', marginLeft: 'auto' }}
+                  >
+                    ⬇ Export CSV
+                  </button>
+                </div>
+              </div>
+
+              {reportSummary && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
+                  <StatCard title={`By record type (${reportSummary.total} total)`} data={reportSummary.by_record_type} />
+                  <StatCard title="By outcome / severity" data={reportSummary.by_outcome_or_severity} />
+                  <StatCard title="By reason code" data={reportSummary.by_reason_code} />
+                </div>
+              )}
+
+              <div style={{ border: '1px solid #d0d7de', borderRadius: '6px', background: '#fff', overflow: 'hidden' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.9rem' }}>
+                  <thead style={{ background: '#f6f8fa' }}>
+                    <tr>
+                      <th style={th}>Type</th>
+                      <th style={th}>Time</th>
+                      <th style={th}>Agent ID</th>
+                      <th style={th}>Principal</th>
+                      <th style={th}>Outcome / Severity</th>
+                      <th style={th}>Reason</th>
+                      <th style={th}>Correlation ID</th>
+                      <th style={th}>Detail</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {reportRows.length === 0 ? (
+                      <tr><td colSpan="8" style={{ padding: '2rem', textAlign: 'center', color: '#57606a' }}>
+                        {reportLoading ? 'Loading…' : 'Run a report to see results.'}
+                      </td></tr>
+                    ) : reportRows.map((row, idx) => (
+                      <tr key={idx} style={{ borderBottom: '1px solid #d0d7de' }}>
+                        <td style={td}>{row.record_type}</td>
+                        <td style={{ ...td, fontSize: '0.8rem', color: '#57606a', whiteSpace: 'nowrap' }}>
+                          {row.timestamp ? new Date(row.timestamp).toLocaleString() : '—'}
+                        </td>
+                        <td style={{ ...td, fontFamily: 'monospace', fontSize: '0.75rem' }}>{row.agent_id || '—'}</td>
+                        <td style={{ ...td, fontFamily: 'monospace', fontSize: '0.75rem' }}>{row.principal_ref || '—'}</td>
+                        <td style={td}>{row.outcome_or_severity || '—'}</td>
+                        <td style={{ ...td, fontFamily: 'monospace', fontSize: '0.75rem', color: '#57606a' }}>{row.reason_code || '—'}</td>
+                        <td style={{ ...td, fontFamily: 'monospace', fontSize: '0.75rem', color: '#57606a' }}>{row.correlation_id || '—'}</td>
+                        <td style={td}>{row.detail || '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         )}
@@ -400,7 +605,7 @@ export default function AgentGovernance({ principal = DEFAULT_PRINCIPAL }) {
 function StatCard({ title, data }) {
   const entries = Object.entries(data || {});
   return (
-    <div style={{ border: '1px solid #d0d7de', borderRadius: '6px', background: '#fff', padding: '1rem' }}>
+    <div style={{ border: '1px solid #d0d7de', borderRadius: '6px', background: '#f6f8fa', padding: '1rem' }}>
       <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem' }}>{title}</h4>
       {entries.length === 0 ? (
         <div style={{ fontSize: '0.85rem', color: '#57606a' }}>No data yet.</div>
