@@ -376,8 +376,10 @@ def query_report(record_types=None, start_ts=None, end_ts=None, agent_id=None,
 
     Returns rows normalized to one shape:
     {record_type, timestamp, agent_id, principal_ref, outcome_or_severity, reason_code,
-     correlation_id, detail} -- sorted newest first -- plus a summary of counts by
-    record_type/outcome_or_severity/reason_code over exactly those rows."""
+     correlation_id, detail, device_id} -- sorted newest first (device_id is only ever
+    populated for "activity" rows; the other two tables don't have that column) -- plus
+    a summary of counts by record_type/outcome_or_severity/reason_code over exactly
+    those rows."""
     record_types = record_types or ["activity", "event", "incident"]
     conn = _connect()
     cursor = conn.cursor()
@@ -395,7 +397,7 @@ def query_report(record_types=None, start_ts=None, end_ts=None, agent_id=None,
             clauses.append("reason_code = ?"); params.append(reason_code)
         where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
         cursor.execute(
-            f'SELECT ts, agent_id, invoking_user_id, outcome, reason_code, correlation_id, action '
+            f'SELECT ts, agent_id, invoking_user_id, outcome, reason_code, correlation_id, action, device_id '
             f'FROM activity_log {where} ORDER BY ts DESC',
             params,
         )
@@ -403,7 +405,7 @@ def query_report(record_types=None, start_ts=None, end_ts=None, agent_id=None,
             rows.append({
                 "record_type": "activity", "timestamp": r[0], "agent_id": r[1],
                 "principal_ref": r[2], "outcome_or_severity": r[3], "reason_code": r[4],
-                "correlation_id": r[5], "detail": r[6],
+                "correlation_id": r[5], "detail": r[6], "device_id": r[7],
             })
 
     if "event" in record_types:

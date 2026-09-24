@@ -158,10 +158,18 @@ class EmailNotifier:
     @staticmethod
     def send_user_awareness_email(to_email: str, agent: dict, reason_code: str, awareness_url: str):
         """Separate from send_incident_email, which goes to the back-office security
-        council. This one goes to the Data Principal themselves, in plain language --
-        no incident IDs or internal reason codes as the headline, just what happened and
-        why it was stopped, plus a link to a short explainer (same idea as a brokerage's
-        investor-education article linked from a trade-block SMS)."""
+        council. This one goes to the Data Principal themselves.
+
+        Deliberately generic and reason_code-agnostic: earlier this named the specific
+        agent and asserted "we blocked it before anything happened" -- factually wrong
+        for a retrospective (Layer 2) finding, where the message had already gone out,
+        and framed as the agent's fault rather than as something educational. Doesn't
+        name the agent, doesn't claim an outcome (blocked/masked/already sent) that
+        isn't true for every reason_code this is used for, and doesn't describe how the
+        finding was made (e.g. "a slower secondary check caught this") -- that's an
+        internal detection-architecture detail, not something a customer needs to know.
+        All of the specific, educational content lives on the linked awareness_url page
+        instead, worded per reason_code without any of the above."""
         if not to_email or "@" not in to_email:
             return
 
@@ -174,31 +182,25 @@ class EmailNotifier:
             logging.error("SMTP_USER or SMTP_PASSWORD environment variables not set. Cannot send email.")
             return
 
-        agent_name = agent.get('agent_name') or 'An AI agent'
-        subject = f"We blocked {agent_name} from doing something outside its permissions"
+        subject = "A quick note about keeping your account safe"
 
         html_content = f"""
         <html>
           <body style="font-family: Arial, sans-serif; color: #333;">
-            <h2 style="color: #0969da;">🛡️ We stopped an action on your behalf</h2>
+            <h2 style="color: #0969da;">🛡️ A note about your account</h2>
             <p>
-              <strong>{agent_name}</strong> just tried to do something it isn't allowed to do on your
-              account, so we blocked it before anything happened. Nothing was changed, ordered, or shared.
+              As part of keeping your account safe, we regularly review activity from the AI agents and
+              services connected to it. Something from that review is worth sharing with you.
             </p>
             <p>
-              This usually means an app tried to use a skill or capability that was never granted to it,
-              not that your account was compromised. We're telling you so you know exactly what your AI
-              agents can and can't do on your behalf.
+              No action is needed on your part, this is purely for your awareness, and a good moment to
+              pick up a tip or two for staying safe going forward.
             </p>
             <p style="margin-top: 20px;">
               <a href="{awareness_url}" style="display: inline-block; background-color: #0969da; color: white;
                  padding: 10px 18px; border-radius: 6px; text-decoration: none;">
-                Learn what this means and what to do next
+                Read more
               </a>
-            </p>
-            <p style="margin-top: 20px; font-size: 0.9em; color: #57606a;">
-              If you don't recognize this agent or didn't expect this, you can review it any time using the
-              link above.
             </p>
           </body>
         </html>

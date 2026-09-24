@@ -444,13 +444,16 @@ def apply_injection_check(text: str, direction: str = "INGRESS"):
     return should_block, result
 
 
-def apply_toxicity_check(text: str, direction: str = "EGRESS"):
+def apply_toxicity_check(text: str, direction: str = "EGRESS", correlation_id: str = None):
     """
     Run detoxify toxicity analysis on text.
 
     Returns (should_block, toxicity_result). A disabled guard returns (False, None); a
     guard that errored returns (True, {...guard_failed}) rather than a clean verdict --
     "the text is clean" and "the check did not happen" must not be the same answer.
+
+    correlation_id: forwarded to the alarm when the caller has one (e.g.
+    /guardrail_validate) -- see diff_engine.generate_alarm's docstring.
     """
     try:
         settings = load_guard_settings()
@@ -471,7 +474,7 @@ def apply_toxicity_check(text: str, direction: str = "EGRESS"):
     )
 
     if result["is_toxic"]:
-        diff_engine.generate_toxicity_alarm(text, result, direction)
+        diff_engine.generate_toxicity_alarm(text, result, direction, correlation_id=correlation_id)
 
     return result["is_toxic"], result
 
@@ -603,7 +606,7 @@ def apply_egress_guardrail(raw_text: str):
     anonymized_result = anonymizer.anonymize(text=raw_text, analyzer_results=results, operators=operators)
     return anonymized_result.text, results
 
-def run_watchdog_task(request_id: str, raw_text: str, layer1_results):
+def run_watchdog_task(request_id: str, raw_text: str, layer1_results, correlation_id: str = None):
     try:
         with open("pii_rules.json", "r") as f:
             settings = json.load(f).get("settings", {})
@@ -611,13 +614,17 @@ def run_watchdog_task(request_id: str, raw_text: str, layer1_results):
                 return
     except Exception:
         return
-    
+
     start_time = time.perf_counter()
     l2_res = llm_watchdog.analyze_text(raw_text)
     end_time = time.perf_counter()
     BenchmarkLogger.log_metric(request_id, "LLM_WATCHDOG", (end_time - start_time) * 1000)
-    
-    diff_engine.run_diff(raw_text, layer1_results, l2_res)
+
+    alarms_triggered = diff_engine.run_diff(raw_text, layer1_results, l2_res, correlation_id=correlation_id)
+
+    # Optional, removable block -- see handle_layer2_enforcement_actions's own docstring.
+    if alarms_triggered:
+        handle_layer2_enforcement_actions(correlation_id)
 
 # --- 4. Endpoints ---
 @app.post("/query_db", response_model=GovernResponse)
@@ -825,6 +832,7 @@ def guardrail_validate(request: GuardrailValidateRequest, background_tasks: Back
                 outcome="BLOCKED" if blocked else "SERVED",
                 correlation_id=correlation_id,
                 reason_code=flag_reason,
+                device_id=agent.get("device_id"),
             )
             # Mirrors /v1/agent/decisions/check's AGENT_UNAUTHORIZED_ACTION event -- a content
             # block from this endpoint is a policy violation the same way a DPDP DENY is, and
@@ -845,7 +853,7 @@ def guardrail_validate(request: GuardrailValidateRequest, background_tasks: Back
     # check. should_block_toxic_egress() is the same admin-configurable policy /chat's
     # egress path already respects, not a second toxicity policy invented for this
     # endpoint alone.
-    is_toxic, tox_result = apply_toxicity_check(request.text, "EGRESS")
+    is_toxic, tox_result = apply_toxicity_check(request.text, "EGRESS", correlation_id=correlation_id)
     if is_toxic and should_block_toxic_egress():
         guard_failed = tox_result.get("guard_failed")
         message = guard_failure_response(tox_result) if guard_failed else _GUARDRAIL_BLOCK_MSG
@@ -966,7 +974,7 @@ def guardrail_validate(request: GuardrailValidateRequest, background_tasks: Back
 
     # 3. Not toxic, and not a declined payment confirmation -- mask PII/financial/health.
     masked_output, l1_results = apply_egress_guardrail(request.text)
-    background_tasks.add_task(run_watchdog_task, "N/A", request.text, l1_results)
+    background_tasks.add_task(run_watchdog_task, "N/A", request.text, l1_results, correlation_id)
 
     flag = "PARTIAL" if masked_output != request.text else "CLEAR"
     flag_reason = _FLAG_REASON_SENSITIVE_CONTENT_MASKED if flag == "PARTIAL" else None
@@ -982,6 +990,11 @@ def guardrail_validate(request: GuardrailValidateRequest, background_tasks: Back
 
     _record_guardrail_activity(flag, raw_hash, x_user_id, flag_reason)
     _log_agent_activity(flag, flag_reason)
+
+    # Optional, removable block -- see handle_partial_mask_compliance_notice's own docstring.
+    if flag == "PARTIAL" and agent:
+        handle_partial_mask_compliance_notice(agent, x_user_id, correlation_id, background_tasks)
+
     return GuardrailValidateResponse(
         flag=f"AI Guardrail flag: {flag}", message=masked_output, flag_reason=flag_reason,
         correlation_id=correlation_id,
@@ -1042,11 +1055,11 @@ def chat_agent(request: ChatRequest, background_tasks: BackgroundTasks,
         )
 
     OLLAMA_URL = config.OLLAMA_URL
-    SYSTEM_PROMPT = """You are an internal enterprise AI with access to a customer database. 
-If the user asks for details about a specific customer, you MUST output ONLY the command <FETCH_DB:ID> where ID is the customer number (e.g. <FETCH_DB:101>). 
-Do NOT output anything else if you need data. 
+    SYSTEM_PROMPT = """You are an internal enterprise AI with access to a customer database.
+If the user asks for details about a specific customer, you MUST output ONLY the command <FETCH_DB:ID> where ID is the customer number (e.g. <FETCH_DB:101>).
+Do NOT output anything else if you need data.
 If you are provided with data, summarize it naturally and helpfully."""
-    
+
     messages = [
         {"role": "system", "content": SYSTEM_PROMPT},
         {"role": "user", "content": request.message}
@@ -1461,27 +1474,50 @@ def notify_incident(incident_id: str, agent: dict, request: "AgentDecisionCheckR
 # runbook -- written for the end user, not for whoever investigates the incident.
 AWARENESS_CONTENT = {
     "IAM_SCOPE_EXCEEDED": {
-        "title": "An AI agent tried to do something outside its permissions",
+        "title": "How your connected AI agents are scoped",
         "body": [
-            "One of the AI agents acting on your behalf tried to use a capability it was never "
-            "granted, for example, an agent that's only allowed to check information tried to "
-            "place an order or take an action instead. We blocked it automatically, before "
-            "anything happened.",
-            "Every AI agent connected to your account is only allowed to do the specific things "
-            "it was explicitly set up for. This is deliberate: even if an agent is compromised, "
-            "buggy, or simply misconfigured, it can never do more than it was scoped to do.",
-            "You don't need to take any action. If you don't recognize the agent involved, or you "
-            "didn't expect it to attempt this, let us know so we can review it.",
+            "Each AI agent connected to your account is authorized for a specific, limited set of "
+            "actions rather than a general free hand. This is by design: it means that even if "
+            "one agent behaves unexpectedly, it can never take an action beyond what it was "
+            "explicitly authorized for.",
+            "This safeguard applied to a recent action on your account, and that action did not "
+            "go through.",
+            "No action is needed from you. If you'd ever like a summary of what your connected "
+            "agents are authorized to do, you're welcome to ask.",
+        ],
+    },
+    "RETROSPECTIVE_CONTENT_LEAK": {
+        "title": "A tip on sharing sensitive information safely",
+        "body": [
+            "One of your recent messages included details, like an account number, that are "
+            "safer left out of plain-text messages, even in conversations you trust.",
+            "A simple habit that helps: share only a partial reference (for example, just the "
+            "last 4 digits) rather than the full number, or confirm identity through a method "
+            "built specifically for that purpose.",
+            "No action is needed on this specific message, this note is just to help make "
+            "future exchanges a little safer.",
+        ],
+    },
+    "SENSITIVE_CONTENT_MASKED": {
+        "title": "Keeping shared information secure",
+        "body": [
+            "A recent message included details, like a passcode or account number, that are "
+            "safest shared through a secure, purpose-built channel rather than in a plain "
+            "message, even between people you trust.",
+            "A simple habit that helps: share a partial reference (for example, the last 4 "
+            "digits) instead of the full number or code.",
+            "No action is needed on your part, this note is simply here to help keep future "
+            "exchanges secure.",
         ],
     },
 }
 DEFAULT_AWARENESS = {
-    "title": "We blocked an AI agent action on your behalf",
+    "title": "A security note about your account",
     "body": [
-        "One of the AI agents acting on your behalf attempted an action that didn't meet our "
-        "governance rules, so it was blocked automatically before anything happened.",
-        "You don't need to take any action. If you don't recognize the agent involved, let us "
-        "know so we can review it.",
+        "As part of keeping your account safe, an automated safeguard applied to recent "
+        "activity on your account.",
+        "No action is needed from you. If anything here is unclear, you're welcome to reach "
+        "out for more detail.",
     ],
 }
 
@@ -1775,6 +1811,12 @@ def delete_alarm(request: DeleteAlarmRequest, principal: Principal = Depends(req
 class ToggleRequest(BaseModel):
     enable_llm_watchdog: bool
 
+class ToggleLayer2EnforcementRequest(BaseModel):
+    enable_layer2_enforcement_actions: bool
+
+class TogglePartialMaskNoticeRequest(BaseModel):
+    enable_partial_mask_compliance_notice: bool
+
 class ToggleToxicityRequest(BaseModel):
     enable_toxicity_guard: bool
 
@@ -1834,6 +1876,182 @@ def toggle_watchdog(request: ToggleRequest, principal: Principal = Depends(requi
         return {"status": "success"}
     except Exception as e:
         return {"status": "error", "message": str(e)}
+
+# --- Layer 2 enforcement actions -- fully removable block ------------------------------
+# Everything under this banner (this endpoint, the enable_layer2_enforcement_actions
+# setting, handle_layer2_enforcement_actions below, its one call site in
+# run_watchdog_task, the RETROSPECTIVE_CONTENT_LEAK entry in AWARENESS_CONTENT, and the
+# matching toggle in AdminConfig.jsx) is one self-contained, optional feature. Deleting
+# all of it leaves Layer 2 exactly as it was before: a detective-only background check
+# that raises a Threat Detection alarm and nothing else. See the design discussion in
+# this session for why "stop the message" is deliberately NOT part of this -- Layer 2
+# runs after the response has already been sent, so it can notify and record, but it can
+# never block.
+@app.post("/toggle_layer2_enforcement")
+def toggle_layer2_enforcement(request: ToggleLayer2EnforcementRequest,
+                               principal: Principal = Depends(require_role(ROLE_SUPER_ADMIN))):
+    try:
+        with open("pii_rules.json", "r") as f:
+            data = json.load(f)
+
+        if "settings" not in data:
+            data["settings"] = {}
+        before = data["settings"].get("enable_layer2_enforcement_actions")
+        data["settings"]["enable_layer2_enforcement_actions"] = request.enable_layer2_enforcement_actions
+
+        with open("pii_rules.json", "w") as f:
+            json.dump(data, f, indent=2)
+
+        AuditLogger.log_config_change(
+            actor=principal.name, actor_role=principal.role,
+            action="toggle_layer2_enforcement", before=before,
+            after=request.enable_layer2_enforcement_actions,
+        )
+
+        return {"status": "success"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+
+def handle_layer2_enforcement_actions(correlation_id: str):
+    """Optional, additive behavior for a Layer 2 (LLM watchdog) finding -- gated entirely
+    by enable_layer2_enforcement_actions, off by default. When on: raises a Compliance
+    Event distinctly labeled RETROSPECTIVE_CONTENT_LEAK (never the same shape as a
+    real-time block like IAM_SCOPE_EXCEEDED -- this was caught after the message was
+    already served, and must not be misread later as something that was actually
+    stopped), and sends the Data Principal the same kind of awareness email as an IAM
+    incident, reusing notify_principal_awareness's machinery.
+
+    Fire-and-log throughout: nothing here can affect a request that already completed
+    seconds ago. Looks up agent/principal identity via the same correlation_id already
+    written to the Activity Log (governance_db.query_report) rather than duplicating
+    that data -- if no matching Activity Log row exists (e.g. the caller never sent
+    X-Agent-Id), there's no identity to notify, and this is a no-op.
+    """
+    try:
+        with open("pii_rules.json", "r") as f:
+            settings = json.load(f).get("settings", {})
+        if not settings.get("enable_layer2_enforcement_actions", False):
+            return
+        if not correlation_id:
+            return
+
+        report = governance_db.query_report(record_types=["activity"], correlation_id=correlation_id)
+        rows = report.get("rows", [])
+        if not rows:
+            return
+        row = rows[0]
+        agent_id = row.get("agent_id")
+        principal_ref = row.get("principal_ref")
+        reason_code = "LAYER2_POST_HOC_DETECTION"
+
+        governance_db.log_governance_event(
+            event_id=f"gov-{uuid.uuid4().hex[:12]}",
+            event_type="RETROSPECTIVE_CONTENT_LEAK",
+            severity="HIGH",
+            agent_id=agent_id or "unknown",
+            reason_code=reason_code,
+            correlation_id=correlation_id,
+        )
+
+        if not principal_ref or not agent_id:
+            return
+        with open("pii_rules.json", "r") as f:
+            contacts = json.load(f).get("principal_contacts", {})
+        to_email = contacts.get(principal_ref)
+        if not to_email:
+            return
+        agent = governance_db.get_agent(agent_id) or {}
+        base_url = os.environ.get("GUARDRAIL_BASE_URL", "http://localhost:8000")
+        EmailNotifier.send_user_awareness_email(
+            to_email, agent, reason_code, f"{base_url}/awareness/RETROSPECTIVE_CONTENT_LEAK",
+        )
+    except Exception as e:
+        logging.error(f"Layer 2 enforcement actions failed for correlation_id={correlation_id}: {e}")
+# --- end Layer 2 enforcement actions ----------------------------------------------------
+
+
+# --- Partial-mask compliance notice -- fully removable block ---------------------------
+# Same shape as the Layer 2 enforcement block above, for the opposite (much more common)
+# case: a real-time, Layer 1 PARTIAL mask -- something like a passcode caught and masked
+# in the same request, not missed. Deleting this endpoint, the
+# enable_partial_mask_compliance_notice setting, handle_partial_mask_compliance_notice
+# below, its one call site in guardrail_validate, the SENSITIVE_CONTENT_MASKED entry in
+# AWARENESS_CONTENT, and the matching toggle in AdminConfig.jsx leaves guardrail_validate
+# exactly as it was before: PARTIAL is returned and logged, nothing else.
+@app.post("/toggle_partial_mask_notice")
+def toggle_partial_mask_notice(request: TogglePartialMaskNoticeRequest,
+                                principal: Principal = Depends(require_role(ROLE_SUPER_ADMIN))):
+    try:
+        with open("pii_rules.json", "r") as f:
+            data = json.load(f)
+
+        if "settings" not in data:
+            data["settings"] = {}
+        before = data["settings"].get("enable_partial_mask_compliance_notice")
+        data["settings"]["enable_partial_mask_compliance_notice"] = request.enable_partial_mask_compliance_notice
+
+        with open("pii_rules.json", "w") as f:
+            json.dump(data, f, indent=2)
+
+        AuditLogger.log_config_change(
+            actor=principal.name, actor_role=principal.role,
+            action="toggle_partial_mask_notice", before=before,
+            after=request.enable_partial_mask_compliance_notice,
+        )
+
+        return {"status": "success"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+
+def handle_partial_mask_compliance_notice(agent: dict, principal_ref: str, correlation_id: str,
+                                           background_tasks: BackgroundTasks):
+    """Optional, additive behavior for an ordinary real-time PARTIAL mask (Layer 1 caught
+    and masked something, e.g. a passcode, in the same request) -- gated entirely by
+    enable_partial_mask_compliance_notice, off by default. Never changes what
+    /guardrail_validate returns; this only adds a Compliance Event and an end-user email
+    on top of the PARTIAL decision already made.
+
+    Unlike handle_layer2_enforcement_actions, this fires on ordinary high-volume traffic
+    (any masked message), not a rare incident -- so the email is scheduled on
+    background_tasks rather than sent inline, to avoid adding SMTP latency to every
+    masked request. The Compliance Event write is a cheap local insert and stays
+    synchronous, same as every other compliance event this endpoint already raises."""
+    try:
+        with open("pii_rules.json", "r") as f:
+            settings = json.load(f).get("settings", {})
+        if not settings.get("enable_partial_mask_compliance_notice", False):
+            return
+        if not agent:
+            return
+
+        governance_db.log_governance_event(
+            event_id=f"gov-{uuid.uuid4().hex[:12]}",
+            event_type="CONTENT_MASKING_COMPLIANCE_VIOLATION",
+            severity="MEDIUM",
+            agent_id=agent.get("agent_id") or "unknown",
+            reason_code=_FLAG_REASON_SENSITIVE_CONTENT_MASKED,
+            correlation_id=correlation_id,
+        )
+
+        if not principal_ref:
+            return
+        with open("pii_rules.json", "r") as f:
+            contacts = json.load(f).get("principal_contacts", {})
+        to_email = contacts.get(principal_ref)
+        if not to_email:
+            return
+        base_url = os.environ.get("GUARDRAIL_BASE_URL", "http://localhost:8000")
+        background_tasks.add_task(
+            EmailNotifier.send_user_awareness_email,
+            to_email, agent, _FLAG_REASON_SENSITIVE_CONTENT_MASKED,
+            f"{base_url}/awareness/{_FLAG_REASON_SENSITIVE_CONTENT_MASKED}",
+        )
+    except Exception as e:
+        logging.error(f"Partial-mask compliance notice failed for correlation_id={correlation_id}: {e}")
+# --- end partial-mask compliance notice -------------------------------------------------
+
 
 @app.post("/toggle_toxicity")
 def toggle_toxicity(request: ToggleToxicityRequest, principal: Principal = Depends(require_role(ROLE_SUPER_ADMIN))):
@@ -2356,7 +2574,7 @@ If you are provided with data, summarize it naturally and helpfully."""
         {"role": "system", "content": SYSTEM_PROMPT},
         {"role": "user", "content": request.message}
     ]
-    
+
     try:
         start_time_llm_call = time.perf_counter()
         # Step 1: Initial routing

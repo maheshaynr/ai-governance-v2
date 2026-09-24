@@ -196,9 +196,15 @@ def generate_guard_failure_alarm(guard_name: str, error: str, direction: str = "
     return alarm
 
 
-def generate_alarm(raw_text: str, missing_finding: dict, l1_entities: list, l2_entities: list):
+def generate_alarm(raw_text: str, missing_finding: dict, l1_entities: list, l2_entities: list,
+                    correlation_id: str = None):
     """
     Creates and saves an alarm object for the dashboard.
+
+    correlation_id, when the caller has one, ties this alarm back to the same
+    Activity Log row /guardrail_validate already wrote (governance_db.log_activity) --
+    lets the dashboard show which agent/principal/device this specific alarm came from
+    without duplicating that identity data onto the alarm itself.
     """
     
     # --- INTELLIGENT NOTIFICATION ROUTING CATEGORY ---
@@ -232,18 +238,21 @@ def generate_alarm(raw_text: str, missing_finding: dict, l1_entities: list, l2_e
         "layer2_findings": l2_entities,
         "status": "PENDING_REVIEW"
     }
-    
+    if correlation_id:
+        alarm["correlation_id"] = correlation_id
+
     save_alarm(alarm)
     logging.warning(f"🚨 ALARM GENERATED: Phi-4 found unmasked {alarm['missed_entity']['type']} (Category: {category})")
 
     _dispatch_to_subscribers(alarm)
     return alarm
 
-def run_diff(raw_text: str, layer1_results: list, layer2_results: dict):
+def run_diff(raw_text: str, layer1_results: list, layer2_results: dict, correlation_id: str = None):
     """
     Compares Presidio results with LLM results.
     layer1_results: list of presidio AnalyzerResult objects (or dicts with entity_type, start, end)
     layer2_results: dict from llm_watchdog
+    correlation_id: forwarded to generate_alarm, see its docstring.
     """
     if not layer2_results.get("has_sensitive_data", False):
         return None # LLM found nothing, no alarm
@@ -299,19 +308,21 @@ def run_diff(raw_text: str, layer1_results: list, layer2_results: dict):
                 
         if not is_masked:
             # LLM found something Presidio didn't!
-            generate_alarm(raw_text, finding, l1_entity_types, l2_entity_types)
+            generate_alarm(raw_text, finding, l1_entity_types, l2_entity_types, correlation_id=correlation_id)
             alarms_triggered += 1
             
     return alarms_triggered
 
-def generate_toxicity_alarm(raw_text: str, toxicity_result: dict, direction: str = "EGRESS"):
+def generate_toxicity_alarm(raw_text: str, toxicity_result: dict, direction: str = "EGRESS",
+                             correlation_id: str = None):
     """
     Creates and saves an alarm for toxic content detected by the detoxify model.
-    
+
     Args:
         raw_text: The original text that was analyzed
         toxicity_result: Result dict from toxicity_guard.analyze()
         direction: "INGRESS" (user input) or "EGRESS" (AI output)
+        correlation_id: see generate_alarm's docstring -- same idea, same source.
     """
     # Toxicity alarms used to be suppressed whenever enable_llm_watchdog was off, and
     # suppressed entirely when the settings file could not be read. Those are independent
@@ -333,7 +344,9 @@ def generate_toxicity_alarm(raw_text: str, toxicity_result: dict, direction: str
         "context_snippet": raw_text[:200] + "..." if len(raw_text) > 200 else raw_text,
         "status": "PENDING_REVIEW"
     }
-    
+    if correlation_id:
+        alarm["correlation_id"] = correlation_id
+
     save_alarm(alarm)
     logging.warning(f"🚨 TOXICITY ALARM: {direction} — {toxicity_result.get('triggered_categories')} (max: {toxicity_result.get('max_category')} @ {toxicity_result.get('max_score')})")
 

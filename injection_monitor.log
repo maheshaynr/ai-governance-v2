@@ -35,3 +35,4 @@
 [2026-09-21T01:01:04.881042] [INGRESS] Injection: False | blocking=False label=SAFE score=0.9964 patterns=[]
 [2026-09-21T01:25:34.244485] [INGRESS] Injection: False | blocking=False label=SAFE score=1.0 patterns=[]
 [2026-09-21T01:25:37.796231] [INGRESS] Injection: False | blocking=False label=SAFE score=0.9964 patterns=[]
+[2026-09-23T11:18:36.264982] [INGRESS] Injection: True | blocking=False label=INJECTION score=1.0 patterns=[]

@@ -1,6 +1,8 @@
 {
   "settings": {
     "enable_llm_watchdog": true,
+    "enable_layer2_enforcement_actions": true,
+    "enable_partial_mask_compliance_notice": true,
     "enable_toxicity_guard": true,
     "enable_pii": true,
     "enable_health": true,

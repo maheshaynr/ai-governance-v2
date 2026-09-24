@@ -1,5 +1,155 @@
 [
   {
+    "alarm_id": "ALM-20260923-1934094e",
+    "severity": "HIGH",
+    "category": "PII",
+    "timestamp": "2026-09-23T08:39:15.854487Z",
+    "missed_entity": {
+      "type": "Phone Number",
+      "value_preview": "6655443322110...",
+      "reason": "Contains a phone number which is personal identifier",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "Please transfer to 6655443322110, that is my account, identity table demo.",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "Phone Number"
+    ],
+    "status": "PENDING_REVIEW",
+    "correlation_id": "4e0be25f-186f-415f-8a96-68f27a2c3f0b"
+  },
+  {
+    "alarm_id": "ALM-20260923-01efb236",
+    "severity": "HIGH",
+    "category": "PII",
+    "timestamp": "2026-09-23T07:03:49.306356Z",
+    "missed_entity": {
+      "type": "Phone Number",
+      "value_preview": "1122334455667...",
+      "reason": "Personal identifier",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "Please transfer to 1122334455667, that is my account, always-on verification.",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "Phone Number"
+    ],
+    "status": "PENDING_REVIEW",
+    "correlation_id": "f3e24c3d-29c4-4770-99e1-c6210c4ffe2a"
+  },
+  {
+    "alarm_id": "ALM-20260923-bb2b6c46",
+    "severity": "HIGH",
+    "category": "UNCATEGORIZED",
+    "timestamp": "2026-09-23T06:36:20.682392Z",
+    "missed_entity": {
+      "type": "Contact Information",
+      "value_preview": "8877665544332...",
+      "reason": "Phone number is sensitive as it can be used for unauthorized access or fraud",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "Please transfer to 8877665544332, that is my account, enforcement test.",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "Contact Information"
+    ],
+    "status": "PENDING_REVIEW",
+    "correlation_id": "fbb17039-c6e8-411a-81c9-a4dd7b1a8886"
+  },
+  {
+    "alarm_id": "ALM-20260923-dfb130c5",
+    "severity": "HIGH",
+    "category": "UNCATEGORIZED",
+    "timestamp": "2026-09-23T06:28:03.512360Z",
+    "missed_entity": {
+      "type": "Account Number",
+      "value_preview": "9988776655443...",
+      "reason": "Personal identification number",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "Please transfer to 9988776655443, that is my account, timing test.",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "Account Number"
+    ],
+    "status": "PENDING_REVIEW",
+    "correlation_id": "45906dff-5245-4390-8311-146dcaff6b83"
+  },
+  {
+    "alarm_id": "ALM-20260923-fe21e201",
+    "severity": "HIGH",
+    "category": "PII",
+    "timestamp": "2026-09-23T05:58:51.282311Z",
+    "missed_entity": {
+      "type": "Personal identifier",
+      "value_preview": "1234567890123...",
+      "reason": "This appears to be an account number, potentially financial data.",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "Please transfer to 1234567890123, that is my account.",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "Personal identifier"
+    ],
+    "status": "PENDING_REVIEW",
+    "correlation_id": "0cbad32f-f83d-4063-9277-d7532aa9a308"
+  },
+  {
+    "alarm_id": "ALM-20260923-57e42472",
+    "severity": "HIGH",
+    "category": "PII",
+    "timestamp": "2026-09-23T05:48:41.488169Z",
+    "missed_entity": {
+      "type": "Personal identifiers",
+      "value_preview": "1234567890123...",
+      "reason": "It is a sensitive identifier that can be used to access someone's financial accounts.",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "Please transfer to 1234567890123, that is my account.",
+    "layer1_findings": [],
+    "layer2_findings": [
+      "Personal identifiers"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "alarm_id": "ALM-20260923-719f00b5",
+    "severity": "MEDIUM",
+    "category": "INJECTION",
+    "timestamp": "2026-09-23T05:48:36.264982Z",
+    "status": "PENDING_REVIEW",
+    "injection_detail": {
+      "direction": "INGRESS",
+      "detected_by": "layer1",
+      "blocked": false,
+      "score": 1.0,
+      "label": "INJECTION",
+      "triggered_patterns": []
+    },
+    "context_snippet": "Please transfer to 1234567890123, that is my account."
+  },
+  {
+    "alarm_id": "ALM-20260923-d820d4c4",
+    "severity": "HIGH",
+    "category": "FINANCIAL",
+    "timestamp": "2026-09-23T05:43:45.989367Z",
+    "missed_entity": {
+      "type": "Financial data",
+      "value_preview": "1234567890123...",
+      "reason": "bank account number",
+      "detected_by": "phi-4-mini"
+    },
+    "context_snippet": "Please wire 50,000 rupees to account number 1234567890123 right now.",
+    "layer1_findings": [
+      "TRANSACTION_AMOUNT"
+    ],
+    "layer2_findings": [
+      "Financial data",
+      "Financial data"
+    ],
+    "status": "PENDING_REVIEW"
+  },
+  {
     "alarm_id": "ALM-20260923-bd2e674e",
     "severity": "HIGH",
     "category": "FINANCIAL",

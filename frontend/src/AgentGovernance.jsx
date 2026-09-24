@@ -14,7 +14,7 @@ const EMPTY_REPORT_FILTERS = {
 };
 
 function reportRowsToCsv(rows) {
-  const header = ['record_type', 'timestamp', 'agent_id', 'principal_ref', 'outcome_or_severity', 'reason_code', 'correlation_id', 'detail'];
+  const header = ['record_type', 'timestamp', 'agent_id', 'principal_ref', 'outcome_or_severity', 'reason_code', 'correlation_id', 'detail', 'device_id'];
   const escape = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
   const lines = [header.join(',')];
   rows.forEach((r) => lines.push(header.map((h) => escape(r[h])).join(',')));
@@ -198,6 +198,35 @@ export default function AgentGovernance({ principal = DEFAULT_PRINCIPAL }) {
     });
   };
 
+  // Clicking a checkbox in one of the Reports summary cards -- unlike the filter form's
+  // own checkboxes above, these re-run the report immediately, since the whole point is
+  // "click a number, see it filtered" rather than click-then-press-Run. Each of the three
+  // summary groups is its own independent filter dimension, so toggling one never touches
+  // the other two's current value.
+  const toggleReportRecordTypeAndRun = (key) => {
+    setReportFilters((prev) => {
+      const has = prev.recordTypes.includes(key);
+      const recordTypes = has ? prev.recordTypes.filter((k) => k !== key) : [...prev.recordTypes, key];
+      const next = { ...prev, recordTypes };
+      loadReports(next);
+      return next;
+    });
+  };
+
+  // outcome_or_severity is one filtered column on the backend split across two request
+  // params (outcome, severity) that the query ANDs together -- setting both at once to
+  // different values would always return zero rows. Clicking a value here treats the two
+  // as one field: it sets outcome and clears severity, and clicking the same value again
+  // clears the filter (acts like a single-select, not an additive multi-check).
+  const toggleReportOutcomeSeverityAndRun = (key) => {
+    setReportFilters((prev) => {
+      const isActive = prev.outcome === key || prev.severity === key;
+      const next = { ...prev, outcome: isActive ? '' : key, severity: '' };
+      loadReports(next);
+      return next;
+    });
+  };
+
   const handleRevoke = async (agentId) => {
     setRevokingAgentId(agentId);
     try {
@@ -373,11 +402,12 @@ export default function AgentGovernance({ principal = DEFAULT_PRINCIPAL }) {
                       <th style={th}>Severity</th>
                       <th style={th}>Agent ID</th>
                       <th style={th}>Reason</th>
+                      <th style={th}>Correlation ID</th>
                     </tr>
                   </thead>
                   <tbody>
                     {events.length === 0 ? (
-                      <tr><td colSpan="5" style={{ padding: '2rem', textAlign: 'center', color: '#57606a' }}>No compliance events yet.</td></tr>
+                      <tr><td colSpan="6" style={{ padding: '2rem', textAlign: 'center', color: '#57606a' }}>No compliance events yet.</td></tr>
                     ) : events.map((row) => (
                       <tr key={row.event_id} style={{ borderBottom: '1px solid #d0d7de' }}>
                         <td style={{ ...td, fontSize: '0.8rem', color: '#57606a', whiteSpace: 'nowrap' }}>
@@ -387,6 +417,7 @@ export default function AgentGovernance({ principal = DEFAULT_PRINCIPAL }) {
                         <td style={td}>{statusPill(row.severity, false)}</td>
                         <td style={{ ...td, fontFamily: 'monospace', fontSize: '0.75rem' }}>{row.agent_id}</td>
                         <td style={td}>{row.reason_code || '—'}</td>
+                        <td style={{ ...td, fontFamily: 'monospace', fontSize: '0.75rem', color: '#57606a' }}>{row.correlation_id || '—'}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -517,9 +548,14 @@ export default function AgentGovernance({ principal = DEFAULT_PRINCIPAL }) {
                   </label>
                   <label style={{ fontSize: '0.75rem', color: '#57606a' }}>
                     Reason code
-                    <input type="text" value={reportFilters.reasonCode} placeholder="e.g. IAM_SCOPE_EXCEEDED"
+                    <select value={reportFilters.reasonCode}
                       onChange={(e) => setReportFilters({ ...reportFilters, reasonCode: e.target.value })}
-                      style={{ display: 'block', width: '100%', marginTop: '0.2rem', padding: '0.3rem', fontSize: '0.85rem' }} />
+                      style={{ display: 'block', width: '100%', marginTop: '0.2rem', padding: '0.3rem', fontSize: '0.85rem' }}>
+                      <option value="">All</option>
+                      {Object.entries(reportSummary?.by_reason_code || {}).map(([code, count]) => (
+                        <option key={code} value={code}>{code} ({count})</option>
+                      ))}
+                    </select>
                   </label>
                   <label style={{ fontSize: '0.75rem', color: '#57606a' }}>
                     Correlation ID
@@ -551,10 +587,19 @@ export default function AgentGovernance({ principal = DEFAULT_PRINCIPAL }) {
               </div>
 
               {reportSummary && (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
-                  <StatCard title={`By record type (${reportSummary.total} total)`} data={reportSummary.by_record_type} />
-                  <StatCard title="By outcome / severity" data={reportSummary.by_outcome_or_severity} />
-                  <StatCard title="By reason code" data={reportSummary.by_reason_code} />
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 480px))', gap: '2rem', marginBottom: '1rem' }}>
+                  <FilterableStatCard
+                    title={`By record type (${reportSummary.total} total)`}
+                    data={reportSummary.by_record_type}
+                    activeValues={reportFilters.recordTypes}
+                    onToggle={toggleReportRecordTypeAndRun}
+                  />
+                  <FilterableStatCard
+                    title="By outcome / severity"
+                    data={reportSummary.by_outcome_or_severity}
+                    activeValues={[reportFilters.outcome, reportFilters.severity].filter(Boolean)}
+                    onToggle={toggleReportOutcomeSeverityAndRun}
+                  />
                 </div>
               )}
 
@@ -570,11 +615,12 @@ export default function AgentGovernance({ principal = DEFAULT_PRINCIPAL }) {
                       <th style={th}>Reason</th>
                       <th style={th}>Correlation ID</th>
                       <th style={th}>Detail</th>
+                      <th style={th}>Device ID</th>
                     </tr>
                   </thead>
                   <tbody>
                     {reportRows.length === 0 ? (
-                      <tr><td colSpan="8" style={{ padding: '2rem', textAlign: 'center', color: '#57606a' }}>
+                      <tr><td colSpan="9" style={{ padding: '2rem', textAlign: 'center', color: '#57606a' }}>
                         {reportLoading ? 'Loading…' : 'Run a report to see results.'}
                       </td></tr>
                     ) : reportRows.map((row, idx) => (
@@ -589,6 +635,7 @@ export default function AgentGovernance({ principal = DEFAULT_PRINCIPAL }) {
                         <td style={{ ...td, fontFamily: 'monospace', fontSize: '0.75rem', color: '#57606a' }}>{row.reason_code || '—'}</td>
                         <td style={{ ...td, fontFamily: 'monospace', fontSize: '0.75rem', color: '#57606a' }}>{row.correlation_id || '—'}</td>
                         <td style={td}>{row.detail || '—'}</td>
+                        <td style={{ ...td, fontFamily: 'monospace', fontSize: '0.75rem', color: '#57606a' }}>{row.device_id || '—'}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -614,6 +661,30 @@ function StatCard({ title, data }) {
           <span style={{ fontFamily: 'monospace' }}>{key}</span>
           <strong>{value}</strong>
         </div>
+      ))}
+    </div>
+  );
+}
+
+// Reports-tab-only variant of StatCard with a checkbox per row -- checking a value
+// filters the report to it immediately. Kept separate from StatCard (used by the plain,
+// non-interactive Stats tab) so nothing about that existing card changes.
+function FilterableStatCard({ title, data, activeValues, onToggle }) {
+  const entries = Object.entries(data || {});
+  return (
+    <div style={{ border: '1px solid #d0d7de', borderRadius: '6px', background: '#f6f8fa', padding: '1rem' }}>
+      <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem' }}>{title}</h4>
+      {entries.length === 0 ? (
+        <div style={{ fontSize: '0.85rem', color: '#57606a' }}>No data yet.</div>
+      ) : entries.map(([key, value]) => (
+        <label key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.85rem', color: '#57606a', cursor: 'pointer', padding: '0.3rem 0' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <input type="checkbox" checked={activeValues.includes(key)} onChange={() => onToggle(key)}
+              style={{ margin: 0, width: '14px', height: '14px', flexShrink: 0 }} />
+            <span style={{ fontFamily: 'monospace' }}>{key}</span>
+          </span>
+          <strong>{value}</strong>
+        </label>
       ))}
     </div>
   );

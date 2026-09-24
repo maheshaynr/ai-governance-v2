@@ -3,6 +3,7 @@ import AdminConfig from './AdminConfig';
 import AnalyticsDashboard from './AnalyticsDashboard';
 import ChatBot from './ChatBot';
 import AgentGovernance from './AgentGovernance';
+import ThreatDetections from './ThreatDetections';
 import { fetchAlarms, fetchSystemStatus, getRole, setRole as persistRole } from './api';
 
 const ROLES = ['super_admin', 'admin_pii', 'caller'];
@@ -16,6 +17,7 @@ function App() {
   const [activeTab, setActiveTab] = useState('chatbot');
   const [alarms, setAlarms] = useState([]);
   const [sysStatus, setSysStatus] = useState('loading');
+  const [rulePrefill, setRulePrefill] = useState(null);
 
   // No login -- a role is just declared (see auth.py), defaulting to full access so
   // there's no friction opening the app. Switch roles from the picker below to see
@@ -84,6 +86,12 @@ function App() {
               Admin Configuration
             </button>
             <button
+              className={activeTab === 'threats' ? 'active' : ''}
+              onClick={() => setActiveTab('threats')}
+            >
+              Threat Detection
+            </button>
+            <button
               className={activeTab === 'analytics' ? 'active' : ''}
               onClick={() => setActiveTab('analytics')}
             >
@@ -118,7 +126,8 @@ function App() {
       <main>
         {activeTab === 'chatbot' && <ChatBot />}
         {activeTab === 'analytics' && <AnalyticsDashboard />}
-        {activeTab === 'admin' && <AdminConfig principal={principal} />}
+        {activeTab === 'admin' && <AdminConfig principal={principal} rulePrefill={rulePrefill} onConsumeRulePrefill={() => setRulePrefill(null)} />}
+        {activeTab === 'threats' && <ThreatDetections principal={principal} onCreateRule={(entity) => { setRulePrefill({ entity, ts: Date.now() }); setActiveTab('admin'); }} />}
         {activeTab === 'governance' && <AgentGovernance principal={principal} />}
       </main>
     </div>

@@ -95,6 +95,18 @@ export async function toggleWatchdog(enable_llm_watchdog) {
   return postJson('/toggle_watchdog', { enable_llm_watchdog });
 }
 
+// Removable alongside its backend counterpart -- see api.py's "Layer 2 enforcement
+// actions" banner comment.
+export async function toggleLayer2Enforcement(enable_layer2_enforcement_actions) {
+  return postJson('/toggle_layer2_enforcement', { enable_layer2_enforcement_actions });
+}
+
+// Removable alongside its backend counterpart -- see api.py's "Partial-mask compliance
+// notice" banner comment.
+export async function togglePartialMaskNotice(enable_partial_mask_compliance_notice) {
+  return postJson('/toggle_partial_mask_notice', { enable_partial_mask_compliance_notice });
+}
+
 export async function toggleCategory(category, enabled) {
   return postJson('/toggle_category', { category, enabled });
 }

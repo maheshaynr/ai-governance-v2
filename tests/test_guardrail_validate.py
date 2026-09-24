@@ -134,7 +134,7 @@ def test_respects_the_same_toxic_egress_policy_chat_uses(client, app_module, mon
 
 def test_guard_failure_fails_closed(client, app_module, monkeypatch):
     """A toxicity guard that cannot run must block, not pass -- fail closed."""
-    def broken_check(text, direction="EGRESS"):
+    def broken_check(text, direction="EGRESS", correlation_id=None):
         return True, {"guard_failed": True, "guard": "toxicity_guard", "error": "boom"}
 
     monkeypatch.setattr(app_module, "apply_toxicity_check", broken_check)
