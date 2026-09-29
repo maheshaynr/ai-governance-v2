@@ -1,0 +1,471 @@
+<title>JioCare Onboarding</title>
+<meta name="description" content="Step-by-step guide for re-registering the JioCare Helper agent with Guardrail's identity, authorization, and consent layers.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f7f8fa;
+    --surface: #ffffff;
+    --surface-2: #eef1f5;
+    --border: #dde2e8;
+    --text: #1b2430;
+    --text-muted: #5b6472;
+    --accent: #0969da;
+    --accent-soft: #e8f0fe;
+    --good: #1a7f42;
+    --good-soft: #e6f6ec;
+    --warn: #9a6700;
+    --warn-soft: #fff6e0;
+    --bad: #b3261e;
+    --bad-soft: #fdecec;
+    --code-bg: #10151f;
+    --code-text: #d7e0ea;
+    --code-key: #7ab7ff;
+    --code-str: #9fe0a0;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f1216;
+      --surface: #171b21;
+      --surface-2: #1e232b;
+      --border: #2b323c;
+      --text: #e7ebf0;
+      --text-muted: #97a1ad;
+      --accent: #6ea8ff;
+      --accent-soft: #16233b;
+      --good: #4ade80;
+      --good-soft: #103322;
+      --warn: #f2c14e;
+      --warn-soft: #3a2e0d;
+      --bad: #f28b82;
+      --bad-soft: #3a1614;
+      --code-bg: #0a0d12;
+      --code-text: #cfd9e4;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f1216;
+    --surface: #171b21;
+    --surface-2: #1e232b;
+    --border: #2b323c;
+    --text: #e7ebf0;
+    --text-muted: #97a1ad;
+    --accent: #6ea8ff;
+    --accent-soft: #16233b;
+    --good: #4ade80;
+    --good-soft: #103322;
+    --warn: #f2c14e;
+    --warn-soft: #3a2e0d;
+    --bad: #f28b82;
+    --bad-soft: #3a1614;
+    --code-bg: #0a0d12;
+    --code-text: #cfd9e4;
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+    line-height: 1.55;
+  }
+  .wrap {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 3rem 1.25rem 5rem;
+  }
+  header.hero {
+    margin-bottom: 2.5rem;
+  }
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: .72rem;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--accent);
+    background: var(--accent-soft);
+    border-radius: 999px;
+    padding: .3rem .7rem;
+    margin-bottom: 1rem;
+  }
+  h1 {
+    font-size: 2.1rem;
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+    margin: 0 0 .6rem;
+    text-wrap: balance;
+  }
+  .subtitle {
+    color: var(--text-muted);
+    font-size: 1.05rem;
+    max-width: 62ch;
+    margin: 0;
+  }
+  h2 {
+    font-size: 1.3rem;
+    margin: 3rem 0 .9rem;
+    padding-bottom: .6rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: baseline;
+    gap: .6rem;
+  }
+  h2 .num {
+    font-family: "IBM Plex Mono", monospace;
+    color: var(--accent);
+    font-size: 1rem;
+  }
+  h3 {
+    font-size: 1.02rem;
+    margin: 1.6rem 0 .6rem;
+  }
+  p { margin: 0 0 .9rem; }
+  .lede { font-size: 1rem; color: var(--text-muted); }
+  a { color: var(--accent); }
+
+  .callout {
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--warn);
+    background: var(--warn-soft);
+    border-radius: 8px;
+    padding: 1rem 1.1rem;
+    margin: 1.2rem 0;
+    font-size: .92rem;
+  }
+  .callout strong { color: var(--warn); }
+  .callout.good { border-left-color: var(--good); background: var(--good-soft); }
+  .callout.good strong { color: var(--good); }
+  .callout.bad { border-left-color: var(--bad); background: var(--bad-soft); }
+  .callout.bad strong { color: var(--bad); }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.25rem 1.4rem;
+    margin: 1rem 0;
+  }
+
+  .layer-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: .9rem;
+    margin: 1.2rem 0;
+  }
+  @media (max-width: 640px) { .layer-grid { grid-template-columns: 1fr; } }
+  .layer {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1rem 1.1rem;
+  }
+  .layer .tag {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: .68rem;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--accent);
+    display: block;
+    margin-bottom: .35rem;
+  }
+  .layer h4 { margin: 0 0 .35rem; font-size: .98rem; }
+  .layer p { margin: 0; font-size: .85rem; color: var(--text-muted); }
+  .status-pill {
+    display: inline-block;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: .68rem;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    padding: .2rem .5rem;
+    border-radius: 999px;
+    margin-top: .5rem;
+  }
+  .status-pill.missing { background: var(--bad-soft); color: var(--bad); }
+  .status-pill.exists { background: var(--good-soft); color: var(--good); }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .87rem;
+    margin: 1rem 0;
+  }
+  th, td {
+    text-align: left;
+    padding: .55rem .7rem;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  th {
+    font-size: .72rem;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--text-muted);
+    font-weight: 600;
+  }
+  td code, p code, li code {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: .84em;
+    background: var(--surface-2);
+    padding: .1rem .35rem;
+    border-radius: 4px;
+  }
+  .owner {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: .68rem;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    padding: .15rem .5rem;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+  .owner.guardrail { background: var(--accent-soft); color: var(--accent); }
+  .owner.jiocare { background: var(--warn-soft); color: var(--warn); }
+
+  pre {
+    background: var(--code-bg);
+    color: var(--code-text);
+    border-radius: 10px;
+    padding: 1rem 1.1rem;
+    overflow-x: auto;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: .82rem;
+    line-height: 1.6;
+    margin: .8rem 0 1.3rem;
+  }
+  .step {
+    display: flex;
+    gap: .9rem;
+    margin: 1.4rem 0;
+  }
+  .step .idx {
+    flex: none;
+    width: 2rem; height: 2rem;
+    border-radius: 50%;
+    background: var(--accent-soft);
+    color: var(--accent);
+    display: flex; align-items: center; justify-content: center;
+    font-family: "IBM Plex Mono", monospace;
+    font-weight: 600;
+    font-size: .9rem;
+  }
+  .step .body { flex: 1; min-width: 0; }
+  .step h4 { margin: .1rem 0 .4rem; font-size: 1rem; }
+
+  ul.checklist { list-style: none; padding: 0; margin: 1rem 0; }
+  ul.checklist li {
+    display: flex; gap: .6rem; align-items: flex-start;
+    padding: .5rem 0;
+    border-bottom: 1px solid var(--border);
+    font-size: .9rem;
+  }
+  ul.checklist li:last-child { border-bottom: none; }
+  ul.checklist li::before {
+    content: "☐";
+    color: var(--text-muted);
+    flex: none;
+  }
+
+  footer {
+    margin-top: 3.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: .82rem;
+  }
+</style>
+
+<div class="wrap">
+  <header class="hero">
+    <span class="eyebrow">🛡️ Guardrail · Agent Governance</span>
+    <h1>Re-registering JioCare Helper</h1>
+    <p class="subtitle">JioCare's device-diagnosis assistant was integrated with the platform about a week ago and worked end to end. Since then, Guardrail's Agent Governance layer was built out (the same model VOXA's skills now run on), and JioCare was never carried over into it. This guide covers exactly what's missing and how to close the gap.</p>
+  </header>
+
+  <div class="callout bad">
+    <strong>Current state, checked directly against both databases:</strong> JioCare has no registered agent identity in Guardrail (<code>agents</code> table has zero rows for it), no IAM entitlement, and — as of this session's data cleanup — no active DPDP consent either. A DPDP <em>notice</em> for it still exists (<code>jio-device-diagnosis-notice-v1</code>), and historical decision records confirm the purpose and wiring worked before, but every live grant tied to it is gone.
+  </div>
+
+  <h2><span class="num">01</span> The three layers, applied to JioCare</h2>
+  <p>Every agent on this platform is governed by three independent checks, in this order. A gap in any one of them blocks the flow — that's what's currently happening to JioCare.</p>
+
+  <div class="layer-grid">
+    <div class="layer">
+      <span class="tag">Layer 1 — Identity</span>
+      <h4>Agent Registry</h4>
+      <p>Who is this caller? Established once via <code>/v1/agent/register</code>, which returns an <code>agent_id</code> and a secret.</p>
+      <span class="status-pill missing">Missing</span>
+    </div>
+    <div class="layer">
+      <span class="tag">Layer 2 — Authorization</span>
+      <h4>IAM Entitlement</h4>
+      <p>Is this specific agent allowed to act, for this principal, within this app? A (principal, agent, app) grant.</p>
+      <span class="status-pill missing">Missing — and unmapped</span>
+    </div>
+    <div class="layer">
+      <span class="tag">Layer 3 — Consent</span>
+      <h4>DPDP Consent</h4>
+      <p>Has the Data Principal agreed their data can be used for this purpose? Checked against a live consent record.</p>
+      <span class="status-pill missing">Notice exists, consent doesn't</span>
+    </div>
+  </div>
+
+  <p>These are deliberately separate from each other — see <a href="#">Agent_Governance_Layer_Design.md</a> for the full rationale. A principal saying yes to a purpose (Layer 3) never implies the agent asking is authorized to ask (Layer 2); each has to be independently true.</p>
+
+  <h2><span class="num">02</span> What Guardrail does (nothing from JioCare needed)</h2>
+
+  <div class="step">
+    <div class="idx">A</div>
+    <div class="body">
+      <h4>Map JioCare's purpose to an "app" for IAM</h4>
+      <p>Today, <code>_purpose_to_app()</code> only recognizes <code>swiggy</code>, <code>teams</code>, <code>kite</code>, and <code>yahoo</code> — an unrecognized purpose skips the IAM gate entirely rather than failing closed on it. JioCare's purpose, <code>device_diagnosis_ai_analysis</code>, isn't in that list, so it currently bypasses authorization checking altogether. Bringing JioCare to parity with VOXA means adding a mapping:</p>
+      <pre>_PURPOSE_APP_SUBSTRINGS = (
+    ("swiggy", "swiggy"),
+    ("teams", "teams"),
+    ("kite", "kite"),
+    ("yahoo", "yahoo_finance"),
+    <span style="color:var(--code-key)">("device_diagnosis", "jiocare")</span>,
+)</pre>
+      <p>Without this, JioCare traffic is <em>never</em> IAM-gated — every call falls straight through to the consent check.</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="idx">B</div>
+    <div class="body">
+      <h4>Grant the entitlement, once JioCare's agent_id exists</h4>
+      <p>A one-time call after step 1 below completes:</p>
+      <pre>governance_db.grant_entitlement(
+    principal_ref="&lt;real subscriber id&gt;",
+    agent_id="&lt;jiocare agent_id from registration&gt;",
+    allowed_app="jiocare",
+)</pre>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="idx">C</div>
+    <div class="body">
+      <h4>Re-issue DPDP consent per real subscriber</h4>
+      <p>The notice already exists — no new notice needed:</p>
+      <pre>notice_ref: jio-device-diagnosis-notice-v1
+purpose:    device_diagnosis_ai_analysis
+owner:      ai-jiocare-helper</pre>
+      <p>What's missing is the <em>consent</em> record itself (DPDP Engine → Consents → Grant), one per real subscriber, referencing that notice.</p>
+    </div>
+  </div>
+
+  <h2><span class="num">03</span> What JioCare implements</h2>
+
+  <div class="step">
+    <div class="idx">1</div>
+    <div class="body">
+      <h4>Register the agent — once, ever</h4>
+      <p>Call <code>POST /v1/agent/register</code>. Store the returned secret; it's shown exactly once.</p>
+      <pre>POST /v1/agent/register
+{
+  "agent_name": "JioCare Device Diagnosis Helper",
+  "business_unit": "JioCare",
+  "owner_name": "&lt;team/owner&gt;",
+  "location_of_deployment": "&lt;prod/staging&gt;",
+  "in_house_or_external": "in_house",
+  "device_id": ""
+}
+
+→ 200
+{
+  "agent_id": "jiocare-device-482913",
+  "agent_secret": "&lt;shown once — persist this&gt;",
+  "identity_assignment_timestamp": "…"
+}</pre>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="idx">2</div>
+    <div class="body">
+      <h4>Send identity on every call</h4>
+      <p>Every request from here on carries these two headers — this is the part that's currently missing entirely (today's calls go through unauthenticated, so nothing is logged against JioCare at all):</p>
+      <pre>X-Agent-Id: jiocare-device-482913
+Authorization: Bearer &lt;agent_secret&gt;</pre>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="idx">3</div>
+    <div class="body">
+      <h4>Gate the diagnosis action through the decision check</h4>
+      <p>Before pulling any device/modem/STB data for a customer, ask Guardrail whether this is authorized:</p>
+      <pre>POST /v1/agent/decisions/check
+{
+  "principal_ref": "&lt;real subscriber id&gt;",
+  "purpose": "device_diagnosis_ai_analysis",
+  "operation": "ANALYZE_DEVICE_LOGS",
+  "data_categories": ["DEVICE_MEDIA"],
+  "device_id": ""
+}</pre>
+      <p>A <code>DENY</code> with <code>reason_code: IAM_SCOPE_EXCEEDED</code> means step B above hasn't run yet for this subscriber. A <code>DENY</code> with a DPDP reason means step C hasn't.</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="idx">4</div>
+    <div class="body">
+      <h4>Run the customer's message through content validation</h4>
+      <p>Anything the customer types, and anything the AI is about to send back, goes through <code>/guardrail_validate</code> — this is what catches an account number or OTP the customer pastes into the chat before it's masked or flagged.</p>
+      <pre>POST /guardrail_validate
+{ "text": "&lt;message&gt;" }
+
+→ { "flag": "AI Guardrail flag: PARTIAL", "message": "&lt;masked text&gt;", ... }</pre>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="idx">5</div>
+    <div class="body">
+      <h4>Self-report the outcome</h4>
+      <p>After the action actually happens (or is refused), log it — this closes the loop for Activity Log and Reports.</p>
+      <pre>POST /v1/agent/activity
+{
+  "invoking_user_id": "&lt;subscriber id&gt;",
+  "action": "device_diagnosis_completed",
+  "outcome": "SERVED",
+  "correlation_id": "&lt;same id as step 3&gt;"
+}</pre>
+    </div>
+  </div>
+
+  <h2><span class="num">04</span> Who owns what</h2>
+  <table>
+    <thead><tr><th>Item</th><th>Owner</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td>Agent registration call</td><td><span class="owner jiocare">JioCare</span></td><td>One-time; store the secret securely, not in source control</td></tr>
+      <tr><td>Sending <code>X-Agent-Id</code> / <code>Authorization</code> on every call</td><td><span class="owner jiocare">JioCare</span></td><td>Currently absent — this is the main gap</td></tr>
+      <tr><td>Purpose→app mapping for IAM</td><td><span class="owner guardrail">Guardrail</span></td><td>Code change, one line</td></tr>
+      <tr><td>Granting the IAM entitlement</td><td><span class="owner guardrail">Guardrail</span></td><td>Per real subscriber, after registration</td></tr>
+      <tr><td>DPDP notice</td><td><span class="owner guardrail">Guardrail</span></td><td>Already exists — no action</td></tr>
+      <tr><td>DPDP consent grant</td><td><span class="owner guardrail">Guardrail</span></td><td>Per real subscriber, against the existing notice</td></tr>
+      <tr><td>Calling <code>/v1/agent/decisions/check</code> before touching device data</td><td><span class="owner jiocare">JioCare</span></td><td>New integration point</td></tr>
+      <tr><td>Calling <code>/guardrail_validate</code> on chat content</td><td><span class="owner jiocare">JioCare</span></td><td>New integration point</td></tr>
+      <tr><td>Self-reporting via <code>/v1/agent/activity</code></td><td><span class="owner jiocare">JioCare</span></td><td>New integration point</td></tr>
+    </tbody>
+  </table>
+
+  <h2><span class="num">05</span> Verification checklist</h2>
+  <ul class="checklist">
+    <li>JioCare's agent appears in Agent Governance → Registered Agents, status <code>active</code></li>
+    <li>A test <code>decisions/check</code> call with an unentitled subscriber returns <code>DENY / IAM_SCOPE_EXCEEDED</code></li>
+    <li>After granting the entitlement, the same call with a consented subscriber returns <code>ALLOW</code></li>
+    <li>A message containing an account number or OTP comes back <code>PARTIAL</code> from <code>/guardrail_validate</code>, masked</li>
+    <li>Activity Log shows paired rows (decision check + self-reported activity) sharing one <code>correlation_id</code></li>
+  </ul>
+
+  <footer>Guardrail Agent Governance Layer · reference implementation already live for VOXA's Swiggy, Teams, Yahoo Finance, and Kite skills — this mirrors that same pattern for JioCare.</footer>
+</div>

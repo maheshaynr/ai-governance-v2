@@ -46,7 +46,7 @@ const EntitlementsModal = ({ entitlements, onRefresh, onClose }) => (
   <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
     <div className="card" style={{ width: '80%', maxWidth: '900px', height: '80vh', display: 'flex', flexDirection: 'column' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #d0d7de', padding: '1rem' }}>
-        <h3 style={{ margin: 0 }}>🔌 Entitlements (Mocked IAM)</h3>
+        <h3 style={{ margin: 0 }}>🔌 Entitlements</h3>
         <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
           <button onClick={onRefresh} className="secondary" style={{ padding: '0.2rem 0.5rem', fontSize: '0.8rem' }}>Refresh</button>
           <button onClick={onClose} className="secondary" style={{ padding: '0.5rem 1rem' }}>Close</button>
@@ -283,9 +283,9 @@ export default function AgentGovernance({ principal = DEFAULT_PRINCIPAL }) {
           className="secondary"
           onClick={() => { loadEntitlements(); setShowEntitlements(true); }}
           style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem', whiteSpace: 'nowrap' }}
-          title="A mocked external IAM system -- not Guardrail's own data, shown separately on purpose."
+          title="An external IAM system -- not Guardrail's own data, shown separately on purpose."
         >
-          🔌 Entitlements (Mocked IAM)
+          🔌 Entitlements
         </button>
       </div>
 

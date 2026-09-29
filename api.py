@@ -1438,6 +1438,9 @@ _PURPOSE_APP_SUBSTRINGS = (
     ("teams", "teams"),
     ("kite", "kite"),
     ("yahoo", "yahoo_finance"),
+    ("device_diagnosis", "jiocare"),
+    ("modem_diagnosis", "jiocare"),
+    ("stb_diagnosis", "jiocare"),
 )
 
 
@@ -1474,16 +1477,20 @@ def notify_incident(incident_id: str, agent: dict, request: "AgentDecisionCheckR
 # runbook -- written for the end user, not for whoever investigates the incident.
 AWARENESS_CONTENT = {
     "IAM_SCOPE_EXCEEDED": {
-        "title": "How your connected AI agents are scoped",
+        "title": "An action on your account was blocked",
         "body": [
-            "Each AI agent connected to your account is authorized for a specific, limited set of "
-            "actions rather than a general free hand. This is by design: it means that even if "
-            "one agent behaves unexpectedly, it can never take an action beyond what it was "
-            "explicitly authorized for.",
-            "This safeguard applied to a recent action on your account, and that action did not "
-            "go through.",
-            "No action is needed from you. If you'd ever like a summary of what your connected "
-            "agents are authorized to do, you're welcome to ask.",
+            "One of the AI agents connected to your account attempted an action it was not "
+            "authorized to take. We treat this as a security event: the action was stopped "
+            "immediately, before it could take effect.",
+            "Every AI agent connected to your account is limited to a specific, pre-approved set "
+            "of actions. This safeguard exists for exactly this situation: even if an agent "
+            "misbehaves, is compromised, or is misconfigured, it can never act outside what it "
+            "was explicitly authorized for.",
+            "If you don't recognize this kind of activity, or have any concerns about what your "
+            "connected agents are authorized to do, please contact support so we can look into it "
+            "with you.",
+            "Protecting your privacy and security is something we take seriously, and this "
+            "safeguard is one part of that.",
         ],
     },
     "RETROSPECTIVE_CONTENT_LEAK": {
@@ -1504,8 +1511,6 @@ AWARENESS_CONTENT = {
             "A recent message included details, like a passcode or account number, that are "
             "safest shared through a secure, purpose-built channel rather than in a plain "
             "message, even between people you trust.",
-            "A simple habit that helps: share a partial reference (for example, the last 4 "
-            "digits) instead of the full number or code.",
             "No action is needed on your part, this note is simply here to help keep future "
             "exchanges secure.",
         ],
@@ -1553,7 +1558,7 @@ def notify_principal_awareness(incident_id: str, agent: dict, request: "AgentDec
             return
         base_url = os.environ.get("GUARDRAIL_BASE_URL", "http://localhost:8000")
         awareness_url = f"{base_url}/awareness/{reason_code}"
-        EmailNotifier.send_user_awareness_email(to_email, agent, reason_code, awareness_url)
+        EmailNotifier.send_incident_customer_notice(to_email, incident_id, awareness_url)
     except Exception as e:
         logging.error(f"Failed to notify principal awareness for incident {incident_id}: {e}")
 

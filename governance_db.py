@@ -376,16 +376,28 @@ def query_report(record_types=None, start_ts=None, end_ts=None, agent_id=None,
 
     Returns rows normalized to one shape:
     {record_type, timestamp, agent_id, principal_ref, outcome_or_severity, reason_code,
-     correlation_id, detail, device_id} -- sorted newest first (device_id is only ever
-    populated for "activity" rows; the other two tables don't have that column) -- plus
-    a summary of counts by record_type/outcome_or_severity/reason_code over exactly
-    those rows."""
-    record_types = record_types or ["activity", "event", "incident"]
+     correlation_id, detail, device_id} -- sorted newest first -- plus a summary of counts
+    by record_type/outcome_or_severity/reason_code.
+
+    by_record_type is computed over every type regardless of which ones were actually
+    requested (every other filter -- date range, agent, principal, outcome, reason_code,
+    correlation_id -- still applies). Confirmed directly this was a real bug otherwise:
+    narrowing record_types to just "incident" made the by_record_type card's own
+    "activity"/"event" checkboxes vanish (there being zero rows of those types left to
+    count), so once you unchecked everything but one type there was no way back to the
+    others without using the filter form above instead. The rows actually returned (and
+    the other two summaries, which legitimately are scoped to the current type
+    selection) still respect record_types as before.
+
+    device_id is only ever a column on activity_log; an event/incident row gets it
+    backfilled from a same-correlation_id activity_log row when one exists, rather than
+    always showing blank for two of the three record types."""
+    requested_types = record_types or ["activity", "event", "incident"]
     conn = _connect()
     cursor = conn.cursor()
     rows = []
 
-    if "activity" in record_types:
+    if True:  # always fetch every type -- see by_record_type note above
         clauses, params = [], []
         if start_ts:
             clauses.append("ts >= ?"); params.append(start_ts)
@@ -408,7 +420,7 @@ def query_report(record_types=None, start_ts=None, end_ts=None, agent_id=None,
                 "correlation_id": r[5], "detail": r[6], "device_id": r[7],
             })
 
-    if "event" in record_types:
+    if True:  # always fetch every type -- see by_record_type note above
         clauses, params = [], []
         if start_ts:
             clauses.append("occurred_at >= ?"); params.append(start_ts)
@@ -428,10 +440,10 @@ def query_report(record_types=None, start_ts=None, end_ts=None, agent_id=None,
             rows.append({
                 "record_type": "event", "timestamp": r[0], "agent_id": r[1],
                 "principal_ref": None, "outcome_or_severity": r[2], "reason_code": r[3],
-                "correlation_id": r[4], "detail": r[5],
+                "correlation_id": r[4], "detail": r[5], "device_id": None,
             })
 
-    if "incident" in record_types:
+    if True:  # always fetch every type -- see by_record_type note above
         clauses, params = [], []
         if start_ts:
             clauses.append("created_at >= ?"); params.append(start_ts)
@@ -451,8 +463,27 @@ def query_report(record_types=None, start_ts=None, end_ts=None, agent_id=None,
             rows.append({
                 "record_type": "incident", "timestamp": r[0], "agent_id": r[1],
                 "principal_ref": r[2], "outcome_or_severity": r[3], "reason_code": r[4],
-                "correlation_id": r[5], "detail": r[6],
+                "correlation_id": r[5], "detail": r[6], "device_id": None,
             })
+
+    # Backfill device_id for event/incident rows from a same-correlation_id activity_log
+    # row, since neither table has its own device_id column -- see docstring.
+    missing_device_cids = {r["correlation_id"] for r in rows if r["device_id"] is None and r["correlation_id"]}
+    if missing_device_cids:
+        placeholders = ",".join("?" * len(missing_device_cids))
+        conn2 = _connect()
+        device_by_cid = {
+            cid: device_id
+            for cid, device_id in conn2.execute(
+                f"SELECT correlation_id, device_id FROM activity_log "
+                f"WHERE correlation_id IN ({placeholders}) AND device_id IS NOT NULL",
+                tuple(missing_device_cids),
+            )
+        }
+        conn2.close()
+        for r in rows:
+            if r["device_id"] is None and r["correlation_id"] in device_by_cid:
+                r["device_id"] = device_by_cid[r["correlation_id"]]
 
     conn.close()
 
@@ -465,11 +496,18 @@ def query_report(record_types=None, start_ts=None, end_ts=None, agent_id=None,
     if correlation_id:
         rows = [r for r in rows if r["correlation_id"] == correlation_id]
 
+    # by_record_type is computed here, over every type with every filter above already
+    # applied but BEFORE narrowing to requested_types -- see docstring for why.
+    by_record_type = {}
+    for r in rows:
+        by_record_type[r["record_type"]] = by_record_type.get(r["record_type"], 0) + 1
+
+    rows = [r for r in rows if r["record_type"] in requested_types]
+
     rows.sort(key=lambda r: r["timestamp"] or "", reverse=True)
 
-    summary = {"total": len(rows), "by_record_type": {}, "by_outcome_or_severity": {}, "by_reason_code": {}}
+    summary = {"total": len(rows), "by_record_type": by_record_type, "by_outcome_or_severity": {}, "by_reason_code": {}}
     for r in rows:
-        summary["by_record_type"][r["record_type"]] = summary["by_record_type"].get(r["record_type"], 0) + 1
         if r["outcome_or_severity"]:
             summary["by_outcome_or_severity"][r["outcome_or_severity"]] = summary["by_outcome_or_severity"].get(r["outcome_or_severity"], 0) + 1
         if r["reason_code"]:

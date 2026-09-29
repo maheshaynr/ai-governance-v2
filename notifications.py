@@ -221,3 +221,71 @@ class EmailNotifier:
             logging.info(f"Successfully sent user awareness email to {to_email}")
         except Exception as e:
             logging.error(f"Failed to send user awareness email to {to_email}: {str(e)}")
+
+    @staticmethod
+    def send_incident_customer_notice(to_email: str, incident_id: str, awareness_url: str):
+        """Distinct from send_user_awareness_email -- this is specifically for an
+        IAM_SCOPE_EXCEEDED incident, a genuine authorization failure, not a low-key FYI.
+        Unlike the generic awareness email, this one is direct about what happened and
+        that a support ticket has been raised, matching the message VOXA itself shows
+        the customer in-app.
+
+        The ticket ref shown here is a hardcoded placeholder for the email only -- not
+        generated or persisted anywhere, per explicit instruction to ignore building a
+        real ticketing integration for now. incident_id is our own real, already-existing
+        incident record, shown as a secondary reference."""
+        if not to_email or "@" not in to_email:
+            return
+
+        smtp_host = os.environ.get('SMTP_HOST', 'smtp.gmail.com')
+        smtp_port = int(os.environ.get('SMTP_PORT', 587))
+        smtp_user = os.environ.get('SMTP_USER')
+        smtp_pass = os.environ.get('SMTP_PASSWORD')
+
+        if not smtp_user or not smtp_pass:
+            logging.error("SMTP_USER or SMTP_PASSWORD environment variables not set. Cannot send email.")
+            return
+
+        ticket_ref = "G-482913"  # hardcoded placeholder, email-only -- see docstring
+        subject = f"Action blocked — Ticket Ref: {ticket_ref}"
+
+        html_content = f"""
+        <html>
+          <body style="font-family: Arial, sans-serif; color: #333;">
+            <h2 style="color: #0969da;">🛡️ We blocked an action on your account</h2>
+            <p>
+              This request was blocked because the agent involved isn't currently authorized to act on
+              your behalf for this action.
+            </p>
+            <p>
+              A support ticket has been raised on your behalf (<strong>Ref: {ticket_ref}</strong>) and
+              our team will follow up with you shortly.
+            </p>
+            <p style="font-size: 0.85em; color: #57606a;">
+              Internal reference: {incident_id}
+            </p>
+            <p style="margin-top: 20px;">
+              <a href="{awareness_url}" style="display: inline-block; background-color: #0969da; color: white;
+                 padding: 10px 18px; border-radius: 6px; text-decoration: none;">
+                Learn more about what this means
+              </a>
+            </p>
+          </body>
+        </html>
+        """
+
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = subject
+        msg["From"] = smtp_user
+        msg["To"] = to_email
+        msg.attach(MIMEText(html_content, "html"))
+
+        try:
+            server = smtplib.SMTP(smtp_host, smtp_port)
+            server.starttls()
+            server.login(smtp_user, smtp_pass)
+            server.sendmail(smtp_user, to_email, msg.as_string())
+            server.quit()
+            logging.info(f"Successfully sent incident customer notice to {to_email}")
+        except Exception as e:
+            logging.error(f"Failed to send incident customer notice to {to_email}: {str(e)}")
